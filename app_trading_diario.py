@@ -21,8 +21,7 @@ for key, default in {
     "rol": None,
     "fondo_actual": "",
 }.items():
-    if key not in st.session_state:
-        st.session_state[key] = default
+    st.session_state.setdefault(key, default)
 
 # ------------------------- AUTENTICACIÓN ------------------------- #
 
@@ -33,14 +32,18 @@ def login_page():
     pwd = st.sidebar.text_input("Contraseña", type="password")
     if st.sidebar.button("Entrar"):
         if user in USUARIOS and USUARIOS[user]["pwd"] == pwd:
-            st.session_state.logged_in = True
-            st.session_state.usuario_actual = user
-            st.session_state.rol = USUARIOS[user]["rol"]
-            st.session_state.fondo_actual = USUARIOS[user]["fondo"]
-            st.experimental_rerun()
+            st.session_state.update({
+                "logged_in": True,
+                "usuario_actual": user,
+                "rol": USUARIOS[user]["rol"],
+                "fondo_actual": USUARIOS[user]["fondo"],
+            })
+            st.rerun()  # <— reemplaza experimental_rerun
         else:
             st.sidebar.error("Credenciales incorrectas ❌")
-    st.stop()
+            st.stop()
+    else:
+        st.stop()
 
 if not st.session_state.logged_in:
     login_page()
@@ -63,9 +66,7 @@ COLUMNS = [
     "Resultado",
 ]
 
-if "records" not in st.session_state:
-    st.session_state.records = pd.DataFrame(columns=COLUMNS)
-
+st.session_state.setdefault("records", pd.DataFrame(columns=COLUMNS))
 df = st.session_state.records
 
 # -------------------- ENCABEZADO & DATOS DEL FONDO --------------- #
@@ -87,15 +88,7 @@ if rol == "admin":
         with c3:
             estrategia = st.selectbox(
                 "Estrategia",
-                [
-                    "spot",
-                    "futuros",
-                    "staking",
-                    "holding",
-                    "ICO",
-                    "pool_liquidez",
-                    "farming",
-                ],
+                ["spot", "futuros", "staking", "holding", "ICO", "pool_liquidez", "farming"],
             )
 
         c4, c5, c6 = st.columns(3)
@@ -127,11 +120,9 @@ if rol == "admin":
                 "SL": sl,
                 "Resultado": resultado,
             }
-            st.session_state.records = pd.concat(
-                [st.session_state.records, pd.DataFrame([nuevo])], ignore_index=True
-            )
+            st.session_state.records = pd.concat([st.session_state.records, pd.DataFrame([nuevo])], ignore_index=True)
             st.success("Registro añadido ✔️")
-            st.experimental_rerun()
+            st.rerun()  # <— reemplaza experimental_rerun
 
     st.markdown("---")
 
@@ -148,23 +139,15 @@ with colf1:
     fecha_desde = st.date_input("Desde", filtros_df["Fecha"].min().date())
     fecha_hasta = st.date_input("Hasta", filtros_df["Fecha"].max().date())
 with colf2:
-    brokers_sel = st.multiselect(
-        "Broker / Exchange",
-        sorted(filtros_df["Broker"].dropna().unique()),
-        default=list(filtros_df["Broker"].dropna().unique()),
-    )
+    brokers_sel = st.multiselect("Broker / Exchange", sorted(filtros_df["Broker"].dropna().unique()), default=list(filtros_df["Broker"].dropna().unique()))
 with colf3:
-    estr_sel = st.multiselect(
-        "Estrategia",
-        sorted(filtros_df["Estrategia"].unique()),
-        default=list(filtros_df["Estrategia"].unique()),
-    )
+    estr_sel = st.multiselect("Estrategia", sorted(filtros_df["Estrategia"].unique()), default=list(filtros_df["Estrategia"].unique()))
 
 mask = (
-    (filtros_df["Fecha"] >= pd.to_datetime(fecha_desde))
-    & (filtros_df["Fecha"] <= pd.to_datetime(fecha_hasta))
-    & (filtros_df["Broker"].isin(brokers_sel))
-    & (filtros_df["Estrategia"].isin(estr_sel))
+    (filtros_df["Fecha"] >= pd.to_datetime(fecha_desde)) &
+    (filtros_df["Fecha"] <= pd.to_datetime(fecha_hasta)) &
+    (filtros_df["Broker"].isin(brokers_sel)) &
+    (filtros_df["Estrategia"].isin(estr_sel))
 )
 filtered = filtros_df[mask].copy()
 
@@ -200,13 +183,7 @@ def convert_df(df_):
 
 csv = convert_df(filtered)
 b64 = base64.b64encode(csv).decode()
-st.markdown(
-    f'<a href="data:file/csv;base64,{b64}" download="diario_trading.csv">📥 Descargar CSV</a>',
-    unsafe_allow_html=True,
-)
+st.markdown(f'<a href="data:file/csv;base64,{b64}" download="diario_trading.csv">📥 Descargar CSV</a>', unsafe_allow_html=True)
 
 # --------------------------- THANKS ------------------------------- #
-st.markdown(
-    """<br><hr style='border:1px solid #eee'>\n<center><sub>Creado con ❤ usando Streamlit · 2025</sub></center>""",
-    unsafe_allow_html=True,
-)
+st.markdown("<br><hr style='border:1px solid #eee'><center><sub>Creado con ❤ usando Streamlit · 2025</sub></center>", unsafe_allow_html=True)
