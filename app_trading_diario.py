@@ -12,17 +12,20 @@ USUARIOS = {
     "maria": {"pwd": "maria123", "fondo": "Arkez Invest", "rol": "lector"},
 }
 
-# ------------------ SESSION INIT ------------------ #
 DEFAULT_FONDOS = ["Arkez Invest", "Cripto Alpha"]
 
-if "logged_in" not in st.session_state:
+# ------------------ SESSION INIT ------------------ #
+if "init" not in st.session_state:
+    st.session_state.init = True
     st.session_state.logged_in = False
     st.session_state.usuario = None
     st.session_state.rol = None
-    st.session_state.fondo = DEFAULT_FONDOS[0]
     st.session_state.fondos = DEFAULT_FONDOS.copy()
+    st.session_state.fondo = DEFAULT_FONDOS[0]
     st.session_state.aportaciones = pd.DataFrame(columns=["Fondo", "Socio", "Cedula", "Fecha", "Tipo", "Monto"])
-    st.session_state.ops = pd.DataFrame(columns=["ID", "Fondo", "Fecha", "Moneda", "Estrategia", "Broker", "Valor_Pos", "TP_%", "SL_%", "TP_usd", "SL_usd", "Resultado"])
+    st.session_state.ops = pd.DataFrame(
+        columns=["ID", "Fondo", "Fecha", "Moneda", "Estrategia", "Broker", "Valor_Pos", "TP_%", "SL_%", "TP_usd", "SL_usd", "Resultado"]
+    )
 
 # ------------------ LOGIN ------------------ #
 
@@ -36,15 +39,13 @@ def login_ui():
             st.session_state.usuario = u
             st.session_state.rol = USUARIOS[u]["rol"]
             st.session_state.fondo = USUARIOS[u]["fondo"]
-            st.experimental_rerun()
+            st.rerun()
         else:
             st.sidebar.error("Credenciales incorrectas ❌")
-            st.stop()
-    else:
-        st.stop()
 
 if not st.session_state.logged_in:
     login_ui()
+    st.stop()
 
 usuario = st.session_state.usuario
 rol = st.session_state.rol
@@ -56,13 +57,13 @@ if rol == "admin":
     sel = st.sidebar.selectbox("Selecciona Fondo", st.session_state.fondos, index=st.session_state.fondos.index(fondo))
     if sel != fondo:
         st.session_state.fondo = sel
-        st.experimental_rerun()
+        st.rerun()
     nuevo = st.sidebar.text_input("Crear nuevo fondo")
     if st.sidebar.button("Agregar Fondo") and nuevo.strip():
         if nuevo not in st.session_state.fondos:
             st.session_state.fondos.append(nuevo)
             st.session_state.fondo = nuevo
-            st.experimental_rerun()
+            st.rerun()
         else:
             st.sidebar.warning("Ese fondo ya existe")
 
@@ -85,9 +86,9 @@ if rol == "admin":
             row = {"Fondo": fondo, "Socio": socio, "Cedula": ced, "Fecha": fecha_mov, "Tipo": tipo, "Monto": monto}
             st.session_state.aportaciones = pd.concat([st.session_state.aportaciones, pd.DataFrame([row])], ignore_index=True)
             st.success("Movimiento registrado")
-            st.experimental_rerun()
+            st.rerun()
     st.dataframe(
-        st.session_state.aportaciones[st.session_state.aportaciones["Fondo"] == fondo].sort_values("Fecha", ascending=False),
+        st.session_state.aportaciones.query("Fondo==@fondo").sort_values("Fecha", ascending=False),
         use_container_width=True,
     )
     st.markdown("---")
@@ -128,7 +129,7 @@ if rol == "admin":
             }
             st.session_state.ops = pd.concat([st.session_state.ops, pd.DataFrame([row_op])], ignore_index=True)
             st.success("Operación guardada")
-            st.experimental_rerun()
+            st.rerun()
     st.markdown("---")
 
 # ===== Cerrar operaciones abiertas ===== #
@@ -141,26 +142,42 @@ if rol == "admin":
         if st.button("Actualizar Resultado"):
             st.session_state.ops.loc[st.session_state.ops["ID"] == sel_id, "Resultado"] = nuevo_res
             st.success("Operación actualizada")
-            st.experimental_rerun()
+            st.rerun()
     st.markdown("---")
 
 # ===== FILTROS & TABLA ===== #
 st.subheader("🔍 Operaciones")
 ops_fondo = st.session_state.ops[st.session_state.ops["Fondo"] == fondo]
+
 if ops_fondo.empty:
     st.info("Sin operaciones para este fondo")
-else:
-    c1, c2, c3 = st.columns(3)
-    desde = c1.date_input("Desde", ops_fondo["Fecha"].min().date())
-    hasta = c1.date_input("Hasta", ops_fondo["Fecha"].max().date())
-    bro_sel = c2.multiselect("Broker", sorted(ops_fondo["Broker"].unique()), default=list(ops_fondo["Broker"].unique()))
-    est_sel = c3.multiselect("Estrategia", sorted(ops_fondo["Estrategia"].unique()), default=list(ops_fondo["Estrategia"].unique()))
+    st.stop()
 
-    mask = (
-        (ops_fondo["Fecha"] >= pd.to_datetime(desde))
-        & (ops_fondo["Fecha"] <= pd.to_datetime(hasta))
-        & (ops_fondo["Broker"].isin(bro_sel))
-        & (ops_fondo["Estrategia"].isin(est_sel))
-    )
-    filt = ops_fondo[mask]
-    st.data
+c1, c2, c3 = st.columns(3)
+desde = c1.date_input("Desde", ops_fondo["Fecha"].min().date())
+hasta = c1.date_input("Hasta", ops_fondo["Fecha"].max().date())
+bro_sel = c2.multiselect("Broker", sorted(ops_fondo["Broker"].unique()), default=list(ops_fondo["Broker"].unique()))
+est_sel = c3.multiselect("Estrategia", sorted(ops_fondo["Estrategia"].unique()), default=list(ops_fondo["Estrategia"].unique()))
+
+mask = (
+    (ops_fondo["Fecha"] >= pd.to_datetime(desde))
+    & (ops_fondo["Fecha"] <= pd.to_datetime(hasta))
+    & (ops_fondo["Broker"].isin(bro_sel))
+    & (ops_fondo["Estrategia"].isin(est_sel))
+)
+filtered_ops = ops_fondo[mask]
+
+st.dataframe(filtered_ops.sort_values("Fecha", ascending=False), use_container_width=True)
+
+# ===== RESUMEN & GRÁFICA ===== #
+# Capital neto
+aport_fondo = st.session_state.aportaciones[st.session_state.aportaciones["Fondo"] == fondo]
+cap_in = aport_fondo.query("Tipo=='Aporte'")["Monto"].sum()
+cap_out = aport_fondo.query("Tipo=='Retiro'")["Monto"].sum()
+capital_neto = cap_in - cap_out
+
+# PnL
+filtered_ops = filtered_ops.copy()
+filtered_ops["PnL"] = 0.0
+filtered_ops.loc[filtered_ops["Resultado"] == 
+
