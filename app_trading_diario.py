@@ -11,14 +11,7 @@ st.set_page_config(page_title="Diario de Trading", layout="wide")
 USUARIOS = {
     "admin": {"pwd": "admin123", "fondo": "Arkez Invest", "rol": "admin"},
     "juan":  {"pwd": "juan123",  "fondo": "Cripto Alpha", "rol": "lector"},
-    "Marcos": {"pwd": "marcos123", "fondo": "Arkez Invest", "rol": "lector"},
-    "Marcos": {"pwd": "marcos123", "fondo": "Shalom", "rol": "lector"},
-    "German": {"pwd": "german123", "fondo": "Arkez Invest", "rol": "lector"},
-    "German": {"pwd": "german123", "fondo": "Shalom", "rol": "lector"},
-    "Guillermo": {"pwd": "guillermo123", "fondo": "Arkez Invest", "rol": "lector"},
-    "Guillermo": {"pwd": "guillermo123", "fondo": "Shalom", "rol": "lector"},
-    "Alvaro": {"pwd": "alvaro123", "fondo": "Arkez Invest", "rol": "lector"},
-    "Alvaro": {"pwd": "alvaro123", "fondo": "Shalom", "rol": "lector"},
+    "maria": {"pwd": "maria123", "fondo": "Arkez Invest", "rol": "lector"},
 }
 DEFAULT_FONDOS = ["Arkez Invest", "Cripto Alpha"]
 
@@ -43,24 +36,22 @@ if "init" not in st.session_state:
 
 def login_ui():
     st.sidebar.title("🔒 Acceso Privado")
-    u = st.sidebar.text_input("Usuario")
-    p = st.sidebar.text_input("Contraseña", type="password")
+    user = st.sidebar.text_input("Usuario")
+    pwd  = st.sidebar.text_input("Contraseña", type="password")
     if st.sidebar.button("Entrar"):
-        if u in USUARIOS and USUARIOS[u]["pwd"] == p:
+        if user in USUARIOS and USUARIOS[user]["pwd"] == pwd:
             st.session_state.logged_in = True
-            st.session_state.usuario   = u
-            st.session_state.rol       = USUARIOS[u]["rol"]
-            st.session_state.fondo     = USUARIOS[u]["fondo"]
+            st.session_state.usuario   = user
+            st.session_state.rol       = USUARIOS[user]["rol"]
+            st.session_state.fondo     = USUARIOS[user]["fondo"]
             st.rerun()
         else:
             st.sidebar.error("Credenciales incorrectas ❌")
 
 if st.session_state.get("logged_in"):
     if st.sidebar.button("Cerrar Sesión ⏻"):
-        for k in list(st.session_state.keys()):
-            if k not in ("init","fondos","aportaciones","ops"):
-                st.session_state.pop(k, None)
-        st.session_state.logged_in = False
+        for k in ["logged_in","usuario","rol","fondo"]:
+            st.session_state.pop(k, None)
         st.rerun()
 
 if not st.session_state.get("logged_in", False):
@@ -72,7 +63,7 @@ rol     = st.session_state.rol
 fondo   = st.session_state.fondo
 
 # -------------------------------------------------
-# GESTIÓN DE FONDOS (ADMIN)
+# FONDOS (ADMIN)
 # -------------------------------------------------
 if rol == "admin":
     st.sidebar.subheader("🏦 Fondos")
@@ -90,13 +81,13 @@ if rol == "admin":
             st.sidebar.warning("Ese fondo ya existe")
 
 # -------------------------------------------------
-# ENCABEZADO
+# HEADER
 # -------------------------------------------------
 st.title("📈 Diario & Gestor de Fondos de Inversión")
 st.markdown(f"**👤 {usuario}** — **Fondo:** {fondo}")
 
 # =================================================
-# 1) MOVIMIENTOS DE CAPITAL (con editar/eliminar)
+# MOVIMIENTOS DE CAPITAL
 # =================================================
 if rol == "admin":
     st.header("💰 Movimientos de Capital (Socios)")
@@ -114,22 +105,20 @@ if rol == "admin":
             st.success("Registro agregado ✔️")
             st.rerun()
 
-# Tabla con botones eliminar / editar
 aport_df = st.session_state.aportaciones.query("Fondo==@fondo")
 if not aport_df.empty:
     st.dataframe(aport_df.drop(columns=["idx"]), use_container_width=True)
     col1,col2 = st.columns(2)
-    idx_sel = col1.number_input("Fila a editar/eliminar",min_value=0,max_value=int(aport_df["idx"].max()),step=1)
-    if col1.button("Eliminar fila"):
+    idx_sel = col1.number_input("Fila capital a editar/eliminar",min_value=0,max_value=int(aport_df["idx"].max()),step=1)
+    if col1.button("Eliminar capital"):
         st.session_state.aportaciones = st.session_state.aportaciones[st.session_state.aportaciones["idx"]!=idx_sel]
         st.success("Eliminado ✔️")
         st.rerun()
-    if col2.button("Editar fila"):
+    if col2.button("Editar capital"):
         fila = st.session_state.aportaciones.loc[st.session_state.aportaciones["idx"]==idx_sel].iloc[0]
         with st.form("edit_aporte"):
-            st.write("Edición del movimiento")
             socio_e  = st.text_input("Socio", value=fila.Socio)
-            ced_e    = st.text_input("Cedula", value=fila.Cedula)
+            ced_e    = st.text_input("Cédula", value=fila.Cedula)
             tipo_e   = st.selectbox("Tipo", ["Aporte","Retiro"], index=0 if fila.Tipo=="Aporte" else 1)
             monto_e  = st.number_input("Monto USD", value=float(fila.Monto))
             fecha_e  = st.date_input("Fecha", value=fila.Fecha)
@@ -137,9 +126,11 @@ if not aport_df.empty:
                 st.session_state.aportaciones.loc[st.session_state.aportaciones["idx"]==idx_sel, ["Socio","Cedula","Tipo","Monto","Fecha"]] = [socio_e, ced_e, tipo_e, monto_e, fecha_e]
                 st.success("Actualizado ✔️")
                 st.rerun()
+else:
+    st.info("Sin movimientos registrados")
 
 # =================================================
-# 2) REGISTRAR OPERACIÓN (editar/eliminar)
+# REGISTRAR OPERACIÓN
 # =================================================
 st.header("➕ Registrar Nueva Operación")
 if rol == "admin":
@@ -158,7 +149,7 @@ if rol == "admin":
         res      = c9.selectbox("Resultado", ["Abierta","Ganadora","Perdedora"])
         tp_usd   = valor_pos*tp_pct/100 - com
         sl_usd   = valor_pos*sl_pct/100 + com
-        st.markdown(f"TP neto ≈ **${tp_usd:,.2f}** | SL neto ≈ **${sl_usd:,.2f}**")
+        st.markdown(f"TP ≈ **${tp_usd:,.2f}** | SL ≈ **${sl_usd:,.2f}**")
         if st.form_submit_button("Guardar Operación"):
             idx = len(st.session_state.ops)
             new_op = {"idx":idx,"ID":idx+1,"Fondo":fondo,"Fecha":fecha_op,"Moneda":moneda,"Estrategia":est,"Broker":broker,
@@ -174,19 +165,5 @@ if not ops_df.empty:
     idx_op = col1.number_input("Fila op a editar/eliminar",min_value=0,max_value=int(ops_df["idx"].max()),step=1)
     if col1.button("Eliminar op"):
         st.session_state.ops = st.session_state.ops[st.session_state.ops["idx"]!=idx_op]
-        st.success("Operación eliminada ✔️")
-        st.rerun()
-    if col2.button("Editar op"):
-        row = st.session_state.ops.loc[st.session_state.ops["idx"]==idx_op].iloc[0]
-        with st.form("edit_op"):
-            moneda_e = st.text_input("Moneda", value=row.Moneda)
-            est_e = st.selectbox("Estrategia", ["spot","futuros","staking","holding","ICO","pool_liquidez","farming"], index=["spot","futuros","staking","holding","ICO","pool_liquidez","farming"].index(row.Estrategia))
-            broker_e = st.text_input("Broker", value=row.Broker)
-            val_e = st.number_input("Valor Pos USD", value=float(row.Valor_Pos))
-            tp_pct_e = st.number_input("TP %", value=float(row["TP_%"]))
-            sl_pct_e = st.number_input("SL %", value=float(row["SL_%"]))
-            com_e = st.number_input("Comisiones", value=float(row.Comisiones))
-            res_e = st.selectbox("Resultado", ["Abierta","Ganadora","Perdedora"], index=["Abierta","Ganadora","Perdedora"].index(row.Resultado))
-            if st.form_submit_button("Actualizar"):
-                tp
+        st.success("Operación eliminada ✔
 
