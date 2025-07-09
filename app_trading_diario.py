@@ -8,19 +8,35 @@ import base64
 # ---------------------- CONFIGURACIÓN BÁSICA ---------------------- #
 st.set_page_config(page_title="Diario de Trading", layout="wide")
 
+# ---------------------- USUARIOS Y FONDOS ------------------------- #
+# Cada usuario está asignado a un solo fondo y tiene permisos definidos
+USUARIOS = {
+    "admin": {"pwd": "admin123", "fondo": "Arkez Invest", "rol": "admin"},
+    "juan": {"pwd": "juan123", "fondo": "Cripto Alpha", "rol": "lector"},
+    "maria": {"pwd": "maria123", "fondo": "Arkez Invest", "rol": "lector"},
+}
+
 # ------------------------- AUTENTICACIÓN ------------------------- #
-#  (para demo: usuario=admin / contraseña=admin123)
 if 'logged_in' not in st.session_state:
     st.session_state.logged_in = False
+if 'usuario_actual' not in st.session_state:
+    st.session_state.usuario_actual = None
+if 'rol' not in st.session_state:
+    st.session_state.rol = None
+if 'fondo_actual' not in st.session_state:
+    st.session_state.fondo_actual = ""
 
 def login_page():
     st.sidebar.title("🔒 Acceso Privado")
     user = st.sidebar.text_input("Usuario")
     pwd = st.sidebar.text_input("Contraseña", type="password")
     if st.sidebar.button("Entrar"):
-        if user == "admin" and pwd == "admin123":
+        if user in USUARIOS and USUARIOS[user]['pwd'] == pwd:
             st.session_state.logged_in = True
-            st.sidebar.success("Credenciales correctas ✔️")
+            st.session_state.usuario_actual = user
+            st.session_state.rol = USUARIOS[user]['rol']
+            st.session_state.fondo_actual = USUARIOS[user]['fondo']
+            st.sidebar.success("Acceso concedido ✔️")
         else:
             st.sidebar.error("Credenciales incorrectas ❌")
     st.stop()
@@ -28,9 +44,13 @@ def login_page():
 if not st.session_state.logged_in:
     login_page()
 
+usuario = st.session_state.usuario_actual
+rol = st.session_state.rol
+nombre_fondo = st.session_state.fondo_actual
+
 # --------------------- BASE DE DATOS EN MEMORIA ------------------- #
 COLUMNS = [
-    'Fecha', 'Estrategia', 'Broker', 'Capital_Inicial', 'Valor_Posicion',
+    'Fondo', 'Fecha', 'Estrategia', 'Broker', 'Capital_Inicial', 'Valor_Posicion',
     'TP', 'SL', 'Resultado'
 ]
 
@@ -40,62 +60,60 @@ if 'records' not in st.session_state:
 df = st.session_state.records
 
 # -------------------- ENCABEZADO & DATOS DEL FONDO --------------- #
-st.title("📈 Diario & Gestor de Fondo de Inversión")
-col_fondo, col_inv = st.columns(2)
-with col_fondo:
-    nombre_fondo = st.text_input("Nombre del Fondo", "Arkez Invest", key="fondo")
-with col_inv:
-    nombre_inv = st.text_input("Nombre del Inversionista", "José", key="inversor")
+st.title("📈 Diario & Gestor de Fondos de Inversión")
+st.markdown(f"**👤 Usuario:** `{usuario}` — Fondo asignado: **{nombre_fondo}**")
 
 st.markdown("---")
 
 # ---------------------- FORMULARIO DE REGISTRO -------------------- #
-st.subheader("➕ Registrar Nueva Posición")
+if rol == "admin":
+    st.subheader("➕ Registrar Nueva Posición")
 
-with st.form("registro_form"):
-    c1, c2, c3 = st.columns(3)
-    with c1:
-        fecha = st.date_input("Fecha", datetime.today())
-    with c2:
-        estrategia = st.selectbox(
-            "Estrategia",
-            ["spot", "futuros", "staking", "holding", "ICO", "pool_liquidez", "farming"],
-        )
-    with c3:
-        broker = st.text_input("Broker / Exchange")
+    with st.form("registro_form"):
+        c1, c2, c3 = st.columns(3)
+        with c1:
+            fecha = st.date_input("Fecha", datetime.today())
+        with c2:
+            estrategia = st.selectbox(
+                "Estrategia",
+                ["spot", "futuros", "staking", "holding", "ICO", "pool_liquidez", "farming"],
+            )
+        with c3:
+            broker = st.text_input("Broker / Exchange")
 
-    c4, c5, c6 = st.columns(3)
-    with c4:
-        capital = st.number_input("Capital Inicial (USD)", min_value=0.0, step=0.01)
-    with c5:
-        valor = st.number_input("Valor Posición (USD)", min_value=0.0, step=0.01)
-    with c6:
-        resultado = st.selectbox("Resultado", ["Abierta", "Ganadora", "Perdedora"])
+        c4, c5, c6 = st.columns(3)
+        with c4:
+            capital = st.number_input("Capital Inicial (USD)", min_value=0.0, step=0.01)
+        with c5:
+            valor = st.number_input("Valor Posición (USD)", min_value=0.0, step=0.01)
+        with c6:
+            resultado = st.selectbox("Resultado", ["Abierta", "Ganadora", "Perdedora"])
 
-    c7, c8 = st.columns(2)
-    with c7:
-        tp = st.number_input("Take Profit (USD)", min_value=0.0, step=0.01)
-    with c8:
-        sl = st.number_input("Stop Loss (USD)", min_value=0.0, step=0.01)
+        c7, c8 = st.columns(2)
+        with c7:
+            tp = st.number_input("Take Profit (USD)", min_value=0.0, step=0.01)
+        with c8:
+            sl = st.number_input("Stop Loss (USD)", min_value=0.0, step=0.01)
 
-    submitted = st.form_submit_button("Guardar Registro")
-    if submitted:
-        new = {
-            'Fecha': pd.to_datetime(fecha),
-            'Estrategia': estrategia,
-            'Broker': broker,
-            'Capital_Inicial': capital,
-            'Valor_Posicion': valor,
-            'TP': tp,
-            'SL': sl,
-            'Resultado': resultado,
-        }
-        st.session_state.records = pd.concat(
-            [st.session_state.records, pd.DataFrame([new])], ignore_index=True
-        )
-        st.success("Registro añadido correctamente ✔️")
+        submitted = st.form_submit_button("Guardar Registro")
+        if submitted:
+            new = {
+                'Fondo': nombre_fondo,
+                'Fecha': pd.to_datetime(fecha),
+                'Estrategia': estrategia,
+                'Broker': broker,
+                'Capital_Inicial': capital,
+                'Valor_Posicion': valor,
+                'TP': tp,
+                'SL': sl,
+                'Resultado': resultado,
+            }
+            st.session_state.records = pd.concat(
+                [st.session_state.records, pd.DataFrame([new])], ignore_index=True
+            )
+            st.success("Registro añadido correctamente ✔️")
 
-st.markdown("---")
+    st.markdown("---")
 
 # --------------------------- FILTROS ------------------------------ #
 st.subheader("🔍 Filtros")
@@ -104,29 +122,31 @@ if df.empty:
     st.info("Aún no hay registros de posiciones.")
     st.stop()
 
+filtros_df = df[df['Fondo'] == nombre_fondo]
+
 colf1, colf2, colf3 = st.columns(3)
 with colf1:
-    fecha_desde = st.date_input("Desde", df['Fecha'].min().date())
-    fecha_hasta = st.date_input("Hasta", df['Fecha'].max().date())
+    fecha_desde = st.date_input("Desde", filtros_df['Fecha'].min().date())
+    fecha_hasta = st.date_input("Hasta", filtros_df['Fecha'].max().date())
 with colf2:
     brokers_sel = st.multiselect(
-        "Broker / Exchange", sorted(df['Broker'].dropna().unique()),
-        default=list(df['Broker'].dropna().unique()),
+        "Broker / Exchange", sorted(filtros_df['Broker'].dropna().unique()),
+        default=list(filtros_df['Broker'].dropna().unique()),
     )
 with colf3:
     estr_sel = st.multiselect(
-        "Estrategia", sorted(df['Estrategia'].unique()),
-        default=list(df['Estrategia'].unique()),
+        "Estrategia", sorted(filtros_df['Estrategia'].unique()),
+        default=list(filtros_df['Estrategia'].unique()),
     )
 
 mask = (
-    (df['Fecha'] >= pd.to_datetime(fecha_desde))
-    & (df['Fecha'] <= pd.to_datetime(fecha_hasta))
-    & (df['Broker'].isin(brokers_sel))
-    & (df['Estrategia'].isin(estr_sel))
+    (filtros_df['Fecha'] >= pd.to_datetime(fecha_desde)) &
+    (filtros_df['Fecha'] <= pd.to_datetime(fecha_hasta)) &
+    (filtros_df['Broker'].isin(brokers_sel)) &
+    (filtros_df['Estrategia'].isin(estr_sel))
 )
 
-filtered = df[mask].copy()
+filtered = filtros_df[mask].copy()
 
 # ------------------------- TABLA DETALLADA ------------------------- #
 st.subheader("📄 Posiciones Filtradas")
@@ -166,3 +186,4 @@ st.markdown(download_link, unsafe_allow_html=True)
 # --------------------------- THANKS ------------------------------- #
 st.markdown("""<br><hr style='border:1px solid #eee'>
 <center><sub>Creado con ❤ usando Streamlit · 2025</sub></center>""", unsafe_allow_html=True)
+
