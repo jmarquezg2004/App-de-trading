@@ -166,6 +166,19 @@ else:
     st.subheader("📊 Resumen del Fondo")
 
     # Capital neto aportado
-    ap = st
+    aportes_fondo = st.session_state.aportaciones[st.session_state.aportaciones["Fondo"] == nombre_fondo]
+    total_aportes = aportes_fondo.query("Tipo == 'Aporte'")["Monto"].sum()
+    total_retiros = aportes_fondo.query("Tipo == 'Retiro'")["Monto"].sum()
+    capital_neto = total_aportes - total_retiros
 
+    # Ganancias / Pérdidas de operaciones
+    ganancia_total = filtered.query("Resultado == 'Ganadora'")["TP_usd"].sum()
+    perdida_total = filtered.query("Resultado == 'Perdedora'")["SL_usd"].sum()
+    resultado_neto = ganancia_total - perdida_total
+    capital_total = capital_neto + resultado_neto
+
+    colr1, colr2, colr3 = st.columns(3)
+    colr1.metric("💼 Capital Neto Aportado", f"${capital_neto:,.2f}")
+    colr2.metric("📈 Ganancia / Pérdida", f"${resultado_neto:,.2f}", delta_color="inverse")
+    colr3.metric("🔢 Capital Total Actual", f"${capital_total:,.2f}")
 
