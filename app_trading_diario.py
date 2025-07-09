@@ -165,4 +165,39 @@ capital_neto = cap_in - cap_out
 # PnL neto
 filtered_ops = filtered_ops.copy()
 filtered_ops["PnL"] = 0.0
-filtered_ops.loc[filtered_ops["Resultado"]=="Ganadora","PnL"]  = filtered_ops["
+filtered_ops.loc[filtered_ops["Resultado"] == "Ganadora", "PnL"]  = filtered_ops["TP_usd"]
+filtered_ops.loc[filtered_ops["Resultado"] == "Perdedora", "PnL"] = -filtered_ops["SL_usd"]
+
+pnl_total = filtered_ops["PnL"].sum()
+capital_total = capital_neto + pnl_total
+rendimiento_pct = (pnl_total / capital_neto * 100) if capital_neto else 0
+
+m1, m2, m3, m4 = st.columns(4)
+m1.metric("Capital Neto (USD)", f"${capital_neto:,.2f}")
+m2.metric("PnL Acumulado",      f"${pnl_total:,.2f}")
+m3.metric("Total USD",          f"${capital_total:,.2f}")
+m4.metric("Rendimiento %",      f"{rendimiento_pct:.2f}%")
+
+# Rendimiento por socio
+st.markdown("### 👥 Rendimiento por Socio")
+if not aport_fondo.empty and capital_neto > 0:
+    def neto(df):
+        return df.loc[df["Tipo"]=="Aporte","Monto"].sum() - df.loc[df["Tipo"]=="Retiro","Monto"].sum()
+    socios_cap = aport_fondo.groupby("Socio").apply(neto).reset_index(name="Capital_Neto")
+    socios_cap["% Participación"] = socios_cap["Capital_Neto"] / capital_neto * 100
+    socios_cap["P/L Asignado"]    = socios_cap["Capital_Neto"] / capital_neto * pnl_total
+    socios_cap["Retorno %"]       = socios_cap["P/L Asignado"] / socios_cap["Capital_Neto"] * 100
+    st.dataframe(socios_cap.round(2), use_container_width=True)
+else:
+    st.info("Sin datos de aportes para calcular rendimiento por socio")
+
+# Gráfica de evolución del fondo
+st.markdown("#### 📈 Evolución del Fondo")
+ops_cerradas = filtered_ops[filtered_ops["Resultado"] != "Abierta"].copy()
+if not ops_cerradas.empty:
+    ops_cerradas = ops_cerradas.sort_values("Fecha")
+    ops_cerradas["Equity"] = capital_neto + ops_cerradas["PnL"].cumsum()
+    fig = px.line(ops_cerradas, x="Fecha", y="Equity", markers=True, title="Equity Curve")
+    st.plotly_chart(fig, use_container_width=True)
+else:
+    st.info("Aún no hay operaciones cerradas para mostrar gráfica.")
