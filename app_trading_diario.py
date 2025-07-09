@@ -14,7 +14,6 @@ USUARIOS = {
 
 DEFAULT_FONDOS = ["Arkez Invest", "Cripto Alpha"]
 
-# ------------------ SESSION INIT ------------------ #
 if "init" not in st.session_state:
     st.session_state.init = True
     st.session_state.logged_in = False
@@ -23,12 +22,9 @@ if "init" not in st.session_state:
     st.session_state.fondos = DEFAULT_FONDOS.copy()
     st.session_state.fondo = DEFAULT_FONDOS[0]
     st.session_state.aportaciones = pd.DataFrame(columns=["Fondo", "Socio", "Cedula", "Fecha", "Tipo", "Monto"])
-    st.session_state.ops = pd.DataFrame(
-        columns=["ID", "Fondo", "Fecha", "Moneda", "Estrategia", "Broker", "Valor_Pos", "TP_%", "SL_%", "TP_usd", "SL_usd", "Resultado"]
-    )
+    st.session_state.ops = pd.DataFrame(columns=["ID", "Fondo", "Fecha", "Moneda", "Estrategia", "Broker", "Valor_Pos", "TP_%", "SL_%", "TP_usd", "SL_usd", "Resultado"])
 
 # ------------------ LOGIN ------------------ #
-
 def login_ui():
     st.sidebar.title("🔒 Acceso Privado")
     u = st.sidebar.text_input("Usuario")
@@ -67,7 +63,6 @@ if rol == "admin":
         else:
             st.sidebar.warning("Ese fondo ya existe")
 
-# ------------------ HEADER ------------------ #
 st.title("📈 Diario & Gestor de Fondos de Inversión")
 st.markdown(f"**👤 {usuario}** — **Fondo:** {fondo}")
 st.markdown("---")
@@ -132,7 +127,61 @@ if rol == "admin":
             st.rerun()
     st.markdown("---")
 
-# ===== Cerrar operaciones abiertas ===== #
+# ===== FILTROS & TABLA ===== #
+st.subheader("🔍 Operaciones")
+ops_fondo = st.session_state.ops[st.session_state.ops["Fondo"] == fondo]
+if not ops_fondo.empty:
+    c1, c2, c3 = st.columns(3)
+    desde = c1.date_input("Desde", ops_fondo["Fecha"].min().date())
+    hasta = c1.date_input("Hasta", ops_fondo["Fecha"].max().date())
+    bro_sel = c2.multiselect("Broker", sorted(ops_fondo["Broker"].unique()), default=list(ops_fondo["Broker"].unique()))
+    est_sel = c3.multiselect("Estrategia", sorted(ops_fondo["Estrategia"].unique()), default=list(ops_fondo["Estrategia"].unique()))
+
+    mask = (
+        (ops_fondo["Fecha"] >= pd.to_datetime(desde))
+        & (ops_fondo["Fecha"] <= pd.to_datetime(hasta))
+        & (ops_fondo["Broker"].isin(bro_sel))
+        & (ops_fondo["Estrategia"].isin(est_sel))
+    )
+    filtered_ops = ops_fondo[mask]
+
+    st.dataframe(filtered_ops.sort_values("Fecha", ascending=False), use_container_width=True)
+
+    # ===== RESUMEN & GRÁFICA ===== #
+    aport_fondo = st.session_state.aportaciones[st.session_state.aportaciones["Fondo"] == fondo]
+    cap_in = aport_fondo.query("Tipo=='Aporte'")["Monto"].sum()
+    cap_out = aport_fondo.query("Tipo=='Retiro'")["Monto"].sum()
+    capital_neto = cap_in - cap_out
+
+    filtered_ops = filtered_ops.copy()
+    filtered_ops["PnL"] = 0.0
+    filtered_ops.loc[filtered_ops["Resultado"] == "Ganadora", "PnL"] = filtered_ops["TP_usd"]
+    filtered_ops.loc[filtered_ops["Resultado"] == "Perdedora", "PnL"] = -filtered_ops["SL_usd"]
+
+    gan_perd = filtered_ops.query("Resultado != 'Abierta'")
+    ganancia_total = gan_perd["PnL"].sum()
+    total_final = capital_neto + ganancia_total
+    rendimiento_pct = ((total_final - capital_neto) / capital_neto * 100) if capital_neto else 0
+
+    st.subheader("📊 Resumen del Fondo")
+    c1, c2, c3, c4 = st.columns(4)
+    c1.metric("Capital Neto (USD)", f"${capital_neto:,.2f}")
+    c2.metric("G/P Acumulado", f"${ganancia_total:,.2f}")
+    c3.metric("Total USD", f"${total_final:,.2f}")
+    c4.metric("Rendimiento %", f"{rendimiento_pct:.2f}%")
+
+    st.markdown("#### 📈 Evolución del Fondo")
+    if not gan_perd.empty:
+        gan_perd = gan_perd.sort_values("Fecha")
+        gan_perd["Total_Acumulado"] = capital_neto + gan_perd["PnL"].cumsum()
+        fig = px.line(gan_perd, x="Fecha", y="Total_Acumulado", title="Capital Acumulado", markers=True)
+        st.plotly_chart(fig, use_container_width=True)
+    else:
+        st.info("No hay operaciones cerradas para graficar.")
+else:
+    st.info("Sin operaciones para este fondo")
+
+# ===== CERRAR OPERACIONES ABIERTAS ===== #
 if rol == "admin":
     abiertas = st.session_state.ops.query("Fondo==@fondo and Resultado=='Abierta'")
     if not abiertas.empty:
@@ -144,40 +193,4 @@ if rol == "admin":
             st.success("Operación actualizada")
             st.rerun()
     st.markdown("---")
-
-# ===== FILTROS & TABLA ===== #
-st.subheader("🔍 Operaciones")
-ops_fondo = st.session_state.ops[st.session_state.ops["Fondo"] == fondo]
-
-if ops_fondo.empty:
-    st.info("Sin operaciones para este fondo")
-    st.stop()
-
-c1, c2, c3 = st.columns(3)
-desde = c1.date_input("Desde", ops_fondo["Fecha"].min().date())
-hasta = c1.date_input("Hasta", ops_fondo["Fecha"].max().date())
-bro_sel = c2.multiselect("Broker", sorted(ops_fondo["Broker"].unique()), default=list(ops_fondo["Broker"].unique()))
-est_sel = c3.multiselect("Estrategia", sorted(ops_fondo["Estrategia"].unique()), default=list(ops_fondo["Estrategia"].unique()))
-
-mask = (
-    (ops_fondo["Fecha"] >= pd.to_datetime(desde))
-    & (ops_fondo["Fecha"] <= pd.to_datetime(hasta))
-    & (ops_fondo["Broker"].isin(bro_sel))
-    & (ops_fondo["Estrategia"].isin(est_sel))
-)
-filtered_ops = ops_fondo[mask]
-
-st.dataframe(filtered_ops.sort_values("Fecha", ascending=False), use_container_width=True)
-
-# ===== RESUMEN & GRÁFICA ===== #
-# Capital neto
-aport_fondo = st.session_state.aportaciones[st.session_state.aportaciones["Fondo"] == fondo]
-cap_in = aport_fondo.query("Tipo=='Aporte'")["Monto"].sum()
-cap_out = aport_fondo.query("Tipo=='Retiro'")["Monto"].sum()
-capital_neto = cap_in - cap_out
-
-# PnL
-filtered_ops = filtered_ops.copy()
-filtered_ops["PnL"] = 0.0
-filtered_ops.loc[filtered_ops["Resultado"] == 
 
