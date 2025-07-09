@@ -160,14 +160,13 @@ gan_perd = ops_fondo.query("Resultado != 'Abierta'")
 ganancia_total = gan_perd["PnL"].sum()
 
 # Ganancia estimada para cada socio
-ganancia_socios = (participacion * ganancia_total).astype(float)
-capital_neto_socios = capital_neto_socios.astype(float).replace(0, pd.NA)
-rendimiento_pct_socios = (ganancia_socios / capital_neto_socios * 100).astype(float).round(2)
+ganancia_socios = participacion * ganancia_total
+rendimiento_pct_socios = (ganancia_socios / capital_neto_socios * 100).round(2)
 
 # Mostramos la tabla
 df_rend_socios = pd.DataFrame({
     "Capital Neto USD": capital_neto_socios.round(2),
-    "Participación %": pd.to_numeric(participacion * 100, errors="coerce").round(2),
+    "Participación %": (participacion * 100).round(2),
     "Ganancia Estimada USD": ganancia_socios.round(2),
     "Rendimiento %": rendimiento_pct_socios
 })
@@ -177,3 +176,72 @@ st.dataframe(df_rend_socios, use_container_width=True)
 # Gráfico de pastel
 fig_socios = px.pie(df_rend_socios, values="Capital Neto USD", names=df_rend_socios.index, title="Participación en el Fondo")
 st.plotly_chart(fig_socios, use_container_width=True)
+
+# === FORMULARIO: Movimiento de Capital ===
+st.subheader("💰 Movimientos de Capital (Socios)")
+with st.form("form_aporte"):
+    col1, col2, col3, col4 = st.columns(4)
+    socio   = col1.text_input("Socio")
+    cedula  = col2.text_input("Cédula/ID")
+    tipo    = col3.selectbox("Tipo", ["Aporte", "Retiro"])
+    monto   = col4.number_input("Monto USD", step=100.0)
+    fecha   = st.date_input("Fecha", value=datetime.today())
+    if st.form_submit_button("Guardar"):
+        nuevo_idx = len(st.session_state.aportaciones)
+        nueva_fila = {
+            "idx": nuevo_idx,
+            "Fondo": fondo,
+            "Socio": socio,
+            "Cedula": cedula,
+            "Fecha": fecha.strftime("%Y-%m-%d"),
+            "Tipo": tipo,
+            "Monto": monto
+        }
+        st.session_state.aportaciones = pd.concat([st.session_state.aportaciones, pd.DataFrame([nueva_fila])], ignore_index=True)
+        st.session_state.aportaciones.to_csv(APORTES_FILE, index=False)
+        st.success("Movimiento registrado ✔️")
+        st.rerun()
+
+# === FORMULARIO: Nueva Operación ===
+st.subheader("➕ Registrar Nueva Operación")
+with st.form("form_op"):
+    col1, col2, col3 = st.columns(3)
+    fecha     = col1.date_input("Fecha de la Operación", value=datetime.today())
+    moneda    = col2.text_input("Moneda (ej. BTC)")
+    estrategia= col3.selectbox("Estrategia", ["spot", "futuros", "scalping", "swing"])
+
+    col4, col5, col6 = st.columns(3)
+    broker     = col4.text_input("Broker / Exchange")
+    valor_pos  = col5.number_input("Valor de la Posición", step=10.0)
+    comisiones = col6.number_input("Comisiones", step=1.0)
+
+    col7, col8, col9 = st.columns(3)
+    tp_pct     = col7.number_input("TP %", step=0.1)
+    sl_pct     = col8.number_input("SL %", step=0.1)
+    resultado  = col9.selectbox("Resultado", ["Abierta", "Ganadora", "Perdedora"])
+
+    tp_usd = valor_pos * tp_pct / 100
+    sl_usd = valor_pos * sl_pct / 100
+
+    if st.form_submit_button("Registrar Operación"):
+        nuevo_idx = len(st.session_state.ops)
+        nueva_op = {
+            "idx": nuevo_idx,
+            "ID": f"{usuario.upper()}-{nuevo_idx}",
+            "Fondo": fondo,
+            "Fecha": fecha.strftime("%Y-%m-%d"),
+            "Moneda": moneda,
+            "Estrategia": estrategia,
+            "Broker": broker,
+            "Valor_Pos": valor_pos,
+            "TP_%": tp_pct,
+            "SL_%": sl_pct,
+            "Comisiones": comisiones,
+            "TP_usd": tp_usd,
+            "SL_usd": sl_usd,
+            "Resultado": resultado
+        }
+        st.session_state.ops = pd.concat([st.session_state.ops, pd.DataFrame([nueva_op])], ignore_index=True)
+        st.session_state.ops.to_csv(OPERACIONES_FILE, index=False)
+        st.success("Operación registrada ✔️")
+        st.rerun()
