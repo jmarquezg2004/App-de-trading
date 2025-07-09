@@ -164,7 +164,9 @@ ganancia_socios = participacion * ganancia_total
 ganancia_socios = pd.to_numeric(ganancia_socios, errors="coerce").fillna(0)
 capital_neto_socios = pd.to_numeric(capital_neto_socios, errors="coerce").replace(0, pd.NA)
 
-rendimiento_pct_socios = ((ganancia_socios / capital_neto_socios) * 100).round(2)
+ganancia_socios = pd.to_numeric(ganancia_socios, errors="coerce")
+capital_neto_socios = pd.to_numeric(capital_neto_socios, errors="coerce").replace(0, pd.NA)
+rendimiento_pct_socios = ((ganancia_socios / capital_neto_socios) * 100).round(2).fillna(0)
 rendimiento_pct_socios = rendimiento_pct_socios.fillna(0)
 
 # Mostramos la tabla
