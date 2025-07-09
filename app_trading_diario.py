@@ -165,4 +165,28 @@ if not ops_df.empty:
     idx_op = col1.number_input("Fila op a editar/eliminar",min_value=0,max_value=int(ops_df["idx"].max()),step=1)
     if col1.button("Eliminar op"):
         st.session_state.ops = st.session_state.ops[st.session_state.ops["idx"]!=idx_op]
-        st.success("Operación eliminada ✔
+        st.success("Operación eliminada ✔️")
+        st.rerun()
+
+    if col2.button("Editar op"):
+        row = st.session_state.ops.loc[st.session_state.ops["idx"]==idx_op].iloc[0]
+        with st.form("edit_op"):
+            moneda_e = st.text_input("Moneda", value=row.Moneda)
+            est_e = st.selectbox("Estrategia", ["spot","futuros","staking","holding","ICO","pool_liquidez","farming"], index=["spot","futuros","staking","holding","ICO","pool_liquidez","farming"].index(row.Estrategia))
+            broker_e = st.text_input("Broker", value=row.Broker)
+            val_e = st.number_input("Valor Pos USD", value=float(row.Valor_Pos))
+            tp_pct_e = st.number_input("TP %", value=float(row["TP_%"]))
+            sl_pct_e = st.number_input("SL %", value=float(row["SL_%"]))
+            com_e = st.number_input("Comisiones", value=float(row.Comisiones))
+            res_e = st.selectbox("Resultado", ["Abierta","Ganadora","Perdedora"], index=["Abierta","Ganadora","Perdedora"].index(row.Resultado))
+            if st.form_submit_button("Actualizar"):
+                tp_usd_e = val_e*tp_pct_e/100 - com_e
+                sl_usd_e = val_e*sl_pct_e/100 + com_e
+                st.session_state.ops.loc[st.session_state.ops["idx"]==idx_op, ["Moneda","Estrategia","Broker","Valor_Pos","TP_%","SL_%","Comisiones","TP_usd","SL_usd","Resultado"]] = [moneda_e, est_e, broker_e, val_e, tp_pct_e, sl_pct_e, com_e, tp_usd_e, sl_usd_e, res_e]
+                st.success("Operación actualizada ✔️")
+                st.rerun()
+else:
+    st.info("Sin operaciones registradas para este fondo")
+
+# -------------------------------------------------
+# (Aquí seguiría el bloque de KPIs, rendimiento por socio y gráfica…)
