@@ -194,4 +194,3 @@ if rol == "admin":
             st.rerun()
     st.markdown("---")
 
-
