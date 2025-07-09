@@ -3,17 +3,17 @@ import pandas as pd
 import plotly.express as px
 from datetime import datetime
 
-# ------------------ CONFIG BASICS ------------------ #
+# ------------------ CONFIG ------------------ #
 st.set_page_config(page_title="Diario de Trading", layout="wide")
 
-# ------------------ USER DEMO ------------------ #
+# ------------------ DEMO USERS ------------------ #
 USUARIOS = {
     "admin": {"pwd": "admin123", "fondo": "Arkez Invest", "rol": "admin"},
     "juan": {"pwd": "juan123", "fondo": "Cripto Alpha", "rol": "lector"},
     "maria": {"pwd": "maria123", "fondo": "Arkez Invest", "rol": "lector"},
 }
 
-# ------------------ INIT SESSION ------------------ #
+# ------------------ SESSION INIT ------------------ #
 
 def init_state():
     defaults = {
@@ -88,9 +88,9 @@ if rol == "admin":
         ced = c2.text_input("Cédula/ID")
         tipo = c3.selectbox("Tipo", ["Aporte", "Retiro"])
         monto = c4.number_input("Monto USD", step=0.01)
-        fecha = st.date_input("Fecha", datetime.today())
+        fecha_mov = st.date_input("Fecha", datetime.today())
         if st.form_submit_button("Guardar"):
-            row = {"Fondo": fondo, "Socio": socio, "Cedula": ced, "Fecha": fecha, "Tipo": tipo, "Monto": monto}
+            row = {"Fondo": fondo, "Socio": socio, "Cedula": ced, "Fecha": fecha_mov, "Tipo": tipo, "Monto": monto}
             st.session_state.aportaciones = pd.concat([st.session_state.aportaciones, pd.DataFrame([row])], ignore_index=True)
             st.success("Movimiento registrado")
             st.rerun()
@@ -120,7 +120,7 @@ if rol == "admin":
         st.markdown(f"TP ≈ **${tp_usd:,.2f}** | SL ≈ **${sl_usd:,.2f}**")
         if st.form_submit_button("Guardar Operación"):
             op_id = len(st.session_state.ops) + 1
-            row = {
+            row_op = {
                 "ID": op_id,
                 "Fondo": fondo,
                 "Fecha": pd.to_datetime(f_op),
@@ -134,12 +134,12 @@ if rol == "admin":
                 "SL_usd": sl_usd,
                 "Resultado": res,
             }
-            st.session_state.ops = pd.concat([st.session_state.ops, pd.DataFrame([row])], ignore_index=True)
+            st.session_state.ops = pd.concat([st.session_state.ops, pd.DataFrame([row_op])], ignore_index=True)
             st.success("Operación guardada")
             st.rerun()
     st.markdown("---")
 
-# ----------- Actualizar operaciones abiertas ------------ #
+# ======== Actualizar operaciones abiertas ======== #
 if rol == "admin":
     abiertas = st.session_state.ops.query("Fondo==@fondo and Resultado=='Abierta'")
     if not abiertas.empty:
@@ -167,7 +167,5 @@ else:
 
     mask = (
         (ops_fondo["Fecha"] >= pd.to_datetime(desde))
-        & (ops_fondo["Fecha"] <= pd.to_datetime(hasta))
-        & (ops_fondo["Broker"].isin(bro_sel))
-        & (ops_fondo["Estrategia"].
+        & (ops_fondo["
 
