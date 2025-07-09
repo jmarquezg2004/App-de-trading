@@ -11,9 +11,16 @@ st.set_page_config(page_title="Diario de Trading", layout="wide")
 USUARIOS = {
     "admin": {"pwd": "admin123", "fondo": "Arkez Invest", "rol": "admin"},
     "juan":  {"pwd": "juan123",  "fondo": "Cripto Alpha", "rol": "lector"},
-    "maria": {"pwd": "maria123", "fondo": "Arkez Invest", "rol": "lector"},
+    "Marcos": {"pwd": "marcos123", "fondo": "Arkez Invest", "rol": "lector"},
+    "Marcos": {"pwd": "marcos123", "fondo": "Shalom", "rol": "lector"},
+    "German": {"pwd": "german123", "fondo": "Arkez Invest", "rol": "lector"},
+    "German": {"pwd": "german123", "fondo": "Shalom", "rol": "lector"},
+    "Guillermo": {"pwd": "guillermo123", "fondo": "Arkez Invest", "rol": "lector"},
+    "Guillermo": {"pwd": "guillermo123", "fondo": "Shalom", "rol": "lector"},
+    "Alvaro": {"pwd": "alvaro123", "fondo": "Arkez Invest", "rol": "lector"},
+    "Alvaro": {"pwd": "alvaro123", "fondo": "Shalom", "rol": "lector"},
 }
-DEFAULT_FONDOS = ["Arkez Invest", "Cripto Alpha"]
+DEFAULT_FONDOS = ["Arkez Invest", "Cripto Alpha", "Shalom"]
 
 # -------------------------------------------------
 # INIT SESSION STATE
