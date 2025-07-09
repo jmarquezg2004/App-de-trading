@@ -148,13 +148,44 @@ filtered_ops = ops_fondo[mask]
 st.dataframe(filtered_ops.sort_values("Fecha", ascending=False), use_container_width=True)
 
 # ------------------ RESUMEN DEL FONDO --------------- #
-aport_fondo = st.session_state.aportaciones.query("Fondo==@fondo")
-cap_in  = aport_fondo.query("Tipo=='Aporte'")["Monto"].sum()
-cap_out = aport_fondo.query("Tipo=='Retiro'")["Monto"].sum()
-capital_neto = cap_in - cap_out
+equity_section = st.container()
+with equity_section:
+    st.subheader("📊 Resumen del Fondo")
 
-filtered_ops = filtered_ops.copy()
-filtered_ops["PnL"] = 0.0
-filtered_ops.loc[filtered_ops["Resultado"]=="Ganadora","PnL"] = filtered_ops["TP_usd"]
-filtered_ops.loc[filtered_ops["
+    aport_fondo = st.session_state.aportaciones.query("Fondo==@fondo")
+    cap_in  = aport_fondo.query("Tipo=='Aporte'")["Monto"].sum()
+    cap_out = aport_fondo.query("Tipo=='Retiro'")["Monto"].sum()
+    capital_neto = cap_in - cap_out
 
+    filtered_ops = filtered_ops.copy()
+    filtered_ops["PnL"] = 0.0
+    filtered_ops.loc[filtered_ops["Resultado"] == "Ganadora", "PnL"] = filtered_ops["TP_usd"]
+    filtered_ops.loc[filtered_ops["Resultado"] == "Perdedora", "PnL"] = -filtered_ops["SL_usd"]
+
+    gan_perd = filtered_ops.query("Resultado != 'Abierta'")
+    ganancia_total = gan_perd["PnL"].sum()
+    total_final = capital_neto + ganancia_total
+    rendimiento_pct = ((total_final - capital_neto) / capital_neto * 100) if capital_neto else 0
+
+    c1, c2, c3, c4 = st.columns(4)
+    c1.metric("Capital Neto (USD)", f"${capital_neto:,.2f}")
+    c2.metric("G/P Acumulado", f"${ganancia_total:,.2f}")
+    c3.metric("Total USD", f"${total_final:,.2f}")
+    c4.metric("Rendimiento %", f"{rendimiento_pct:.2f}%")
+
+    st.markdown("### 📄 Rendimiento por Socio")
+    if not aport_fondo.empty and capital_neto > 0:
+        aportes_socios = aport_fondo.groupby("Socio")["Monto"].sum().reset_index()
+        aportes_socios["% Participación"] = aportes_socios["Monto"] / capital_neto * 100
+        aportes_socios["P/L Asignado"] = aportes_socios["Monto"] / capital_neto * ganancia_total
+        aportes_socios["Retorno %"] = (aportes_socios["P/L Asignado"] / aportes_socios["Monto"]) * 100
+        st.dataframe(aportes_socios, use_container_width=True)
+
+    st.markdown("#### 📈 Evolución del Fondo")
+    if not gan_perd.empty:
+        gan_perd = gan_perd.sort_values("Fecha")
+        gan_perd["Total_Acumulado"] = capital_neto + gan_perd["PnL"].cumsum()
+        fig = px.line(gan_perd, x="Fecha", y="Total_Acumulado", title="Capital Acumulado", markers=True)
+        st.plotly_chart(fig, use_container_width=True)
+    else:
+        st.info("No hay operaciones cerradas para graficar.")
