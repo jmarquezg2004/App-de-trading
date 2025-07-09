@@ -189,5 +189,5 @@ filtered = ops_fondo[mask].copy()
 
 # ------------------------- TABLA DETALLADA ------------------------- #
 st.subheader("📄 Operaciones Filtradas")
-st.dataframe(filtered, use
+st.dataframe(filtered, use_container_width=True)
 
