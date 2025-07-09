@@ -3,7 +3,6 @@ import pandas as pd
 import plotly.express as px
 from datetime import datetime
 
-# ------------------ CONFIG ------------------ #
 st.set_page_config(page_title="Diario de Trading", layout="wide")
 
 # ------------------ DEMO USERS ------------------ #
@@ -14,21 +13,16 @@ USUARIOS = {
 }
 
 # ------------------ SESSION INIT ------------------ #
+DEFAULT_FONDOS = ["Arkez Invest", "Cripto Alpha"]
 
-def init_state():
-    defaults = {
-        "logged_in": False,
-        "usuario": None,
-        "rol": None,
-        "fondo": "Arkez Invest",
-        "fondos": ["Arkez Invest", "Cripto Alpha"],
-        "aportaciones": pd.DataFrame(columns=["Fondo", "Socio", "Cedula", "Fecha", "Tipo", "Monto"]),
-        "ops": pd.DataFrame(columns=["ID", "Fondo", "Fecha", "Moneda", "Estrategia", "Broker", "Valor_Pos", "TP_%", "SL_%", "TP_usd", "SL_usd", "Resultado"]),
-    }
-    for k, v in defaults.items():
-        st.session_state.setdefault(k, v)
-
-init_state()
+if "logged_in" not in st.session_state:
+    st.session_state.logged_in = False
+    st.session_state.usuario = None
+    st.session_state.rol = None
+    st.session_state.fondo = DEFAULT_FONDOS[0]
+    st.session_state.fondos = DEFAULT_FONDOS.copy()
+    st.session_state.aportaciones = pd.DataFrame(columns=["Fondo", "Socio", "Cedula", "Fecha", "Tipo", "Monto"])
+    st.session_state.ops = pd.DataFrame(columns=["ID", "Fondo", "Fecha", "Moneda", "Estrategia", "Broker", "Valor_Pos", "TP_%", "SL_%", "TP_usd", "SL_usd", "Resultado"])
 
 # ------------------ LOGIN ------------------ #
 
@@ -38,13 +32,11 @@ def login_ui():
     p = st.sidebar.text_input("Contraseña", type="password")
     if st.sidebar.button("Entrar"):
         if u in USUARIOS and USUARIOS[u]["pwd"] == p:
-            st.session_state.update({
-                "logged_in": True,
-                "usuario": u,
-                "rol": USUARIOS[u]["rol"],
-                "fondo": USUARIOS[u]["fondo"],
-            })
-            st.rerun()
+            st.session_state.logged_in = True
+            st.session_state.usuario = u
+            st.session_state.rol = USUARIOS[u]["rol"]
+            st.session_state.fondo = USUARIOS[u]["fondo"]
+            st.experimental_rerun()
         else:
             st.sidebar.error("Credenciales incorrectas ❌")
             st.stop()
@@ -64,13 +56,13 @@ if rol == "admin":
     sel = st.sidebar.selectbox("Selecciona Fondo", st.session_state.fondos, index=st.session_state.fondos.index(fondo))
     if sel != fondo:
         st.session_state.fondo = sel
-        st.rerun()
+        st.experimental_rerun()
     nuevo = st.sidebar.text_input("Crear nuevo fondo")
     if st.sidebar.button("Agregar Fondo") and nuevo.strip():
         if nuevo not in st.session_state.fondos:
             st.session_state.fondos.append(nuevo)
             st.session_state.fondo = nuevo
-            st.rerun()
+            st.experimental_rerun()
         else:
             st.sidebar.warning("Ese fondo ya existe")
 
@@ -79,7 +71,7 @@ st.title("📈 Diario & Gestor de Fondos de Inversión")
 st.markdown(f"**👤 {usuario}** — **Fondo:** {fondo}")
 st.markdown("---")
 
-# ==================== APORTES / RETIROS ==================== #
+# ===== APORTES / RETIROS ===== #
 if rol == "admin":
     st.subheader("💰 Movimientos de Capital (Socios)")
     with st.form("mov_cap"):
@@ -93,14 +85,14 @@ if rol == "admin":
             row = {"Fondo": fondo, "Socio": socio, "Cedula": ced, "Fecha": fecha_mov, "Tipo": tipo, "Monto": monto}
             st.session_state.aportaciones = pd.concat([st.session_state.aportaciones, pd.DataFrame([row])], ignore_index=True)
             st.success("Movimiento registrado")
-            st.rerun()
+            st.experimental_rerun()
     st.dataframe(
-        st.session_state.aportaciones.query("Fondo==@fondo").sort_values("Fecha", ascending=False),
+        st.session_state.aportaciones[st.session_state.aportaciones["Fondo"] == fondo].sort_values("Fecha", ascending=False),
         use_container_width=True,
     )
     st.markdown("---")
 
-# ==================== REGISTRO OPERACIONES =================== #
+# ===== REGISTRO OPERACIONES ===== #
 if rol == "admin":
     st.subheader("➕ Registrar Nueva Operación")
     with st.form("nueva_op"):
@@ -136,10 +128,10 @@ if rol == "admin":
             }
             st.session_state.ops = pd.concat([st.session_state.ops, pd.DataFrame([row_op])], ignore_index=True)
             st.success("Operación guardada")
-            st.rerun()
+            st.experimental_rerun()
     st.markdown("---")
 
-# ======== Actualizar operaciones abiertas ======== #
+# ===== Cerrar operaciones abiertas ===== #
 if rol == "admin":
     abiertas = st.session_state.ops.query("Fondo==@fondo and Resultado=='Abierta'")
     if not abiertas.empty:
@@ -147,15 +139,14 @@ if rol == "admin":
         sel_id = st.selectbox("ID de operación", abiertas["ID"].tolist())
         nuevo_res = st.radio("Marcar como", ["Ganadora", "Perdedora"], horizontal=True)
         if st.button("Actualizar Resultado"):
-            idx = st.session_state.ops.index[st.session_state.ops["ID"] == sel_id][0]
-            st.session_state.ops.at[idx, "Resultado"] = nuevo_res
+            st.session_state.ops.loc[st.session_state.ops["ID"] == sel_id, "Resultado"] = nuevo_res
             st.success("Operación actualizada")
-            st.rerun()
+            st.experimental_rerun()
     st.markdown("---")
 
-# ==================== FILTROS & TABLA ======================= #
+# ===== FILTROS & TABLA ===== #
 st.subheader("🔍 Operaciones")
-ops_fondo = st.session_state.ops.query("Fondo==@fondo")
+ops_fondo = st.session_state.ops[st.session_state.ops["Fondo"] == fondo]
 if ops_fondo.empty:
     st.info("Sin operaciones para este fondo")
 else:
@@ -167,5 +158,9 @@ else:
 
     mask = (
         (ops_fondo["Fecha"] >= pd.to_datetime(desde))
-        & (ops_fondo["
-
+        & (ops_fondo["Fecha"] <= pd.to_datetime(hasta))
+        & (ops_fondo["Broker"].isin(bro_sel))
+        & (ops_fondo["Estrategia"].isin(est_sel))
+    )
+    filt = ops_fondo[mask]
+    st.data
