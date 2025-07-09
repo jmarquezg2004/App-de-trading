@@ -161,7 +161,8 @@ ganancia_total = gan_perd["PnL"].sum()
 
 # Ganancia estimada para cada socio
 ganancia_socios = participacion * ganancia_total
-rendimiento_pct_socios = (ganancia_socios.div(capital_neto_socios.replace(0, pd.NA)) * 100).round(2)
+capital_neto_socios = capital_neto_socios.astype(float).replace(0, pd.NA)
+rendimiento_pct_socios = (ganancia_socios / capital_neto_socios * 100).round(2)
 
 # Mostramos la tabla
 df_rend_socios = pd.DataFrame({
