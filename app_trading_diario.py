@@ -15,18 +15,24 @@ USUARIOS = {
 }
 
 # ------------------------- ESTADO DE SESIÓN ----------------------- #
-for key, default in {
-    "logged_in": False,
-    "usuario_actual": None,
-    "rol": None,
-    "fondo_actual": "",
-}.items():
-    st.session_state.setdefault(key, default)
+def init_state():
+    defaults = {
+        "logged_in": False,
+        "usuario_actual": None,
+        "rol": None,
+        "fondo_actual": "",
+        "records": pd.DataFrame(),      # operaciones
+        "aportaciones": pd.DataFrame(),  # movimientos de capital (aportes / retiros)
+        "fondos": ["Arkez Invest", "Cripto Alpha"],
+    }
+    for k, v in defaults.items():
+        st.session_state.setdefault(k, v)
+
+init_state()
 
 # ------------------------- AUTENTICACIÓN ------------------------- #
 
 def login_page():
-    """Formulario de acceso."""
     st.sidebar.title("🔒 Acceso Privado")
     user = st.sidebar.text_input("Usuario")
     pwd = st.sidebar.text_input("Contraseña", type="password")
@@ -38,7 +44,7 @@ def login_page():
                 "rol": USUARIOS[user]["rol"],
                 "fondo_actual": USUARIOS[user]["fondo"],
             })
-            st.rerun()  # <— reemplaza experimental_rerun
+            st.rerun()
         else:
             st.sidebar.error("Credenciales incorrectas ❌")
             st.stop()
@@ -52,138 +58,136 @@ usuario = st.session_state.usuario_actual
 rol = st.session_state.rol
 nombre_fondo = st.session_state.fondo_actual
 
-# --------------------- BASE DE DATOS EN MEMORIA ------------------- #
-COLUMNS = [
-    "Fondo",
-    "Fecha",
-    "Moneda",
-    "Estrategia",
-    "Broker",
-    "Capital_Inicial",
-    "Valor_Posicion",
-    "TP",
-    "SL",
-    "Resultado",
-]
+# -------------------- ADMIN: GESTIÓN DE FONDOS -------------------- #
+if rol == "admin":
+    st.sidebar.subheader("🏦 Fondos")
+    fondo_sel = st.sidebar.selectbox("Selecciona Fondo", st.session_state.fondos, index=st.session_state.fondos.index(nombre_fondo))
+    st.session_state.fondo_actual = fondo_sel
+    nombre_fondo = fondo_sel
 
-st.session_state.setdefault("records", pd.DataFrame(columns=COLUMNS))
-df = st.session_state.records
+    nuevo_fondo = st.sidebar.text_input("Crear nuevo fondo")
+    if st.sidebar.button("Agregar Fondo") and nuevo_fondo.strip():
+        if nuevo_fondo not in st.session_state.fondos:
+            st.session_state.fondos.append(nuevo_fondo)
+            st.session_state.fondo_actual = nuevo_fondo
+            st.rerun()
+        else:
+            st.sidebar.warning("Ese fondo ya existe")
 
 # -------------------- ENCABEZADO & DATOS DEL FONDO --------------- #
 st.title("📈 Diario & Gestor de Fondos de Inversión")
-st.markdown(f"**👤 Usuario:** `{usuario}` — Fondo asignado: **{nombre_fondo}**")
+st.markdown(f"**👤 Usuario:** `{usuario}` &nbsp;—&nbsp; **Fondo actual:** **{nombre_fondo}**")
 
 st.markdown("---")
 
-# ---------------------- FORMULARIO DE REGISTRO -------------------- #
+# ------------------ ADMIN: APORTES / RETIROS SOCIOS -------------- #
 if rol == "admin":
-    st.subheader("➕ Registrar Nueva Posición")
+    st.subheader("💰 Movimientos de Capital (Socios)")
+    AP_COLS = ["Fondo", "Socio", "Cedula", "Fecha", "Tipo", "Monto"]
+    if st.session_state.aportaciones.empty:
+        st.session_state.aportaciones = pd.DataFrame(columns=AP_COLS)
 
-    with st.form("registro_form"):
+    with st.form("aportes_form"):
+        c1, c2, c3, c4 = st.columns(4)
+        with c1:
+            socio = st.text_input("Nombre Socio")
+        with c2:
+            cedula = st.text_input("Cédula / ID")
+        with c3:
+            tipo = st.selectbox("Tipo", ["Aporte", "Retiro"])
+        with c4:
+            monto = st.number_input("Monto (USD)", step=0.01)
+        fecha_apo = st.date_input("Fecha", datetime.today())
+        if st.form_submit_button("Guardar Movimiento"):
+            mov = {"Fondo": nombre_fondo, "Socio": socio, "Cedula": cedula, "Fecha": fecha_apo, "Tipo": tipo, "Monto": monto}
+            st.session_state.aportaciones = pd.concat([st.session_state.aportaciones, pd.DataFrame([mov])], ignore_index=True)
+            st.success("Movimiento guardado ✔️")
+            st.rerun()
+
+    mov_fondo = st.session_state.aportaciones[st.session_state.aportaciones["Fondo"] == nombre_fondo]
+    st.dataframe(mov_fondo.sort_values("Fecha", ascending=False), use_container_width=True)
+    st.markdown("---")
+
+# ---------------------- FORMULARIO DE OPERACIÓN ------------------- #
+if rol == "admin":
+    st.subheader("➕ Registrar Nueva Operación")
+
+    POS_COLS = [
+        "Fondo", "Fecha", "Moneda", "Estrategia", "Broker", "Valor_Posicion", "TP_pct", "SL_pct", "TP_usd", "SL_usd", "Resultado"
+    ]
+    if st.session_state.records.empty:
+        st.session_state.records = pd.DataFrame(columns=POS_COLS)
+
+    with st.form("registro_op"):
         c1, c2, c3 = st.columns(3)
         with c1:
-            fecha = st.date_input("Fecha", datetime.today())
+            fecha_op = st.date_input("Fecha", datetime.today(), key="op_fecha")
         with c2:
-            moneda = st.text_input("Moneda / Activo", "Bitcoin")
+            moneda = st.text_input("Moneda / Activo", "Bitcoin", key="op_moneda")
         with c3:
-            estrategia = st.selectbox(
-                "Estrategia",
-                ["spot", "futuros", "staking", "holding", "ICO", "pool_liquidez", "farming"],
-            )
-
-        c4, c5, c6 = st.columns(3)
+            estrategia = st.selectbox("Estrategia", ["spot", "futuros", "staking", "holding", "ICO", "pool_liquidez", "farming"], key="op_est")
+        c4, c5 = st.columns(2)
         with c4:
-            broker = st.text_input("Broker / Exchange")
+            broker = st.text_input("Broker / Exchange", key="op_broker")
         with c5:
-            capital = st.number_input("Capital Inicial (USD)", min_value=0.0, step=0.01)
+            valor_pos = st.number_input("Valor Posición (USD)", min_value=0.0, step=0.01, key="op_valor")
+        c6, c7, c8 = st.columns(3)
         with c6:
-            valor = st.number_input("Valor Posición (USD)", min_value=0.0, step=0.01)
-
-        c7, c8, c9 = st.columns(3)
+            tp_pct = st.number_input("TP %", min_value=0.0, step=0.1, key="op_tp_pct")
         with c7:
-            tp = st.number_input("Take Profit (USD)", min_value=0.0, step=0.01)
+            sl_pct = st.number_input("SL %", min_value=0.0, step=0.1, key="op_sl_pct")
         with c8:
-            sl = st.number_input("Stop Loss (USD)", min_value=0.0, step=0.01)
-        with c9:
-            resultado = st.selectbox("Resultado", ["Abierta", "Ganadora", "Perdedora"])
+            resultado = st.selectbox("Resultado", ["Abierta", "Ganadora", "Perdedora"], key="op_res")
 
-        if st.form_submit_button("Guardar Registro"):
-            nuevo = {
+        # Calculados
+        tp_usd_calc = valor_pos * tp_pct / 100
+        sl_usd_calc = valor_pos * sl_pct / 100
+        st.markdown(f"**TP USD estimado:** `${tp_usd_calc:,.2f}` &nbsp;&nbsp;|&nbsp;&nbsp; **SL USD estimado:** `${sl_usd_calc:,.2f}`")
+
+        if st.form_submit_button("Guardar Operación"):
+            op = {
                 "Fondo": nombre_fondo,
-                "Fecha": pd.to_datetime(fecha),
+                "Fecha": pd.to_datetime(fecha_op),
                 "Moneda": moneda,
                 "Estrategia": estrategia,
                 "Broker": broker,
-                "Capital_Inicial": capital,
-                "Valor_Posicion": valor,
-                "TP": tp,
-                "SL": sl,
+                "Valor_Posicion": valor_pos,
+                "TP_pct": tp_pct,
+                "SL_pct": sl_pct,
+                "TP_usd": tp_usd_calc,
+                "SL_usd": sl_usd_calc,
                 "Resultado": resultado,
             }
-            st.session_state.records = pd.concat([st.session_state.records, pd.DataFrame([nuevo])], ignore_index=True)
-            st.success("Registro añadido ✔️")
-            st.rerun()  # <— reemplaza experimental_rerun
-
+            st.session_state.records = pd.concat([st.session_state.records, pd.DataFrame([op])], ignore_index=True)
+            st.success("Operación guardada ✔️")
+            st.rerun()
     st.markdown("---")
 
 # --------------------------- FILTROS ------------------------------ #
-st.subheader("🔍 Filtros")
-
-filtros_df = df[df["Fondo"] == nombre_fondo]
-if filtros_df.empty:
-    st.info("Aún no hay registros de posiciones para este fondo.")
+st.subheader("🔍 Filtros de Operaciones")
+ops_fondo = st.session_state.records[st.session_state.records["Fondo"] == nombre_fondo]
+if ops_fondo.empty:
+    st.info("No hay operaciones registradas para este fondo.")
     st.stop()
 
 colf1, colf2, colf3 = st.columns(3)
 with colf1:
-    fecha_desde = st.date_input("Desde", filtros_df["Fecha"].min().date())
-    fecha_hasta = st.date_input("Hasta", filtros_df["Fecha"].max().date())
+    fecha_desde = st.date_input("Desde", ops_fondo["Fecha"].min().date(), key="flt_desde")
+    fecha_hasta = st.date_input("Hasta", ops_fondo["Fecha"].max().date(), key="flt_hasta")
 with colf2:
-    brokers_sel = st.multiselect("Broker / Exchange", sorted(filtros_df["Broker"].dropna().unique()), default=list(filtros_df["Broker"].dropna().unique()))
+    brokers_filt = st.multiselect("Broker", sorted(ops_fondo["Broker"].unique()), default=list(ops_fondo["Broker"].unique()), key="flt_broker")
 with colf3:
-    estr_sel = st.multiselect("Estrategia", sorted(filtros_df["Estrategia"].unique()), default=list(filtros_df["Estrategia"].unique()))
+    estr_filt = st.multiselect("Estrategia", sorted(ops_fondo["Estrategia"].unique()), default=list(ops_fondo["Estrategia"].unique()), key="flt_est")
 
 mask = (
-    (filtros_df["Fecha"] >= pd.to_datetime(fecha_desde)) &
-    (filtros_df["Fecha"] <= pd.to_datetime(fecha_hasta)) &
-    (filtros_df["Broker"].isin(brokers_sel)) &
-    (filtros_df["Estrategia"].isin(estr_sel))
+    (ops_fondo["Fecha"] >= pd.to_datetime(fecha_desde)) &
+    (ops_fondo["Fecha"] <= pd.to_datetime(fecha_hasta)) &
+    (ops_fondo["Broker"].isin(brokers_filt)) &
+    (ops_fondo["Estrategia"].isin(estr_filt))
 )
-filtered = filtros_df[mask].copy()
+filtered = ops_fondo[mask].copy()
 
 # ------------------------- TABLA DETALLADA ------------------------- #
-st.subheader("📄 Posiciones Filtradas")
-st.dataframe(filtered, use_container_width=True)
+st.subheader("📄 Operaciones Filtradas")
+st.dataframe(filtered, use
 
-# --------------------------- RESUMEN ------------------------------- #
-filtered["PnL"] = filtered["Valor_Posicion"] - filtered["Capital_Inicial"]
-cap_init_sum = filtered["Capital_Inicial"].sum()
-pnl_sum = filtered["PnL"].sum()
-
-total_usd = cap_init_sum + pnl_sum
-rend_pct = (pnl_sum / cap_init_sum * 100) if cap_init_sum else 0
-
-cA, cB, cC, cD = st.columns(4)
-cA.metric("Capital Inicial", f"${cap_init_sum:,.2f}")
-cB.metric("Ganancia / Pérdida", f"${pnl_sum:,.2f}")
-cC.metric("Total USD", f"${total_usd:,.2f}")
-cD.metric("Rend. Acum.", f"{rend_pct:.2f}%")
-
-# ------------------------ GRÁFICA DE FONDO ------------------------- #
-filtered.sort_values("Fecha", inplace=True)
-filtered["Equity_Diaria"] = filtered["PnL"].cumsum() + filtered["Capital_Inicial"].cumsum()
-fig = px.line(filtered, x="Fecha", y="Equity_Diaria", title="Evolución del Fondo")
-fig.update_layout(xaxis_title="", yaxis_title="Equity (USD)")
-st.plotly_chart(fig, use_container_width=True)
-
-# ------------------------- DESCARGA CSV ---------------------------- #
-@st.cache_data
-def convert_df(df_):
-    return df_.to_csv(index=False).encode("utf-8")
-
-csv = convert_df(filtered)
-b64 = base64.b64encode(csv).decode()
-st.markdown(f'<a href="data:file/csv;base64,{b64}" download="diario_trading.csv">📥 Descargar CSV</a>', unsafe_allow_html=True)
-
-# --------------------------- THANKS ------------------------------- #
-st.markdown("<br><hr style='border:1px solid #eee'><center><sub>Creado con ❤ usando Streamlit · 2025</sub></center>", unsafe_allow_html=True)
