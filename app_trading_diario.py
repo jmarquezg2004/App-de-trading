@@ -129,7 +129,7 @@ if rol == "admin":
             st.rerun()
 
 # -------------------------------------------------
-# TABLA OPERACIONES
+# TABLA OPERACIONES + FILTRO
 # -------------------------------------------------
 st.subheader("🔍 Operaciones")
 ops_fondo = st.session_state.ops.query("Fondo==@fondo")
@@ -158,12 +158,11 @@ st.subheader("📊 Resumen del Fondo")
 
 # Capital neto aportado
 aport_fondo = st.session_state.aportaciones.query("Fondo==@fondo")
-cap_in = aport_fondo.query("Tipo=='Aporte'")["Monto"].sum()
-cap_out= aport_fondo.query("Tipo=='Retiro'")["Monto"].sum()
+cap_in  = aport_fondo.query("Tipo=='Aporte'")["Monto"].sum()
+cap_out = aport_fondo.query("Tipo=='Retiro'")["Monto"].sum()
 capital_neto = cap_in - cap_out
 
-# PnL neto
+# PnL neto
 filtered_ops = filtered_ops.copy()
 filtered_ops["PnL"] = 0.0
-filtered_ops.loc[filtered_ops["Resultado"]=="Ganadora","PnL"] = filtered_ops["TP_usd"]
-filtered_ops.loc[filtered_ops["Resultado"]=="Perdedora","PnL"] = -filtered_ops[
+filtered_ops.loc[filtered_ops["Resultado"]=="Ganadora","PnL"]  = filtered_ops["
