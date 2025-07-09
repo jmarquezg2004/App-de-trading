@@ -52,7 +52,7 @@ if "init" not in st.session_state:
 # -------------------------------------------------
 
 def login_ui():
-    st.sidebar.title("\U0001F512 Acceso Privado")
+    st.sidebar.title("🔒 Acceso Privado")
     user = st.sidebar.text_input("Usuario")
     pwd  = st.sidebar.text_input("Contraseña", type="password")
     if st.sidebar.button("Entrar"):
@@ -83,7 +83,7 @@ fondo   = st.session_state.fondo
 # FONDOS (ADMIN)
 # -------------------------------------------------
 if rol == "admin":
-    st.sidebar.subheader("\U0001F3E6 Fondos")
+    st.sidebar.subheader("🏦 Fondos")
     sel = st.sidebar.selectbox("Selecciona Fondo", st.session_state.fondos, index=st.session_state.fondos.index(fondo))
     if sel != fondo:
         st.session_state.fondo = sel
@@ -100,22 +100,22 @@ if rol == "admin":
 # -------------------------------------------------
 # HEADER
 # -------------------------------------------------
-st.title("\U0001F4C8 Diario & Gestor de Fondos de Inversión")
-st.markdown(f"**\U0001F464 {usuario}** — **Fondo:** {fondo}")
+st.title("📈 Diario & Gestor de Fondos de Inversión")
+st.markdown(f"**👤 {usuario}** — **Fondo:** {fondo}")
 
 # Botones de descarga CSV
 st.sidebar.markdown("---")
 buf_ap = io.StringIO()
 st.session_state.aportaciones.to_csv(buf_ap, index=False)
-st.sidebar.download_button("\U0001F4C5 Descargar Aportaciones CSV", buf_ap.getvalue(), "aportaciones.csv", "text/csv")
+st.sidebar.download_button("📥 Descargar Aportaciones CSV", buf_ap.getvalue(), "aportaciones.csv", "text/csv")
 
 buf_op = io.StringIO()
 st.session_state.ops.to_csv(buf_op, index=False)
-st.sidebar.download_button("\U0001F4C5 Descargar Operaciones CSV", buf_op.getvalue(), "operaciones.csv", "text/csv")
+st.sidebar.download_button("📥 Descargar Operaciones CSV", buf_op.getvalue(), "operaciones.csv", "text/csv")
 
 # Botones de carga CSV
 st.sidebar.markdown("---")
-sub_ap = st.sidebar.file_uploader("\U0001F4C4 Cargar Aportaciones CSV", type="csv")
+sub_ap = st.sidebar.file_uploader("📤 Cargar Aportaciones CSV", type="csv")
 if sub_ap:
     df_ap = pd.read_csv(sub_ap)
     if set(df_ap.columns).issubset(set(st.session_state.aportaciones.columns)):
@@ -125,7 +125,7 @@ if sub_ap:
     else:
         st.sidebar.error("Columnas inválidas en Aportaciones")
 
-sub_op = st.sidebar.file_uploader("\U0001F4C4 Cargar Operaciones CSV", type="csv")
+sub_op = st.sidebar.file_uploader("📤 Cargar Operaciones CSV", type="csv")
 if sub_op:
     df_op = pd.read_csv(sub_op)
     if set(df_op.columns).issubset(set(st.session_state.ops.columns)):
@@ -135,39 +135,44 @@ if sub_op:
     else:
         st.sidebar.error("Columnas inválidas en Operaciones")
 
-# -------------------------------------------------
-# VISUALIZACIÓN DE RENDIMIENTO POR SOCIO
-# -------------------------------------------------
-st.subheader("\U0001F4CA Rendimiento por Socio")
-df_aportes = st.session_state.aportaciones.copy()
-df_ops = st.session_state.ops.copy()
+# === CÁLCULO DE RENDIMIENTO POR SOCIO ===
+st.subheader("👥 Rendimiento por Socio")
+df_aportes = st.session_state.aportaciones.query("Fondo == @fondo")
 
-# Solo del fondo actual
-df_aportes = df_aportes[df_aportes["Fondo"] == fondo]
-df_ops = df_ops[df_ops["Fondo"] == fondo]
+# Filtramos aportes y retiros por socio
+aportes = df_aportes[df_aportes["Tipo"] == "Aporte"].groupby("Socio")["Monto"].sum()
+retiros = df_aportes[df_aportes["Tipo"] == "Retiro"].groupby("Socio")["Monto"].sum()
 
-# Calcular capital neto por socio
-aportes = df_aportes.groupby("Socio").apply(lambda x: x.query("Tipo == 'Aporte'")["Monto"].sum()).rename("Aportes")
-retiros = df_aportes.groupby("Socio").apply(lambda x: x.query("Tipo == 'Retiro'")["Monto"].sum()).rename("Retiros")
-neto = pd.concat([aportes, retiros], axis=1).fillna(0)
-neto["Capital Neto"] = neto["Aportes"] - neto["Retiros"]
+# Capital neto por socio
+capital_neto_socios = (aportes - retiros).fillna(0)
 
-# Calcular G/P acumulado general
-df_ops = df_ops.copy()
-df_ops["PnL"] = 0.0
-df_ops.loc[df_ops["Resultado"] == "Ganadora", "PnL"] = df_ops["TP_usd"] - df_ops["Comisiones"]
-df_ops.loc[df_ops["Resultado"] == "Perdedora", "PnL"] = -df_ops["SL_usd"] - df_ops["Comisiones"]
-total_ganancia = df_ops.query("Resultado != 'Abierta'")["PnL"].sum()
+# Participación de cada socio en el fondo
+total_capital = capital_neto_socios.sum()
+participacion = capital_neto_socios / total_capital
 
-# Calcular proporción de ganancia por socio (según capital neto)
-total_neto = neto["Capital Neto"].sum()
-neto["% Participación"] = neto["Capital Neto"] / total_neto
-neto["G/P Asignado"] = neto["% Participación"] * total_ganancia
-neto["Total Final"] = neto["Capital Neto"] + neto["G/P Asignado"]
-neto["Rendimiento %"] = (neto["Total Final"] - neto["Capital Neto"]) / neto["Capital Neto"] * 100
+# Ganancia total del fondo
+ops_fondo = st.session_state.ops.query("Fondo == @fondo")
+ops_fondo = ops_fondo.copy()
+ops_fondo["PnL"] = 0.0
+ops_fondo.loc[ops_fondo["Resultado"] == "Ganadora", "PnL"] = ops_fondo["TP_usd"] - ops_fondo["Comisiones"]
+ops_fondo.loc[ops_fondo["Resultado"] == "Perdedora", "PnL"] = -ops_fondo["SL_usd"] - ops_fondo["Comisiones"]
+gan_perd = ops_fondo.query("Resultado != 'Abierta'")
+ganancia_total = gan_perd["PnL"].sum()
 
-st.dataframe(neto.reset_index()[["Socio", "Capital Neto", "% Participación", "G/P Asignado", "Total Final", "Rendimiento %"]], use_container_width=True)
+# Ganancia estimada para cada socio
+ganancia_socios = participacion * ganancia_total
+rendimiento_pct_socios = (ganancia_socios / capital_neto_socios * 100).round(2)
 
-fig = px.pie(neto.reset_index(), names="Socio", values="Total Final", title="Distribución del Fondo por Socio")
-st.plotly_chart(fig, use_container_width=True)
+# Mostramos la tabla
+df_rend_socios = pd.DataFrame({
+    "Capital Neto USD": capital_neto_socios.round(2),
+    "Participación %": (participacion * 100).round(2),
+    "Ganancia Estimada USD": ganancia_socios.round(2),
+    "Rendimiento %": rendimiento_pct_socios
+})
 
+st.dataframe(df_rend_socios, use_container_width=True)
+
+# Gráfico de pastel
+fig_socios = px.pie(df_rend_socios, values="Capital Neto USD", names=df_rend_socios.index, title="Participación en el Fondo")
+st.plotly_chart(fig_socios, use_container_width=True)
