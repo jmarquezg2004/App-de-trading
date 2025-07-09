@@ -167,7 +167,7 @@ rendimiento_pct_socios = (ganancia_socios / capital_neto_socios * 100).astype(fl
 # Mostramos la tabla
 df_rend_socios = pd.DataFrame({
     "Capital Neto USD": capital_neto_socios.round(2),
-    "Participación %": (participacion * 100).round(2),
+    "Participación %": pd.to_numeric(participacion * 100, errors="coerce").round(2),
     "Ganancia Estimada USD": ganancia_socios.round(2),
     "Rendimiento %": rendimiento_pct_socios
 })
