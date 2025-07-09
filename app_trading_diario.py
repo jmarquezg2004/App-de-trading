@@ -14,18 +14,20 @@ USUARIOS = {
     "maria": {"pwd": "maria123", "fondo": "Arkez Invest", "rol": "lector"},
 }
 
-# ------------------------- AUTENTICACIÓN ------------------------- #
-if "logged_in" not in st.session_state:
-    st.session_state.logged_in = False
-if "usuario_actual" not in st.session_state:
-    st.session_state.usuario_actual = None
-if "rol" not in st.session_state:
-    st.session_state.rol = None
-if "fondo_actual" not in st.session_state:
-    st.session_state.fondo_actual = ""
+# ------------------------- ESTADO DE SESIÓN ----------------------- #
+for key, default in {
+    "logged_in": False,
+    "usuario_actual": None,
+    "rol": None,
+    "fondo_actual": "",
+}.items():
+    if key not in st.session_state:
+        st.session_state[key] = default
 
+# ------------------------- AUTENTICACIÓN ------------------------- #
 
 def login_page():
+    """Formulario de acceso."""
     st.sidebar.title("🔒 Acceso Privado")
     user = st.sidebar.text_input("Usuario")
     pwd = st.sidebar.text_input("Contraseña", type="password")
@@ -38,9 +40,7 @@ def login_page():
             st.experimental_rerun()
         else:
             st.sidebar.error("Credenciales incorrectas ❌")
-            st.stop()
-    else:
-        st.stop()
+    st.stop()
 
 if not st.session_state.logged_in:
     login_page()
@@ -115,7 +115,7 @@ if rol == "admin":
             resultado = st.selectbox("Resultado", ["Abierta", "Ganadora", "Perdedora"])
 
         if st.form_submit_button("Guardar Registro"):
-            new = {
+            nuevo = {
                 "Fondo": nombre_fondo,
                 "Fecha": pd.to_datetime(fecha),
                 "Moneda": moneda,
@@ -128,11 +128,10 @@ if rol == "admin":
                 "Resultado": resultado,
             }
             st.session_state.records = pd.concat(
-                [st.session_state.records, pd.DataFrame([new])],
-                ignore_index=True,
+                [st.session_state.records, pd.DataFrame([nuevo])], ignore_index=True
             )
             st.success("Registro añadido ✔️")
-            st.experimental_rerun()  # Refresca la vista para mostrar el nuevo registro
+            st.experimental_rerun()
 
     st.markdown("---")
 
@@ -140,7 +139,6 @@ if rol == "admin":
 st.subheader("🔍 Filtros")
 
 filtros_df = df[df["Fondo"] == nombre_fondo]
-
 if filtros_df.empty:
     st.info("Aún no hay registros de posiciones para este fondo.")
     st.stop()
@@ -168,7 +166,6 @@ mask = (
     & (filtros_df["Broker"].isin(brokers_sel))
     & (filtros_df["Estrategia"].isin(estr_sel))
 )
-
 filtered = filtros_df[mask].copy()
 
 # ------------------------- TABLA DETALLADA ------------------------- #
@@ -191,9 +188,7 @@ cD.metric("Rend. Acum.", f"{rend_pct:.2f}%")
 
 # ------------------------ GRÁFICA DE FONDO ------------------------- #
 filtered.sort_values("Fecha", inplace=True)
-filtered["Equity_Diaria"] = (
-    filtered["PnL"].cumsum() + filtered["Capital_Inicial"].cumsum()
-)
+filtered["Equity_Diaria"] = filtered["PnL"].cumsum() + filtered["Capital_Inicial"].cumsum()
 fig = px.line(filtered, x="Fecha", y="Equity_Diaria", title="Evolución del Fondo")
 fig.update_layout(xaxis_title="", yaxis_title="Equity (USD)")
 st.plotly_chart(fig, use_container_width=True)
@@ -212,6 +207,6 @@ st.markdown(
 
 # --------------------------- THANKS ------------------------------- #
 st.markdown(
-    """<br><hr style='border:1px solid #eee'>
-<center><sub>Creado con ❤ usando Streamlit · 2025</sub></center>""",
-    unsafe
+    """<br><hr style='border:1px solid #eee'>\n<center><sub>Creado con ❤ usando Streamlit · 2025</sub></center>""",
+    unsafe_allow_html=True,
+)
