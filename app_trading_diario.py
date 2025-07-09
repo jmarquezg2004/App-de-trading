@@ -212,5 +212,6 @@ st.markdown(
 
 # --------------------------- THANKS ------------------------------- #
 st.markdown(
-    """<br><hr style='
-
+    """<br><hr style='border:1px solid #eee'>
+<center><sub>Creado con ❤ usando Streamlit · 2025</sub></center>""",
+    unsafe
