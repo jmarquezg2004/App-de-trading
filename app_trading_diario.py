@@ -160,9 +160,9 @@ gan_perd = ops_fondo.query("Resultado != 'Abierta'")
 ganancia_total = gan_perd["PnL"].sum()
 
 # Ganancia estimada para cada socio
-ganancia_socios = participacion * ganancia_total
+ganancia_socios = (participacion * ganancia_total).astype(float)
 capital_neto_socios = capital_neto_socios.astype(float).replace(0, pd.NA)
-rendimiento_pct_socios = (ganancia_socios / capital_neto_socios * 100).round(2)
+rendimiento_pct_socios = (ganancia_socios / capital_neto_socios * 100).astype(float).round(2)
 
 # Mostramos la tabla
 df_rend_socios = pd.DataFrame({
