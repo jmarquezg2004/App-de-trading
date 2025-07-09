@@ -188,5 +188,41 @@ if not ops_df.empty:
 else:
     st.info("Sin operaciones registradas para este fondo")
 
-# -------------------------------------------------
-# (Aquí seguiría el bloque de KPIs, rendimiento por socio y gráfica…)
+# =================================================
+# RESUMEN FINAL KPIs Y GRÁFICAS
+# =================================================
+if not ops_df.empty:
+    cerradas = ops_df[ops_df["Resultado"] != "Abierta"].copy()
+    cerradas["PnL"] = 0.0
+    cerradas.loc[cerradas["Resultado"] == "Ganadora", "PnL"] = cerradas["TP_usd"]
+    cerradas.loc[cerradas["Resultado"] == "Perdedora", "PnL"] = -cerradas["SL_usd"]
+
+    cap_aportes = aport_df.query("Tipo=='Aporte'")["Monto"].sum()
+    cap_retiros = aport_df.query("Tipo=='Retiro'")["Monto"].sum()
+    cap_neto    = cap_aportes - cap_retiros
+    total_gan   = cerradas["PnL"].sum()
+    total_final = cap_neto + total_gan
+    rend_pct    = (total_final - cap_neto) / cap_neto * 100 if cap_neto > 0 else 0
+
+    st.header("📊 KPIs del Fondo")
+    c1,c2,c3,c4 = st.columns(4)
+    c1.metric("Capital Neto", f"${cap_neto:,.2f}")
+    c2.metric("Gan/Perd", f"${total_gan:,.2f}")
+    c3.metric("Total Final", f"${total_final:,.2f}")
+    c4.metric("Rendimiento %", f"{rend_pct:.2f}%")
+
+    st.subheader("📈 Evolución del Capital")
+    if not cerradas.empty:
+        cerradas = cerradas.sort_values("Fecha")
+        cerradas["Total_Acc"] = cap_neto + cerradas["PnL"].cumsum()
+        fig = px.line(cerradas, x="Fecha", y="Total_Acc", title="Capital Acumulado", markers=True)
+        st.plotly_chart(fig, use_container_width=True)
+
+    st.subheader("💹 Rendimiento por Socio")
+    resumen_socios = aport_df.query("Tipo=='Aporte'").groupby("Socio")["Monto"].sum().reset_index()
+    resumen_socios["% Participación"] = resumen_socios["Monto"] / resumen_socios["Monto"].sum()
+    resumen_socios["$ Ganancia"] = resumen_socios["% Participación"] * total_gan
+    resumen_socios["% Rendimiento"] = resumen_socios["$ Ganancia"] / resumen_socios["Monto"] * 100
+    st.dataframe(resumen_socios, use_container_width=True)
+else:
+    st.warning("No hay datos suficientes para calcular KPIs o gráficas.")
