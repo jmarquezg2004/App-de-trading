@@ -9,6 +9,7 @@ CSV_APORTES = "aportes.csv"
 CSV_OPERACIONES = "operaciones.csv"
 
 # Inicializar archivos si no existen
+
 def init_csv():
     if not os.path.exists(CSV_APORTES):
         df = pd.DataFrame(columns=["Fondo", "Socio", "Cedula", "Fecha", "Tipo", "Monto"])
@@ -19,9 +20,17 @@ def init_csv():
 
 # Cargar datos
 @st.cache_data
+
 def load_csv_data():
     df_aportes = pd.read_csv(CSV_APORTES, parse_dates=["Fecha"])
     df_ops = pd.read_csv(CSV_OPERACIONES, parse_dates=["Fecha"])
+
+    # Verificar columnas necesarias
+    expected_cols_ops = ["ID", "Fondo", "Fecha", "Moneda", "Estrategia", "Broker", "Valor_Pos", "TP_%", "SL_%", "TP_usd", "SL_usd", "Comision", "Resultado"]
+    for col in expected_cols_ops:
+        if col not in df_ops.columns:
+            df_ops[col] = None
+
     return df_aportes, df_ops
 
 # Guardar datos
@@ -126,8 +135,22 @@ if rol == "admin":
 
         if st.form_submit_button("Guardar Operación"):
             new_id = df_ops["ID"].max() + 1 if not df_ops.empty else 1
-            row = [new_id, fondo, fecha_op, moneda, estrategia, broker, valor_pos, tp_pct, sl_pct, tp_usd, sl_usd, comision, resultado]
-            df_ops.loc[len(df_ops)] = row
+            row = pd.Series({
+                "ID": new_id,
+                "Fondo": fondo,
+                "Fecha": fecha_op,
+                "Moneda": moneda,
+                "Estrategia": estrategia,
+                "Broker": broker,
+                "Valor_Pos": valor_pos,
+                "TP_%": tp_pct,
+                "SL_%": sl_pct,
+                "TP_usd": tp_usd,
+                "SL_usd": sl_usd,
+                "Comision": comision,
+                "Resultado": resultado
+            })
+            df_ops = pd.concat([df_ops, row.to_frame().T], ignore_index=True)
             save_csv(df_aportes, df_ops)
             st.success("Operación guardada ✔")
             st.rerun()
@@ -180,14 +203,14 @@ df_socios["Capital Neto"] = df_socios["Aportes"] - df_socios["Retiros"]
 df_socios["Participación"] = df_socios["Capital Neto"] / capital_neto if capital_neto else 0
 df_socios["Ganancia"] = df_socios["Participación"] * ganancia_total
 
-# Asegurar que sean numéricos para evitar errores de redondeo
+# Asegurar tipos numéricos
 df_socios["Ganancia"] = pd.to_numeric(df_socios["Ganancia"], errors="coerce")
 df_socios["Capital Neto"] = pd.to_numeric(df_socios["Capital Neto"], errors="coerce")
 
-# Cálculo corregido del rendimiento
-df_socios["Rendimiento %"] = (
-    (df_socios["Ganancia"] / df_socios["Capital Neto"].replace(0, pd.NA)) * 100
-).round(2).fillna(0)
+# Cálculo del rendimiento
+try:
+    df_socios["Rendimiento %"] = ((df_socios["Ganancia"] / df_socios["Capital Neto"].replace(0, pd.NA)) * 100).round(2).fillna(0)
+except Exception:
+    df_socios["Rendimiento %"] = 0
 
 st.dataframe(df_socios.round(2), use_container_width=True)
-
