@@ -13,7 +13,7 @@ Una aplicación interactiva en Streamlit para gestionar operaciones de trading, 
 
 ## 🚀 Acceso a la app
 
-[![Open in Streamlit](https://static.streamlit.io/badges/streamlit_badge_black_white.svg)](https://app.streamlit.com/jmarquezg2004/App-de-trading/main/app_trading_diario.py)
+[![Open in Streamlit](https://static.streamlit.io/badges/streamlit_badge_black_white.svg)](https://app-de-trading-clypupuy2yocp6yavbkbnn.streamlit.app/)
 
 ## 🧰 Requisitos
 
