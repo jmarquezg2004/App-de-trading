@@ -1,25 +1,24 @@
-# 📊 App de Trading Diario — Arkez Invest
+# 📈 App de Trading Diario - Arkez Invest
 
-App desarrollada en **Python + Streamlit** para gestionar fondos de inversión privados. Permite registrar aportes, operaciones, calcular rendimientos por socio, exportar informes, y visualizar gráficas de evolución mensual.
+Una aplicación interactiva en Streamlit para gestionar operaciones de trading, aportes de capital y rendimiento mensual/anual por fondo de inversión.
 
----
+## ✅ Funcionalidades
 
-## 🚀 Funcionalidades
+- Registro de operaciones (Spot, Futuros, Holding, etc.)
+- Control de aportes y retiros por socio
+- Visualización de capital neto, ganancias, rendimiento
+- Filtros por mes y año
+- Exportación de informes a Excel y PDF
+- Acceso seguro por usuario con rol (admin o lector)
 
-- Registro seguro por usuario y fondo.
-- Control de aportes y retiros por socio.
-- Registro de operaciones (spot, futuros, staking, etc.).
-- Cálculo automático de ganancias, rendimientos y participaciones.
-- Gráficas interactivas con Plotly.
-- Filtro por mes y año.
-- Exportación a **Excel y PDF**.
-- Roles diferenciados: `admin` y `lector`.
+## 🚀 Acceso a la app
 
----
+[![Open in Streamlit](https://static.streamlit.io/badges/streamlit_badge_black_white.svg)](https://app.streamlit.com/jmarquezg2004/App-de-trading/main/app_trading_diario.py)
 
-## 🧪 Demo Usuarios
+## 🧰 Requisitos
 
-```plaintext
-admin / admin123       # Acceso completo
-juan  / juan123        # Acceso de lectura (Cripto Alpha)
-maria / maria123       # Acceso de lectura (Arkez Invest)
+- Python 3.9+
+- `requirements.txt` incluido para instalación automática
+
+## 📂 Estructura
+
