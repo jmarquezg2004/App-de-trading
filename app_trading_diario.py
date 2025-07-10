@@ -51,17 +51,17 @@ def exportar_pdf(texto, nombre_archivo="informe.pdf"):
     pdf.set_font("Arial", size=12)
     for linea in texto.split("\n"):
         pdf.cell(200, 10, txt=linea, ln=True, align='L')
-    pdf_output = pdf.output(dest='S').encode('latin1')
-    b64 = base64.b64encode(pdf_output).decode()
+    pdf_output = BytesIO()
+    pdf.output(pdf_output)
+    b64 = base64.b64encode(pdf_output.getvalue()).decode()
     href = f'<a href="data:application/octet-stream;base64,{b64}" download="{nombre_archivo}">📄 Descargar PDF</a>'
     return href
 
 # Usuarios demo
 USUARIOS = {
     "admin": {"pwd": "admin123", "fondo": "Arkez Invest", "rol": "admin"},
+    "juan": {"pwd": "juan123", "fondo": "Cripto Alpha", "rol": "lector"},
     "maria": {"pwd": "maria123", "fondo": "Arkez Invest", "rol": "lector"},
-    "marcos": {"pwd": "marcos123", "fondo": "Arkez Invest", "rol": "lector"},
-    "marcos": {"pwd": "marcos123", "fondo": "Shalom", "rol": "lector"},
 }
 
 # Login UI
@@ -103,19 +103,21 @@ usuario_actual = st.session_state.usuario
 # Crear nuevos fondos
 if rol_actual == "admin":
     nuevo_fondo = st.sidebar.text_input("Crear nuevo fondo")
-    if st.sidebar.button("➕ Crear Fondo Nuevo") and nuevo_fondo.strip():
+    if st.sidebar.button("Agregar Fondo") and nuevo_fondo.strip():
         fondos_existentes = set(df_aportes["Fondo"]).union(df_ops["Fondo"])
         if nuevo_fondo not in fondos_existentes:
+            nueva_fila = pd.DataFrame([[nuevo_fondo, "", "", datetime.today(), "Aporte", 0]], columns=df_aportes.columns)
+            df_aportes = pd.concat([df_aportes, nueva_fila], ignore_index=True)
+            save_csv(df_aportes, df_ops)
             st.session_state.fondo = nuevo_fondo
-            st.success(f"Fondo '{nuevo_fondo}' creado. Ya puedes registrar movimientos.")
+            st.success(f"Fondo '{nuevo_fondo}' creado y registrado. Ya puedes registrar movimientos.")
+            st.rerun()
         else:
             st.warning("Ese fondo ya existe")
 
 # Filtro por mes y año
 st.sidebar.subheader("📅 Filtro por Fecha")
 meses = list(range(1, 13))
-df_aportes['Fecha'] = pd.to_datetime(df_aportes['Fecha'], errors='coerce')
-df_ops['Fecha'] = pd.to_datetime(df_ops['Fecha'], errors='coerce')
 anios = sorted(set(df_aportes['Fecha'].dropna().dt.year).union(df_ops['Fecha'].dropna().dt.year))
 anio_sel = st.sidebar.selectbox("Año", options=anios, index=len(anios)-1)
 mes_sel = st.sidebar.selectbox("Mes", options=meses, index=datetime.today().month - 1)
