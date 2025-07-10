@@ -171,7 +171,7 @@ if not ops_cerradas.empty:
     st.plotly_chart(fig, use_container_width=True)
 
 # === RENDIMIENTO POR SOCIO ===
-st.subheader("🧮 Rendimiento por Socio")
+st.subheader("🥮 Rendimiento por Socio")
 df_socios = df_aportes_fondo.groupby("Socio")["Monto"].agg([
     ("Aportes", lambda x: x[df_aportes_fondo["Tipo"] == "Aporte"].sum()),
     ("Retiros", lambda x: x[df_aportes_fondo["Tipo"] == "Retiro"].sum()),
@@ -179,6 +179,15 @@ df_socios = df_aportes_fondo.groupby("Socio")["Monto"].agg([
 df_socios["Capital Neto"] = df_socios["Aportes"] - df_socios["Retiros"]
 df_socios["Participación"] = df_socios["Capital Neto"] / capital_neto if capital_neto else 0
 df_socios["Ganancia"] = df_socios["Participación"] * ganancia_total
-df_socios["Rendimiento %"] = (df_socios["Ganancia"] / df_socios["Capital Neto"] * 100).round(2).fillna(0)
+
+# Asegurar que sean numéricos para evitar errores de redondeo
+df_socios["Ganancia"] = pd.to_numeric(df_socios["Ganancia"], errors="coerce")
+df_socios["Capital Neto"] = pd.to_numeric(df_socios["Capital Neto"], errors="coerce")
+
+# Cálculo corregido del rendimiento
+df_socios["Rendimiento %"] = (
+    (df_socios["Ganancia"] / df_socios["Capital Neto"].replace(0, pd.NA)) * 100
+).round(2).fillna(0)
 
 st.dataframe(df_socios.round(2), use_container_width=True)
+
