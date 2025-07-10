@@ -179,9 +179,6 @@ df_socios = df_aportes_fondo.groupby("Socio")["Monto"].agg([
 df_socios["Capital Neto"] = df_socios["Aportes"] - df_socios["Retiros"]
 df_socios["Participación"] = df_socios["Capital Neto"] / capital_neto if capital_neto else 0
 df_socios["Ganancia"] = df_socios["Participación"] * ganancia_total
-df_socios["Rendimiento %"] = (
-    pd.to_numeric(df_socios["Ganancia"], errors="coerce") /
-    pd.to_numeric(df_socios["Capital Neto"], errors="coerce").replace(0, pd.NA)
-).multiply(100).round(2).fillna(0)
+df_socios["Rendimiento %"] = (df_socios["Ganancia"] / df_socios["Capital Neto"] * 100).round(2).fillna(0)
 
 st.dataframe(df_socios.round(2), use_container_width=True)
