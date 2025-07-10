@@ -34,6 +34,7 @@ if "init" not in st.session_state:
     st.session_state.fondos    = DEFAULT_FONDOS.copy()
     st.session_state.fondo     = DEFAULT_FONDOS[0]
 
+    # Cargar datos desde CSV o iniciar vacíos
     if os.path.exists(APORTES_FILE):
         st.session_state.aportaciones = pd.read_csv(APORTES_FILE)
     else:
@@ -49,6 +50,7 @@ if "init" not in st.session_state:
 # -------------------------------------------------
 # LOGIN / LOGOUT
 # -------------------------------------------------
+
 def login_ui():
     st.sidebar.title("🔒 Acceso Privado")
     user = st.sidebar.text_input("Usuario")
@@ -133,28 +135,20 @@ if sub_op:
     else:
         st.sidebar.error("Columnas inválidas en Operaciones")
 
-# === FILTRAR DATOS ===
-df_aportes = st.session_state.aportaciones.query("Fondo == @fondo")
-df_ops = st.session_state.ops.query("Fondo == @fondo")
-
-# === RENDIMIENTO POR SOCIO ===
+# === CÁLCULO DE RENDIMIENTO POR SOCIO ===
 st.subheader("👥 Rendimiento por Socio")
 
 df_aportes = st.session_state.aportaciones.query("Fondo == @fondo")
 
-# Aportes y retiros
 aportes = df_aportes[df_aportes["Tipo"] == "Aporte"].groupby("Socio")["Monto"].sum()
 retiros = df_aportes[df_aportes["Tipo"] == "Retiro"].groupby("Socio")["Monto"].sum()
 
-# Capital neto
 capital_neto = (aportes - retiros).fillna(0)
 capital_neto = pd.to_numeric(capital_neto, errors="coerce").replace(0, pd.NA)
 
-# Participación
 total_capital = capital_neto.sum()
 participacion = capital_neto / total_capital
 
-# Ganancias del fondo
 ops_fondo = st.session_state.ops.query("Fondo == @fondo").copy()
 ops_fondo["PnL"] = 0.0
 ops_fondo.loc[ops_fondo["Resultado"] == "Ganadora", "PnL"] = ops_fondo["TP_usd"] - ops_fondo["Comisiones"]
@@ -162,12 +156,10 @@ ops_fondo.loc[ops_fondo["Resultado"] == "Perdedora", "PnL"] = -ops_fondo["SL_usd
 gan_perd = ops_fondo.query("Resultado != 'Abierta'")
 ganancia_total = gan_perd["PnL"].sum()
 
-# Ganancia por socio y rendimiento
 ganancia_socios = participacion * ganancia_total
 ganancia_socios = pd.to_numeric(ganancia_socios, errors="coerce")
 rendimiento_pct = ((ganancia_socios / capital_neto) * 100).astype(float).round(2)
 
-# DataFrame final
 df_rend_socios = pd.DataFrame({
     "Capital Neto USD": capital_neto.round(2),
     "Participación %": (participacion * 100).round(2),
@@ -177,27 +169,8 @@ df_rend_socios = pd.DataFrame({
 
 st.dataframe(df_rend_socios, use_container_width=True)
 
-# Gráfico de pastel
 fig_socios = px.pie(df_rend_socios, values="Capital Neto USD", names=df_rend_socios.index, title="Participación en el Fondo")
 st.plotly_chart(fig_socios, use_container_width=True)
-# === FORMULARIO MOVIMIENTO DE CAPITAL ===
-st.subheader("💰 Movimientos de Capital (Socios)")
-with st.form("form_aporte"):
-    col1, col2, col3, col4 = st.columns(4)
-    socio = col1.text_input("Socio")
-    cedula = col2.text_input("Cédula/ID")
-    tipo = col3.selectbox("Tipo", ["Aporte", "Retiro"])
-    monto = col4.number_input("Monto USD", step=100.0)
-    fecha = st.date_input("Fecha", value=datetime.today())
-    if st.form_submit_button("Guardar"):
-        nuevo_idx = len(st.session_state.aportaciones)
-        nueva = {"idx": nuevo_idx, "Fondo": fondo, "Socio": socio, "Cedula": cedula, "Fecha": fecha.strftime("%Y-%m-%d"), "Tipo": tipo, "Monto": monto}
-        st.session_state.aportaciones = pd.concat([st.session_state.aportaciones, pd.DataFrame([nueva])], ignore_index=True)
-        st.session_state.aportaciones.to_csv(APORTES_FILE, index=False)
-        st.success("Movimiento registrado ✔️")
-        st.rerun()
-
-st.dataframe(df_aportes.sort_values("Fecha", ascending=False), use_container_width=True)
 
 # === FORMULARIO NUEVA OPERACIÓN ===
 st.subheader("➕ Registrar Nueva Operación")
