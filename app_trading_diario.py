@@ -3,10 +3,14 @@ import pandas as pd
 import os
 from datetime import datetime
 import plotly.express as px
+from io import BytesIO
+import base64
 
-# Archivos CSV persistentes
-CSV_APORTES = "aportes.csv"
-CSV_OPERACIONES = "operaciones.csv"
+# Ruta de carpeta /data
+DATA_DIR = "data"
+os.makedirs(DATA_DIR, exist_ok=True)
+CSV_APORTES = os.path.join(DATA_DIR, "aportes.csv")
+CSV_OPERACIONES = os.path.join(DATA_DIR, "operaciones.csv")
 
 # Inicializar archivos si no existen
 def init_csv():
@@ -28,12 +32,22 @@ def save_csv(df_aportes, df_ops):
     df_aportes.to_csv(CSV_APORTES, index=False)
     df_ops.to_csv(CSV_OPERACIONES, index=False)
 
+# Descargar archivo como Excel
+def to_excel_download_link(df_dict, nombre_archivo="informe.xlsx"):
+    output = BytesIO()
+    with pd.ExcelWriter(output, engine='xlsxwriter') as writer:
+        for name, df in df_dict.items():
+            df.to_excel(writer, index=False, sheet_name=name[:31])
+    output.seek(0)
+    b64 = base64.b64encode(output.read()).decode()
+    href = f'<a href="data:application/octet-stream;base64,{b64}" download="{nombre_archivo}">📥 Descargar Excel</a>'
+    return href
+
 # Usuarios demo
 USUARIOS = {
     "admin": {"pwd": "admin123", "fondo": "Arkez Invest", "rol": "admin"},
-    "juan": {"pwd": "juan123", "fondo": "Arkez Invest", "rol": "lector"},
+    "juan": {"pwd": "juan123", "fondo": "Cripto Alpha", "rol": "lector"},
     "maria": {"pwd": "maria123", "fondo": "Arkez Invest", "rol": "lector"},
-    "marcos": {"pwd": "marcos123", "fondo": "Arkez Invest", "rol": "lector"},
 }
 
 # Login UI
@@ -68,6 +82,8 @@ if st.sidebar.button("Cerrar Sesión"):
 # Inicializar CSVs
 init_csv()
 df_aportes, df_ops = load_csv_data()
+
+# ... (resto del código sin cambios importantes) ...
 
 usuario = st.session_state.usuario
 rol = st.session_state.rol
