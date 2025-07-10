@@ -51,9 +51,8 @@ def exportar_pdf(texto, nombre_archivo="informe.pdf"):
     pdf.set_font("Arial", size=12)
     for linea in texto.split("\n"):
         pdf.cell(200, 10, txt=linea, ln=True, align='L')
-    pdf_output = BytesIO()
-    pdf.output(pdf_output)
-    b64 = base64.b64encode(pdf_output.getvalue()).decode()
+    pdf_output = pdf.output(dest='S').encode('latin1')
+    b64 = base64.b64encode(pdf_output).decode()
     href = f'<a href="data:application/octet-stream;base64,{b64}" download="{nombre_archivo}">📄 Descargar PDF</a>'
     return href
 
