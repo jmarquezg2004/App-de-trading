@@ -60,7 +60,6 @@ def exportar_pdf(texto, nombre_archivo="informe.pdf"):
 # Usuarios demo
 USUARIOS = {
     "admin": {"pwd": "admin123", "fondo": "Arkez Invest", "rol": "admin"},
-    "juan": {"pwd": "juan123", "fondo": "Cripto Alpha", "rol": "lector"},
     "maria": {"pwd": "maria123", "fondo": "Arkez Invest", "rol": "lector"},
     "marcos": {"pwd": "marcos123", "fondo": "Arkez Invest", "rol": "lector"},
     "marcos": {"pwd": "marcos123", "fondo": "Shalom", "rol": "lector"},
@@ -99,9 +98,11 @@ if st.sidebar.button("Cerrar Sesión"):
 init_csv()
 df_aportes, df_ops = load_csv_data()
 fondo_actual = st.session_state.fondo
+rol_actual = st.session_state.rol
+usuario_actual = st.session_state.usuario
 
 # Crear nuevos fondos
-if st.session_state.rol == "admin":
+if rol_actual == "admin":
     nuevo_fondo = st.sidebar.text_input("Crear nuevo fondo")
     if st.sidebar.button("Agregar Fondo") and nuevo_fondo.strip():
         fondos_existentes = set(df_aportes["Fondo"]).union(df_ops["Fondo"])
@@ -146,8 +147,26 @@ if not cerradas.empty:
     fig = px.line(cerradas, x="Fecha", y="Total_Acc", title="Capital Acumulado", markers=True)
     st.plotly_chart(fig, use_container_width=True)
 
+# Resumen por fondo (solo admin o si tiene varios fondos)
+if rol_actual == "admin" or len(set(df_aportes["Fondo"])) > 1:
+    st.markdown("#### 📊 Resumen General por Fondo")
+    resumen = []
+    for fondo in sorted(set(df_aportes["Fondo"]).union(df_ops["Fondo"])):
+        cap_ap = df_aportes.query("Fondo == @fondo and Tipo == 'Aporte'")["Monto"].sum()
+        cap_rt = df_aportes.query("Fondo == @fondo and Tipo == 'Retiro'")["Monto"].sum()
+        cap_nt = cap_ap - cap_rt
+        ops_fd = df_ops.query("Fondo == @fondo and Resultado != 'Abierta'").copy()
+        ops_fd["PnL"] = 0.0
+        ops_fd.loc[ops_fd["Resultado"] == "Ganadora", "PnL"] = ops_fd["TP_usd"] - ops_fd["Comision"]
+        ops_fd.loc[ops_fd["Resultado"] == "Perdedora", "PnL"] = -ops_fd["SL_usd"] - ops_fd["Comision"]
+        ganancia = ops_fd["PnL"].sum()
+        rend = ((ganancia / cap_nt) * 100) if cap_nt != 0 else 0
+        resumen.append({"Fondo": fondo, "Capital Neto": cap_nt, "Ganancia": ganancia, "Rendimiento %": round(rend, 2)})
+    df_resumen = pd.DataFrame(resumen)
+    st.dataframe(df_resumen, use_container_width=True)
+
 # Botón para exportar datos
-if st.session_state.rol == "admin":
+if rol_actual == "admin":
     st.markdown("#### Exportar Informes")
     excel_link = to_excel_download_link({"Aportes": df_aportes, "Operaciones": df_ops})
     pdf_texto = f"Fondo: {fondo_actual}\nAño: {anio_sel}  Mes: {mes_sel}\nCapital Neto: ${cap_neto:,.2f}\nGanancia Total: ${total_gan:,.2f}\nTotal Final: ${total_final:,.2f}\nRendimiento: {rend_pct:.2f}%"
