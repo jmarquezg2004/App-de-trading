@@ -26,6 +26,8 @@ def init_csv():
 def load_csv_data():
     df_aportes = pd.read_csv(CSV_APORTES, parse_dates=["Fecha"])
     df_ops = pd.read_csv(CSV_OPERACIONES, parse_dates=["Fecha"])
+    df_aportes["Fecha"] = pd.to_datetime(df_aportes["Fecha"], errors="coerce")
+    df_ops["Fecha"] = pd.to_datetime(df_ops["Fecha"], errors="coerce")
     return df_aportes, df_ops
 
 # Guardar datos
