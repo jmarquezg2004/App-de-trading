@@ -31,7 +31,7 @@ def save_csv(df_aportes, df_ops):
 # Usuarios demo
 USUARIOS = {
     "admin": {"pwd": "admin123", "fondo": "Arkez Invest", "rol": "admin"},
-    "juan": {"pwd": "juan123", "fondo": "Cripto Alpha", "rol": "lector"},
+    "juan": {"pwd": "juan123", "fondo": "Arkez Invest", "rol": "lector"},
     "maria": {"pwd": "maria123", "fondo": "Arkez Invest", "rol": "lector"},
 }
 
