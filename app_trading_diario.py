@@ -168,8 +168,9 @@ ops_fondo.loc[ops_fondo["Resultado"] == "Perdedora", "PnL"] = -ops_fondo["SL_usd
 gan_perd = ops_fondo.query("Resultado != 'Abierta'")
 ganancia_total = gan_perd["PnL"].sum()
 
-ganancia_socios = (participacion * ganancia_total).astype(float)
+ganancia_socios = pd.to_numeric(ganancia_socios, errors="coerce")
 capital_neto = pd.to_numeric(capital_neto, errors="coerce").replace(0, pd.NA)
+
 rendimiento_pct = ((ganancia_socios / capital_neto) * 100).astype(float).round(2)
 
 # Tabla resumen
