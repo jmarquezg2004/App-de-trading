@@ -62,6 +62,8 @@ USUARIOS = {
     "admin": {"pwd": "admin123", "fondo": "Arkez Invest", "rol": "admin"},
     "juan": {"pwd": "juan123", "fondo": "Cripto Alpha", "rol": "lector"},
     "maria": {"pwd": "maria123", "fondo": "Arkez Invest", "rol": "lector"},
+    "marcos": {"pwd": "marcos123", "fondo": "Arkez Invest", "rol": "lector"},
+    "marcos": {"pwd": "marcos123", "fondo": "Shalom", "rol": "lector"},
 }
 
 # Login UI
