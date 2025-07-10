@@ -139,32 +139,52 @@ df_ops = st.session_state.ops.query("Fondo == @fondo")
 
 # === RENDIMIENTO POR SOCIO ===
 st.subheader("👥 Rendimiento por Socio")
+df_aportes = st.session_state.aportaciones.query("Fondo == @fondo")
+
+# Asegurar que Monto sea numérico
+df_aportes["Monto"] = pd.to_numeric(df_aportes["Monto"], errors="coerce")
+
+# Filtrar aportes y retiros
 aportes = df_aportes[df_aportes["Tipo"] == "Aporte"].groupby("Socio")["Monto"].sum()
 retiros = df_aportes[df_aportes["Tipo"] == "Retiro"].groupby("Socio")["Monto"].sum()
-capital_neto = (aportes - retiros).fillna(0)
-total_capital = capital_neto.sum()
-participacion = capital_neto / total_capital if total_capital > 0 else capital_neto * 0
 
-ops_fondo = df_ops.copy()
+# Capital neto
+capital_neto = (aportes - retiros).fillna(0).astype(float)
+
+# Participación
+total_capital = capital_neto.sum()
+participacion = capital_neto / total_capital
+
+# Preparar operaciones del fondo
+ops_fondo = st.session_state.ops.query("Fondo == @fondo").copy()
+cols_to_numeric = ["TP_usd", "SL_usd", "Comisiones"]
+for col in cols_to_numeric:
+    ops_fondo[col] = pd.to_numeric(ops_fondo[col], errors="coerce")
+
+# Calcular PnL
 ops_fondo["PnL"] = 0.0
 ops_fondo.loc[ops_fondo["Resultado"] == "Ganadora", "PnL"] = ops_fondo["TP_usd"] - ops_fondo["Comisiones"]
 ops_fondo.loc[ops_fondo["Resultado"] == "Perdedora", "PnL"] = -ops_fondo["SL_usd"] - ops_fondo["Comisiones"]
-
 gan_perd = ops_fondo.query("Resultado != 'Abierta'")
-gan_total = gan_perd["PnL"].sum()
+ganancia_total = gan_perd["PnL"].sum()
 
-ganancia_socios = participacion * gan_total
+# Calcular ganancias y rendimiento por socio
+ganancia_socios = (participacion * ganancia_total).astype(float)
 rendimiento_pct = (ganancia_socios / capital_neto.replace(0, pd.NA) * 100).round(2)
 
-st.dataframe(pd.DataFrame({
+# Tabla resumen
+df_rend = pd.DataFrame({
     "Capital Neto USD": capital_neto.round(2),
     "Participación %": (participacion * 100).round(2),
     "Ganancia Estimada USD": ganancia_socios.round(2),
     "Rendimiento %": rendimiento_pct
-}), use_container_width=True)
+})
 
-st.plotly_chart(px.pie(values=capital_neto, names=capital_neto.index, title="Participación Socios"), use_container_width=True)
+st.dataframe(df_rend, use_container_width=True)
 
+# Gráfico de pastel
+fig = px.pie(df_rend, values="Capital Neto USD", names=df_rend.index, title="Participación en el Fondo")
+st.plotly_chart(fig, use_container_width=True)
 # === FORMULARIO MOVIMIENTO DE CAPITAL ===
 st.subheader("💰 Movimientos de Capital (Socios)")
 with st.form("form_aporte"):
