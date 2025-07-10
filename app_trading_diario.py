@@ -52,7 +52,7 @@ def exportar_pdf(texto, nombre_archivo="informe.pdf"):
     for linea in texto.split("\n"):
         pdf.cell(200, 10, txt=linea, ln=True, align='L')
     pdf_output = BytesIO()
-    pdf_output.write(pdf.output(dest='S').encode('latin1'))  # Corrección aquí
+    pdf.output(pdf_output)
     b64 = base64.b64encode(pdf_output.getvalue()).decode()
     href = f'<a href="data:application/octet-stream;base64,{b64}" download="{nombre_archivo}">📄 Descargar PDF</a>'
     return href
@@ -94,12 +94,37 @@ if st.sidebar.button("Cerrar Sesión"):
     st.rerun()
 
 # Inicializar CSVs
-definir_fondo = lambda: USUARIOS[st.session_state.usuario]["fondo"]
 init_csv()
 df_aportes, df_ops = load_csv_data()
+fondo_actual = st.session_state.fondo
+
+# Crear nuevos fondos
+if st.session_state.rol == "admin":
+    nuevo_fondo = st.sidebar.text_input("Crear nuevo fondo")
+    if st.sidebar.button("Agregar Fondo") and nuevo_fondo.strip():
+        fondos_existentes = set(df_aportes["Fondo"]).union(df_ops["Fondo"])
+        if nuevo_fondo not in fondos_existentes:
+            st.session_state.fondo = nuevo_fondo
+            st.success(f"Fondo '{nuevo_fondo}' creado. Ya puedes registrar movimientos.")
+        else:
+            st.warning("Ese fondo ya existe")
+
+# Filtro por mes y año
+st.sidebar.subheader("📅 Filtro por Fecha")
+meses = list(range(1, 13))
+anios = sorted(set(df_aportes['Fecha'].dt.year).union(df_ops['Fecha'].dt.year))
+anio_sel = st.sidebar.selectbox("Año", options=anios, index=len(anios)-1)
+mes_sel = st.sidebar.selectbox("Mes", options=meses, index=datetime.today().month - 1)
+
+# Aplicar filtro por mes y año
+df_aportes = df_aportes[(df_aportes['Fecha'].dt.year == anio_sel) & (df_aportes['Fecha'].dt.month == mes_sel)]
+df_ops = df_ops[(df_ops['Fecha'].dt.year == anio_sel) & (df_ops['Fecha'].dt.month == mes_sel)]
+
+# Filtrar por fondo seleccionado
+df_aportes = df_aportes[df_aportes["Fondo"] == fondo_actual]
+df_ops = df_ops[df_ops["Fondo"] == fondo_actual]
 
 # Mostrar métricas del fondo
-fondo_actual = st.session_state.fondo
 cap_aportes = df_aportes.query("Fondo == @fondo_actual and Tipo == 'Aporte'")["Monto"].sum()
 cap_retiros = df_aportes.query("Fondo == @fondo_actual and Tipo == 'Retiro'")["Monto"].sum()
 cap_neto = cap_aportes - cap_retiros
@@ -110,15 +135,20 @@ cerradas.loc[cerradas["Resultado"] == "Perdedora", "PnL"] = -cerradas["SL_usd"] 
 total_gan = cerradas["PnL"].sum()
 total_final = cap_neto + total_gan
 rend_pct = ((total_final - cap_neto) / cap_neto * 100) if cap_neto != 0 else 0
-
 color_rend = "green" if rend_pct >= 0 else "red"
 st.markdown(f"### Rendimiento del Fondo: <span style='color:{color_rend}'>**{rend_pct:.2f}%**</span>", unsafe_allow_html=True)
+
+if not cerradas.empty:
+    cerradas = cerradas.sort_values("Fecha")
+    cerradas["Total_Acc"] = cap_neto + cerradas["PnL"].cumsum()
+    fig = px.line(cerradas, x="Fecha", y="Total_Acc", title="Capital Acumulado", markers=True)
+    st.plotly_chart(fig, use_container_width=True)
 
 # Botón para exportar datos
 if st.session_state.rol == "admin":
     st.markdown("#### Exportar Informes")
     excel_link = to_excel_download_link({"Aportes": df_aportes, "Operaciones": df_ops})
-    pdf_texto = f"Fondo: {fondo_actual}\nCapital Neto: ${cap_neto:,.2f}\nGanancia Total: ${total_gan:,.2f}\nTotal Final: ${total_final:,.2f}\nRendimiento: {rend_pct:.2f}%"
+    pdf_texto = f"Fondo: {fondo_actual}\nAño: {anio_sel}  Mes: {mes_sel}\nCapital Neto: ${cap_neto:,.2f}\nGanancia Total: ${total_gan:,.2f}\nTotal Final: ${total_final:,.2f}\nRendimiento: {rend_pct:.2f}%"
     pdf_link = exportar_pdf(pdf_texto)
     st.markdown(excel_link, unsafe_allow_html=True)
     st.markdown(pdf_link, unsafe_allow_html=True)
