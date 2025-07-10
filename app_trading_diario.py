@@ -58,12 +58,31 @@ if not st.session_state.logged_in:
     login_ui()
     st.stop()
 
+# Botón para cerrar sesión
+if st.sidebar.button("Cerrar Sesión"):
+    for key in ["logged_in", "usuario", "rol", "fondo"]:
+        st.session_state.pop(key, None)
+    st.rerun()
+
 # Inicializar CSVs
 init_csv()
 df_aportes, df_ops = load_csv_data()
 
 usuario = st.session_state.usuario
 rol = st.session_state.rol
+
+# Crear nuevos fondos (solo admin)
+if rol == "admin":
+    nuevo_fondo = st.sidebar.text_input("➕ Crear nuevo fondo")
+    if st.sidebar.button("Agregar Fondo"):
+        if nuevo_fondo.strip():
+            if nuevo_fondo not in set(df_aportes["Fondo"]).union(set(df_ops["Fondo"])):
+                df_aportes = pd.concat([df_aportes, pd.DataFrame([[nuevo_fondo, "", "", pd.NaT, "Aporte", 0]], columns=df_aportes.columns)], ignore_index=True)
+                save_csv(df_aportes, df_ops)
+                st.success(f"Fondo '{nuevo_fondo}' creado ✔")
+                st.rerun()
+            else:
+                st.warning("Ese fondo ya existe")
 
 # Fondos disponibles
 fondos_disponibles = sorted(set(df_aportes["Fondo"]).union(set(df_ops["Fondo"])))
