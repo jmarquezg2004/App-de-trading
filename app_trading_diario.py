@@ -115,7 +115,9 @@ if rol_actual == "admin":
 # Filtro por mes y año
 st.sidebar.subheader("📅 Filtro por Fecha")
 meses = list(range(1, 13))
-anios = sorted(set(df_aportes['Fecha'].dt.year).union(df_ops['Fecha'].dt.year))
+df_aportes['Fecha'] = pd.to_datetime(df_aportes['Fecha'], errors='coerce')
+df_ops['Fecha'] = pd.to_datetime(df_ops['Fecha'], errors='coerce')
+anios = sorted(set(df_aportes['Fecha'].dropna().dt.year).union(df_ops['Fecha'].dropna().dt.year))
 anio_sel = st.sidebar.selectbox("Año", options=anios, index=len(anios)-1)
 mes_sel = st.sidebar.selectbox("Mes", options=meses, index=datetime.today().month - 1)
 
