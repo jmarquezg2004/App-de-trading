@@ -5,6 +5,7 @@ from datetime import datetime
 import plotly.express as px
 from io import BytesIO
 import base64
+from fpdf import FPDF
 
 # Ruta de carpeta /data
 DATA_DIR = "data"
@@ -41,6 +42,19 @@ def to_excel_download_link(df_dict, nombre_archivo="informe.xlsx"):
     output.seek(0)
     b64 = base64.b64encode(output.read()).decode()
     href = f'<a href="data:application/octet-stream;base64,{b64}" download="{nombre_archivo}">📥 Descargar Excel</a>'
+    return href
+
+# Exportar a PDF
+def exportar_pdf(texto, nombre_archivo="informe.pdf"):
+    pdf = FPDF()
+    pdf.add_page()
+    pdf.set_font("Arial", size=12)
+    for linea in texto.split("\n"):
+        pdf.cell(200, 10, txt=linea, ln=True, align='L')
+    pdf_output = BytesIO()
+    pdf.output(pdf_output)
+    b64 = base64.b64encode(pdf_output.getvalue()).decode()
+    href = f'<a href="data:application/octet-stream;base64,{b64}" download="{nombre_archivo}">📄 Descargar PDF</a>'
     return href
 
 # Usuarios demo
@@ -80,8 +94,36 @@ if st.sidebar.button("Cerrar Sesión"):
     st.rerun()
 
 # Inicializar CSVs
+definir_fondo = lambda: USUARIOS[st.session_state.usuario]["fondo"]
 init_csv()
 df_aportes, df_ops = load_csv_data()
+
+# Mostrar métricas del fondo
+fondo_actual = st.session_state.fondo
+cap_aportes = df_aportes.query("Fondo == @fondo_actual and Tipo == 'Aporte'")["Monto"].sum()
+cap_retiros = df_aportes.query("Fondo == @fondo_actual and Tipo == 'Retiro'")["Monto"].sum()
+cap_neto = cap_aportes - cap_retiros
+cerradas = df_ops.query("Fondo == @fondo_actual and Resultado != 'Abierta'").copy()
+cerradas["PnL"] = 0.0
+cerradas.loc[cerradas["Resultado"] == "Ganadora", "PnL"] = cerradas["TP_usd"] - cerradas["Comision"]
+cerradas.loc[cerradas["Resultado"] == "Perdedora", "PnL"] = -cerradas["SL_usd"] - cerradas["Comision"]
+total_gan = cerradas["PnL"].sum()
+total_final = cap_neto + total_gan
+rend_pct = ((total_final - cap_neto) / cap_neto * 100) if cap_neto != 0 else 0
+
+color_rend = "green" if rend_pct >= 0 else "red"
+st.markdown(f"### Rendimiento del Fondo: <span style='color:{color_rend}'>**{rend_pct:.2f}%**</span>", unsafe_allow_html=True)
+
+# Botón para exportar datos
+if st.session_state.rol == "admin":
+    st.markdown("#### Exportar Informes")
+    excel_link = to_excel_download_link({"Aportes": df_aportes, "Operaciones": df_ops})
+    pdf_texto = f"Fondo: {fondo_actual}\nCapital Neto: ${cap_neto:,.2f}\nGanancia Total: ${total_gan:,.2f}\nTotal Final: ${total_final:,.2f}\nRendimiento: {rend_pct:.2f}%"
+    pdf_link = exportar_pdf(pdf_texto)
+    st.markdown(excel_link, unsafe_allow_html=True)
+    st.markdown(pdf_link, unsafe_allow_html=True)
+
+# Resto del código...
 
 # ... (resto del código sin cambios importantes) ...
 
