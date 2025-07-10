@@ -214,3 +214,4 @@ except Exception:
     df_socios["Rendimiento %"] = 0
 
 st.dataframe(df_socios.round(2), use_container_width=True)
+
