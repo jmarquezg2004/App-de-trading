@@ -46,16 +46,17 @@ def to_excel_download_link(df_dict, nombre_archivo="informe.xlsx"):
     href = f'<a href="data:application/octet-stream;base64,{b64}" download="{nombre_archivo}">📥 Descargar Excel</a>'
     return href
 
-# Exportar a PDF
+# Exportar a PDF (corregido)
 def exportar_pdf(texto, nombre_archivo="informe.pdf"):
     pdf = FPDF()
     pdf.add_page()
     pdf.set_font("Arial", size=12)
     for linea in texto.split("\n"):
-        pdf.cell(200, 10, txt=linea, ln=True, align='L')
-    pdf_output = BytesIO()
-    pdf.output(pdf_output)
-    b64 = base64.b64encode(pdf_output.getvalue()).decode()
+        pdf.multi_cell(0, 10, txt=linea)
+    pdf_output_path = os.path.join(DATA_DIR, nombre_archivo)
+    pdf.output(pdf_output_path)
+    with open(pdf_output_path, "rb") as f:
+        b64 = base64.b64encode(f.read()).decode()
     href = f'<a href="data:application/octet-stream;base64,{b64}" download="{nombre_archivo}">📄 Descargar PDF</a>'
     return href
 
