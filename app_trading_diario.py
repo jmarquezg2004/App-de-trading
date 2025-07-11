@@ -46,7 +46,8 @@ def to_excel_download_link(df_dict, nombre_archivo="informe.xlsx"):
     href = f'<a href="data:application/octet-stream;base64,{b64}" download="{nombre_archivo}">📥 Descargar Excel</a>'
     return href
 
-# Exportar a PDF (corregido)
+# Exportar a PDF
+
 def exportar_pdf(texto, nombre_archivo="informe.pdf"):
     pdf = FPDF()
     pdf.add_page()
@@ -98,7 +99,7 @@ if st.sidebar.button("Cerrar Sesión"):
 
 # Inicializar CSVs
 init_csv()
-df_aportes, df_ops = load_csv_data()
+df_aportes_all, df_ops_all = load_csv_data()
 fondo_actual = st.session_state.fondo
 rol_actual = st.session_state.rol
 usuario_actual = st.session_state.usuario
@@ -107,11 +108,11 @@ usuario_actual = st.session_state.usuario
 if rol_actual == "admin":
     nuevo_fondo = st.sidebar.text_input("Crear nuevo fondo")
     if st.sidebar.button("Agregar Fondo", key="btn_agregar_fondo") and nuevo_fondo.strip():
-        fondos_existentes = set(df_aportes["Fondo"]).union(df_ops["Fondo"])
+        fondos_existentes = set(df_aportes_all["Fondo"]).union(df_ops_all["Fondo"])
         if nuevo_fondo not in fondos_existentes:
-            nueva_fila = pd.DataFrame([[nuevo_fondo, "", "", datetime.today(), "Aporte", 0]], columns=df_aportes.columns)
-            df_aportes = pd.concat([df_aportes, nueva_fila], ignore_index=True)
-            save_csv(df_aportes, df_ops)
+            nueva_fila = pd.DataFrame([[nuevo_fondo, "", "", datetime.today(), "Aporte", 0]], columns=df_aportes_all.columns)
+            df_aportes_all = pd.concat([df_aportes_all, nueva_fila], ignore_index=True)
+            save_csv(df_aportes_all, df_ops_all)
             st.session_state.fondo = nuevo_fondo
             st.success(f"Fondo '{nuevo_fondo}' creado y registrado. Ya puedes registrar movimientos.")
             st.rerun()
@@ -121,32 +122,32 @@ if rol_actual == "admin":
 # Filtro por mes y año
 st.sidebar.subheader("📅 Filtro por Fecha")
 meses = list(range(1, 13))
-anios = sorted(set(df_aportes['Fecha'].dropna().dt.year).union(df_ops['Fecha'].dropna().dt.year))
+anios = sorted(set(df_aportes_all['Fecha'].dropna().dt.year).union(df_ops_all['Fecha'].dropna().dt.year))
 anio_sel = st.sidebar.selectbox("Año", options=anios, index=len(anios)-1)
 mes_sel = st.sidebar.selectbox("Mes", options=meses, index=datetime.today().month - 1)
 
-# Mostrar últimos registros sin filtrar (ayuda visual)
+# Mostrar últimos registros (todos sin filtrar)
 st.sidebar.markdown("#### Últimos Movimientos")
-ultimos_aportes = df_aportes[df_aportes["Fondo"] == fondo_actual].sort_values("Fecha", ascending=False).head(3)
-ultimas_ops = df_ops[df_ops["Fondo"] == fondo_actual].sort_values("Fecha", ascending=False).head(3)
+ultimos_aportes = df_aportes_all[df_aportes_all["Fondo"] == fondo_actual].sort_values("Fecha", ascending=False).head(3)
+ultimas_ops = df_ops_all[df_ops_all["Fondo"] == fondo_actual].sort_values("Fecha", ascending=False).head(3)
 st.sidebar.write("**Aportes recientes:**")
 st.sidebar.dataframe(ultimos_aportes.drop(columns=["Cedula"]), use_container_width=True)
 st.sidebar.write("**Operaciones recientes:**")
 st.sidebar.dataframe(ultimas_ops.drop(columns=["ID"]), use_container_width=True)
 
-# Aplicar filtro por mes y año
-df_aportes = df_aportes[(df_aportes['Fecha'].dt.year == anio_sel) & (df_aportes['Fecha'].dt.month == mes_sel)]
-df_ops = df_ops[(df_ops['Fecha'].dt.year == anio_sel) & (df_ops['Fecha'].dt.month == mes_sel)]
-
-# Filtrar por fondo seleccionado
-df_aportes = df_aportes[df_aportes["Fondo"] == fondo_actual]
-df_ops = df_ops[df_ops["Fondo"] == fondo_actual]
+# Filtrar por fondo actual y fecha seleccionada
+filtro_aportes = df_aportes_all[(df_aportes_all["Fondo"] == fondo_actual) &
+                                 (df_aportes_all['Fecha'].dt.year == anio_sel) &
+                                 (df_aportes_all['Fecha'].dt.month == mes_sel)]
+filtro_ops = df_ops_all[(df_ops_all["Fondo"] == fondo_actual) &
+                         (df_ops_all['Fecha'].dt.year == anio_sel) &
+                         (df_ops_all['Fecha'].dt.month == mes_sel)]
 
 # Mostrar métricas del fondo
-cap_aportes = df_aportes.query("Fondo == @fondo_actual and Tipo == 'Aporte'")["Monto"].sum()
-cap_retiros = df_aportes.query("Fondo == @fondo_actual and Tipo == 'Retiro'")["Monto"].sum()
+cap_aportes = filtro_aportes.query("Tipo == 'Aporte'")["Monto"].sum()
+cap_retiros = filtro_aportes.query("Tipo == 'Retiro'")["Monto"].sum()
 cap_neto = cap_aportes - cap_retiros
-cerradas = df_ops.query("Fondo == @fondo_actual and Resultado != 'Abierta'").copy()
+cerradas = filtro_ops.query("Resultado != 'Abierta'").copy()
 cerradas["PnL"] = 0.0
 cerradas.loc[cerradas["Resultado"] == "Ganadora", "PnL"] = cerradas["TP_usd"] - cerradas["Comision"]
 cerradas.loc[cerradas["Resultado"] == "Perdedora", "PnL"] = -cerradas["SL_usd"] - cerradas["Comision"]
@@ -162,28 +163,19 @@ if not cerradas.empty:
     fig = px.line(cerradas, x="Fecha", y="Total_Acc", title="Capital Acumulado", markers=True)
     st.plotly_chart(fig, use_container_width=True)
 
-# Resumen por fondo (solo admin o si tiene varios fondos)
-if rol_actual == "admin" or len(set(df_aportes["Fondo"])) > 1:
-    st.markdown("#### 📊 Resumen General por Fondo")
-    resumen = []
-    for fondo in sorted(set(df_aportes["Fondo"]).union(df_ops["Fondo"])):
-        cap_ap = df_aportes.query("Fondo == @fondo and Tipo == 'Aporte'")["Monto"].sum()
-        cap_rt = df_aportes.query("Fondo == @fondo and Tipo == 'Retiro'")["Monto"].sum()
-        cap_nt = cap_ap - cap_rt
-        ops_fd = df_ops.query("Fondo == @fondo and Resultado != 'Abierta'").copy()
-        ops_fd["PnL"] = 0.0
-        ops_fd.loc[ops_fd["Resultado"] == "Ganadora", "PnL"] = ops_fd["TP_usd"] - ops_fd["Comision"]
-        ops_fd.loc[ops_fd["Resultado"] == "Perdedora", "PnL"] = -ops_fd["SL_usd"] - ops_fd["Comision"]
-        ganancia = ops_fd["PnL"].sum()
-        rend = ((ganancia / cap_nt) * 100) if cap_nt != 0 else 0
-        resumen.append({"Fondo": fondo, "Capital Neto": cap_nt, "Ganancia": ganancia, "Rendimiento %": round(rend, 2)})
-    df_resumen = pd.DataFrame(resumen)
-    st.dataframe(df_resumen, use_container_width=True)
+# Mostrar todos los aportes y operaciones sin filtro
+st.markdown("#### 📋 Aportes del Fondo")
+df_fondo_aportes = df_aportes_all[df_aportes_all["Fondo"] == fondo_actual]
+st.dataframe(df_fondo_aportes.sort_values("Fecha", ascending=False), use_container_width=True)
+
+st.markdown("#### 📋 Operaciones del Fondo")
+df_fondo_ops = df_ops_all[df_ops_all["Fondo"] == fondo_actual]
+st.dataframe(df_fondo_ops.sort_values("Fecha", ascending=False), use_container_width=True)
 
 # Botón para exportar datos
 if rol_actual == "admin":
     st.markdown("#### Exportar Informes")
-    excel_link = to_excel_download_link({"Aportes": df_aportes, "Operaciones": df_ops})
+    excel_link = to_excel_download_link({"Aportes": filtro_aportes, "Operaciones": filtro_ops})
     pdf_texto = f"Fondo: {fondo_actual}\nAño: {anio_sel}  Mes: {mes_sel}\nCapital Neto: ${cap_neto:,.2f}\nGanancia Total: ${total_gan:,.2f}\nTotal Final: ${total_final:,.2f}\nRendimiento: {rend_pct:.2f}%"
     pdf_link = exportar_pdf(pdf_texto)
     st.markdown(excel_link, unsafe_allow_html=True)
