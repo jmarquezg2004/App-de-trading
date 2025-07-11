@@ -7,22 +7,21 @@ from io import BytesIO
 import base64
 from fpdf import FPDF
 
-# Ruta de carpeta /data
+# Configuración inicial
+st.set_page_config(page_title="Diario de Trading", layout="wide")
 DATA_DIR = "data"
 os.makedirs(DATA_DIR, exist_ok=True)
 CSV_APORTES = os.path.join(DATA_DIR, "aportes.csv")
 CSV_OPERACIONES = os.path.join(DATA_DIR, "operaciones.csv")
 
-# Inicializar archivos si no existen
+# Inicializar archivos CSV si no existen
 def init_csv():
     if not os.path.exists(CSV_APORTES):
-        df = pd.DataFrame(columns=["Fondo", "Socio", "Cedula", "Fecha", "Tipo", "Monto"])
-        df.to_csv(CSV_APORTES, index=False)
+        pd.DataFrame(columns=["Fondo", "Socio", "Cedula", "Fecha", "Tipo", "Monto"]).to_csv(CSV_APORTES, index=False)
     if not os.path.exists(CSV_OPERACIONES):
-        df = pd.DataFrame(columns=["ID", "Fondo", "Fecha", "Moneda", "Estrategia", "Broker", "Valor_Pos", "TP_%", "SL_%", "TP_usd", "SL_usd", "Comision", "Resultado"])
-        df.to_csv(CSV_OPERACIONES, index=False)
+        pd.DataFrame(columns=["ID", "Fondo", "Fecha", "Moneda", "Estrategia", "Broker", "Valor_Pos", "TP_%", "SL_%", "TP_usd", "SL_usd", "Comision", "Resultado"]).to_csv(CSV_OPERACIONES, index=False)
 
-# Cargar datos sin cache
+# Cargar datos
 def load_csv_data():
     df_aportes = pd.read_csv(CSV_APORTES)
     df_ops = pd.read_csv(CSV_OPERACIONES)
@@ -35,7 +34,7 @@ def save_csv(df_aportes, df_ops):
     df_aportes.to_csv(CSV_APORTES, index=False)
     df_ops.to_csv(CSV_OPERACIONES, index=False)
 
-# Descargar archivo como Excel
+# Exportar a Excel
 def to_excel_download_link(df_dict, nombre_archivo="informe.xlsx"):
     output = BytesIO()
     with pd.ExcelWriter(output, engine='xlsxwriter') as writer:
@@ -43,23 +42,20 @@ def to_excel_download_link(df_dict, nombre_archivo="informe.xlsx"):
             df.to_excel(writer, index=False, sheet_name=name[:31])
     output.seek(0)
     b64 = base64.b64encode(output.read()).decode()
-    href = f'<a href="data:application/octet-stream;base64,{b64}" download="{nombre_archivo}">📥 Descargar Excel</a>'
-    return href
+    return f'<a href="data:application/octet-stream;base64,{b64}" download="{nombre_archivo}">📥 Descargar Excel</a>'
 
 # Exportar a PDF
-
 def exportar_pdf(texto, nombre_archivo="informe.pdf"):
     pdf = FPDF()
     pdf.add_page()
     pdf.set_font("Arial", size=12)
     for linea in texto.split("\n"):
         pdf.multi_cell(0, 10, txt=linea)
-    pdf_output_path = os.path.join(DATA_DIR, nombre_archivo)
-    pdf.output(pdf_output_path)
-    with open(pdf_output_path, "rb") as f:
+    path = os.path.join(DATA_DIR, nombre_archivo)
+    pdf.output(path)
+    with open(path, "rb") as f:
         b64 = base64.b64encode(f.read()).decode()
-    href = f'<a href="data:application/octet-stream;base64,{b64}" download="{nombre_archivo}">📄 Descargar PDF</a>'
-    return href
+    return f'<a href="data:application/octet-stream;base64,{b64}" download="{nombre_archivo}">📄 Descargar PDF</a>'
 
 # Usuarios demo
 USUARIOS = {
@@ -68,271 +64,109 @@ USUARIOS = {
     "maria": {"pwd": "maria123", "fondo": "Arkez Invest", "rol": "lector"},
 }
 
-# Login UI
-def login_ui():
+# Login
+if "logged_in" not in st.session_state:
+    st.session_state.logged_in = False
+if not st.session_state.logged_in:
     st.sidebar.title("🔒 Acceso Privado")
     user = st.sidebar.text_input("Usuario")
     pwd = st.sidebar.text_input("Contraseña", type="password")
     if st.sidebar.button("Entrar"):
         if user in USUARIOS and USUARIOS[user]["pwd"] == pwd:
-            st.session_state.logged_in = True
-            st.session_state.usuario = user
-            st.session_state.rol = USUARIOS[user]["rol"]
-            st.session_state.fondo = USUARIOS[user]["fondo"]
+            st.session_state.update({
+                "logged_in": True,
+                "usuario": user,
+                "rol": USUARIOS[user]["rol"],
+                "fondo": USUARIOS[user]["fondo"]
+            })
             st.rerun()
         else:
             st.sidebar.error("Credenciales incorrectas ❌")
-
-# Inicializar sesión
-if "logged_in" not in st.session_state:
-    st.session_state.logged_in = False
-
-if not st.session_state.logged_in:
-    login_ui()
     st.stop()
 
-# Botón para cerrar sesión
 if st.sidebar.button("Cerrar Sesión"):
     for key in ["logged_in", "usuario", "rol", "fondo"]:
         st.session_state.pop(key, None)
     st.rerun()
 
-# Inicializar CSVs
+# Datos y contexto
 init_csv()
-df_aportes_all, df_ops_all = load_csv_data()
+df_aportes, df_ops = load_csv_data()
 fondo_actual = st.session_state.fondo
-rol_actual = st.session_state.rol
-usuario_actual = st.session_state.usuario
+rol = st.session_state.rol
+usuario = st.session_state.usuario
 
-# Crear nuevos fondos
-if rol_actual == "admin":
-    nuevo_fondo = st.sidebar.text_input("Crear nuevo fondo")
-    if st.sidebar.button("Agregar Fondo", key="btn_agregar_fondo") and nuevo_fondo.strip():
-        fondos_existentes = set(df_aportes_all["Fondo"]).union(set(df_ops_all["Fondo"]))
-        if nuevo_fondo not in fondos_existentes:
-            nueva_fila = pd.DataFrame([[nuevo_fondo, "", "", datetime.today(), "Aporte", 0]], columns=df_aportes_all.columns)
-            df_aportes_all = pd.concat([df_aportes_all, nueva_fila], ignore_index=True)
-            save_csv(df_aportes_all, df_ops_all)
+# Crear nuevo fondo
+if rol == "admin":
+    nuevo_fondo = st.sidebar.text_input("➕ Crear nuevo fondo")
+    if st.sidebar.button("Agregar Fondo") and nuevo_fondo.strip():
+        if nuevo_fondo not in set(df_aportes["Fondo"]).union(df_ops["Fondo"]):
+            fila = pd.DataFrame([[nuevo_fondo, "", "", datetime.today(), "Aporte", 0]], columns=df_aportes.columns)
+            df_aportes = pd.concat([df_aportes, fila], ignore_index=True)
+            save_csv(df_aportes, df_ops)
             st.session_state.fondo = nuevo_fondo
-            st.success(f"Fondo '{nuevo_fondo}' creado y registrado. Ya puedes registrar movimientos.")
+            st.success(f"Fondo '{nuevo_fondo}' creado ✔")
             st.rerun()
         else:
             st.warning("Ese fondo ya existe")
 
-# Filtro por mes y año
+# Filtros
 st.sidebar.subheader("📅 Filtro por Fecha")
 meses = list(range(1, 13))
-anios = sorted(set(df_aportes_all['Fecha'].dropna().dt.year).union(set(df_ops_all['Fecha'].dropna().dt.year)))
-anio_sel = st.sidebar.selectbox("Año", options=anios, index=len(anios)-1)
-mes_sel = st.sidebar.selectbox("Mes", options=meses, index=datetime.today().month - 1)
+anios = sorted(set(df_aportes['Fecha'].dropna().dt.year).union(df_ops['Fecha'].dropna().dt.year))
+anio_sel = st.sidebar.selectbox("Año", anios, index=len(anios)-1)
+mes_sel = st.sidebar.selectbox("Mes", meses, index=datetime.today().month - 1)
 
-# Mostrar últimos registros (todos sin filtrar)
+# Últimos movimientos
 st.sidebar.markdown("#### Últimos Movimientos")
-ultimos_aportes = df_aportes_all[df_aportes_all["Fondo"] == fondo_actual].sort_values("Fecha", ascending=False).head(3)
-ultimas_ops = df_ops_all[df_ops_all["Fondo"] == fondo_actual].sort_values("Fecha", ascending=False).head(3)
 st.sidebar.write("**Aportes recientes:**")
-st.sidebar.dataframe(ultimos_aportes.drop(columns=["Cedula"]), use_container_width=True)
+st.sidebar.dataframe(df_aportes[df_aportes["Fondo"] == fondo_actual].sort_values("Fecha", ascending=False).head(3).drop(columns=["Cedula"]), use_container_width=True)
 st.sidebar.write("**Operaciones recientes:**")
-st.sidebar.dataframe(ultimas_ops.drop(columns=["ID"]), use_container_width=True)
+st.sidebar.dataframe(df_ops[df_ops["Fondo"] == fondo_actual].sort_values("Fecha", ascending=False).head(3).drop(columns=["ID"]), use_container_width=True)
 
-# ========== FORMULARIO APORTES ==========
-if rol_actual == "admin":
-    st.markdown("### 💰 Registrar Aporte o Retiro")
+# Registrar movimientos
+if rol == "admin":
+    st.markdown("### 💰 Registrar Movimiento de Capital")
     with st.form("form_aporte"):
         c1, c2, c3 = st.columns(3)
         socio = c1.text_input("Nombre del Socio")
         cedula = c2.text_input("Cédula")
-        tipo = c3.selectbox("Tipo de Movimiento", ["Aporte", "Retiro"])
-        c4, c5 = st.columns(2)
-        monto = c4.number_input("Monto", step=0.01)
-        fecha = c5.date_input("Fecha", value=datetime.today())
+        tipo = c3.selectbox("Tipo", ["Aporte", "Retiro"])
+        monto = st.number_input("Monto", step=0.01)
+        fecha = st.date_input("Fecha", value=datetime.today())
         if st.form_submit_button("Guardar Movimiento"):
-            nueva_fila = pd.DataFrame([[fondo_actual, socio, cedula, fecha, tipo, monto]], columns=df_aportes_all.columns)
-            df_aportes_all = pd.concat([df_aportes_all, nueva_fila], ignore_index=True)
-            save_csv(df_aportes_all, df_ops_all)
-            st.success("Movimiento registrado exitosamente")
+            fila = pd.DataFrame([[fondo_actual, socio, cedula, fecha, tipo, monto]], columns=df_aportes.columns)
+            df_aportes = pd.concat([df_aportes, fila], ignore_index=True)
+            save_csv(df_aportes, df_ops)
+            st.success("Movimiento registrado ✔")
             st.rerun()
 
-# ========== FORMULARIO OPERACIONES ==========
-if rol_actual == "admin":
-    st.markdown("### 🧾 Registrar Operación")
+    st.markdown("### 🧾 Registrar Nueva Operación")
     with st.form("form_operacion"):
         c1, c2, c3 = st.columns(3)
         moneda = c1.text_input("Moneda")
         estrategia = c2.selectbox("Estrategia", ["Spot", "Futuros", "Staking", "Holding", "Arbitraje", "Bot o Copy Trading", "Farming", "Launchpool", "ICO"])
         broker = c3.text_input("Broker")
-        c4, c5, c6 = st.columns(3)
-        valor_pos = c4.number_input("Valor de Posición", step=0.01)
-        tp_pct = c5.number_input("TP %", step=0.01)
-        sl_pct = c6.number_input("SL %", step=0.01)
-        c7, c8, c9 = st.columns(3)
-        tp_usd = c7.number_input("TP USD", step=0.01)
-        sl_usd = c8.number_input("SL USD", step=0.01)
-        comision = c9.number_input("Comisión", step=0.01)
-        fecha_op = st.date_input("Fecha", value=datetime.today())
-        resultado = st.selectbox("Resultado", ["Abierta", "Ganadora", "Perdedora"])
-        if st.form_submit_button("Guardar Operación"):
-            nuevo_id = int(df_ops_all["ID"].max()) + 1 if not df_ops_all.empty else 1
-            nueva_fila = pd.DataFrame([[nuevo_id, fondo_actual, fecha_op, moneda, estrategia, broker, valor_pos, tp_pct, sl_pct, tp_usd, sl_usd, comision, resultado]], columns=df_ops_all.columns)
-            df_ops_all = pd.concat([df_ops_all, nueva_fila], ignore_index=True)
-            save_csv(df_aportes_all, df_ops_all)
-            st.success("Operación registrada exitosamente")
-            st.rerun()
-
-# Filtrar por fondo actual y fecha seleccionada
-filtro_aportes = df_aportes_all[(df_aportes_all["Fondo"] == fondo_actual) &
-                                 (df_aportes_all['Fecha'].dt.year == anio_sel) &
-                                 (df_aportes_all['Fecha'].dt.month == mes_sel)]
-filtro_ops = df_ops_all[(df_ops_all["Fondo"] == fondo_actual) &
-                         (df_ops_all['Fecha'].dt.year == anio_sel) &
-                         (df_ops_all['Fecha'].dt.month == mes_sel)]
-
-# Mostrar métricas del fondo
-cap_aportes = filtro_aportes.query("Tipo == 'Aporte'")["Monto"].sum()
-cap_retiros = filtro_aportes.query("Tipo == 'Retiro'")["Monto"].sum()
-cap_neto = cap_aportes - cap_retiros
-cerradas = filtro_ops.query("Resultado != 'Abierta'").copy()
-cerradas["PnL"] = 0.0
-cerradas.loc[cerradas["Resultado"] == "Ganadora", "PnL"] = cerradas["TP_usd"] - cerradas["Comision"]
-cerradas.loc[cerradas["Resultado"] == "Perdedora", "PnL"] = -cerradas["SL_usd"] - cerradas["Comision"]
-total_gan = cerradas["PnL"].sum()
-total_final = cap_neto + total_gan
-rend_pct = ((total_final - cap_neto) / cap_neto * 100) if cap_neto != 0 else 0
-color_rend = "green" if rend_pct >= 0 else "red"
-st.markdown(f"### Rendimiento del Fondo: <span style='color:{color_rend}'>**{rend_pct:.2f}%**</span>", unsafe_allow_html=True)
-
-if not cerradas.empty:
-    cerradas = cerradas.sort_values("Fecha")
-    cerradas["Total_Acc"] = cap_neto + cerradas["PnL"].cumsum()
-    fig = px.line(cerradas, x="Fecha", y="Total_Acc", title="Capital Acumulado", markers=True)
-    st.plotly_chart(fig, use_container_width=True)
-
-# Mostrar todos los aportes y operaciones sin filtro
-st.markdown("#### 📋 Aportes del Fondo")
-df_fondo_aportes = df_aportes_all[df_aportes_all["Fondo"] == fondo_actual]
-st.dataframe(df_fondo_aportes.sort_values("Fecha", ascending=False), use_container_width=True)
-
-st.markdown("#### 📋 Operaciones del Fondo")
-df_fondo_ops = df_ops_all[df_ops_all["Fondo"] == fondo_actual]
-st.dataframe(df_fondo_ops.sort_values("Fecha", ascending=False), use_container_width=True)
-
-# Botón para exportar datos
-if rol_actual == "admin":
-    st.markdown("#### Exportar Informes")
-    excel_link = to_excel_download_link({"Aportes": filtro_aportes, "Operaciones": filtro_ops})
-    pdf_texto = f"Fondo: {fondo_actual}\nAño: {anio_sel}  Mes: {mes_sel}\nCapital Neto: ${cap_neto:,.2f}\nGanancia Total: ${total_gan:,.2f}\nTotal Final: ${total_final:,.2f}\nRendimiento: {rend_pct:.2f}%"
-    pdf_link = exportar_pdf(pdf_texto)
-    st.markdown(excel_link, unsafe_allow_html=True)
-    st.markdown(pdf_link, unsafe_allow_html=True)
-
-# ... (resto del código sin cambios importantes) ...
-
-usuario = st.session_state.usuario
-rol = st.session_state.rol
-
-# Crear nuevos fondos (solo admin)
-if rol == "admin":
-    nuevo_fondo = st.sidebar.text_input("➕ Crear nuevo fondo")
-    if st.sidebar.button("Agregar Fondo"):
-        if nuevo_fondo.strip():
-            if nuevo_fondo not in set(df_aportes["Fondo"]).union(set(df_ops["Fondo"])):
-                df_aportes = pd.concat([df_aportes, pd.DataFrame([[nuevo_fondo, "", "", pd.NaT, "Aporte", 0]], columns=df_aportes.columns)], ignore_index=True)
-                save_csv(df_aportes, df_ops)
-                st.success(f"Fondo '{nuevo_fondo}' creado ✔")
-                st.rerun()
-            else:
-                st.warning("Ese fondo ya existe")
-
-# Fondos disponibles
-fondos_disponibles = sorted(set(df_aportes["Fondo"]).union(set(df_ops["Fondo"])))
-if rol == "admin":
-    fondos_disponibles = sorted(set(fondos_disponibles).union({USUARIOS[usuario]["fondo"]}))
-
-st.set_page_config(page_title="Diario de Trading", layout="wide")
-st.title("📈 Diario & Gestor de Fondos de Inversión")
-fondo = st.selectbox("Selecciona el fondo", fondos_disponibles, index=fondos_disponibles.index(USUARIOS[usuario]["fondo"]))
-st.markdown(f"**👤 {usuario}** — **Fondo:** {fondo}")
-st.markdown("---")
-
-# === MOVIMIENTOS DE CAPITAL ===
-if rol == "admin":
-    st.subheader("💰 Movimientos de Capital (Socios)")
-    with st.form("form_aporte"):
-        c1, c2, c3, c4 = st.columns(4)
-        socio = c1.text_input("Socio")
-        cedula = c2.text_input("Cédula")
-        tipo = c3.selectbox("Tipo", ["Aporte", "Retiro"])
-        monto = c4.number_input("Monto", step=0.01)
-        fecha = st.date_input("Fecha", value=datetime.today())
-        if st.form_submit_button("Guardar"):
-            nuevo = pd.DataFrame([[fondo, socio, cedula, fecha, tipo, monto]], columns=df_aportes.columns)
-            df_aportes = pd.concat([df_aportes, nuevo], ignore_index=True)
-            save_csv(df_aportes, df_ops)
-            st.success("Movimiento guardado ✔")
-            st.rerun()
-
-    df_aportes_fondo = df_aportes[df_aportes["Fondo"] == fondo]
-    st.dataframe(df_aportes_fondo.sort_values("Fecha", ascending=False), use_container_width=True)
-    if st.button("🗑 Eliminar último movimiento"):
-        df_aportes = df_aportes.drop(df_aportes_fondo.tail(1).index)
-        save_csv(df_aportes, df_ops)
-        st.rerun()
-
-# === REGISTRAR OPERACIÓN ===
-if rol == "admin":
-    st.subheader("📌 Registrar Nueva Operación")
-    with st.form("form_op"):
-        c1, c2, c3 = st.columns(3)
-        fecha_op = c1.date_input("Fecha", value=datetime.today())
-        moneda = c2.text_input("Moneda")
-        estrategia = c3.selectbox("Estrategia", ["Spot", "Futuros", "Staking", "Holding", "Arbitraje", "Bot o Copy Trading", "Farming", "Launchpool", "ICO"])
-
-        c4, c5, c6 = st.columns(3)
-        broker = c4.text_input("Broker")
-        valor_pos = c5.number_input("Valor Posición", step=0.01)
-        comision = c6.number_input("Comisión USD", step=0.01)
-
-        c7, c8, c9 = st.columns(3)
-        tp_pct = c7.number_input("TP %")
-        sl_pct = c8.number_input("SL %")
-        resultado = c9.selectbox("Resultado", ["Abierta", "Ganadora", "Perdedora"])
-
+        valor_pos = st.number_input("Valor Posición", step=0.01)
+        tp_pct = st.number_input("TP %", step=0.01)
+        sl_pct = st.number_input("SL %", step=0.01)
         tp_usd = valor_pos * tp_pct / 100
         sl_usd = valor_pos * sl_pct / 100
-
+        comision = st.number_input("Comisión USD", step=0.01)
+        fecha_op = st.date_input("Fecha Operación", value=datetime.today())
+        resultado = st.selectbox("Resultado", ["Abierta", "Ganadora", "Perdedora"])
         if st.form_submit_button("Guardar Operación"):
             new_id = df_ops["ID"].max() + 1 if not df_ops.empty else 1
-            row = pd.Series({
-                "ID": new_id,
-                "Fondo": fondo,
-                "Fecha": fecha_op,
-                "Moneda": moneda,
-                "Estrategia": estrategia,
-                "Broker": broker,
-                "Valor_Pos": valor_pos,
-                "TP_%": tp_pct,
-                "SL_%": sl_pct,
-                "TP_usd": tp_usd,
-                "SL_usd": sl_usd,
-                "Comision": comision,
-                "Resultado": resultado
-            })
-            df_ops = pd.concat([df_ops, row.to_frame().T], ignore_index=True)
+            fila = pd.DataFrame([[new_id, fondo_actual, fecha_op, moneda, estrategia, broker, valor_pos, tp_pct, sl_pct, tp_usd, sl_usd, comision, resultado]], columns=df_ops.columns)
+            df_ops = pd.concat([df_ops, fila], ignore_index=True)
             save_csv(df_aportes, df_ops)
-            st.success("Operación guardada ✔")
+            st.success("Operación registrada ✔")
             st.rerun()
 
-    df_ops_fondo = df_ops[df_ops["Fondo"] == fondo]
-    st.dataframe(df_ops_fondo.sort_values("Fecha", ascending=False), use_container_width=True)
-    if st.button("🗑 Eliminar última operación"):
-        df_ops = df_ops.drop(df_ops_fondo.tail(1).index)
-        save_csv(df_aportes, df_ops)
-        st.rerun()
-
-# === RESUMEN Y GRÁFICAS ===
-st.subheader("📊 Resumen del Fondo")
-df_aportes_fondo = df_aportes[df_aportes["Fondo"] == fondo]
-df_ops_fondo = df_ops[df_ops["Fondo"] == fondo]
+# Resumen por fondo
+st.markdown("## 📊 Resumen del Fondo")
+df_aportes_fondo = df_aportes[df_aportes["Fondo"] == fondo_actual]
+df_ops_fondo = df_ops[df_ops["Fondo"] == fondo_actual]
 
 capital_in = df_aportes_fondo[df_aportes_fondo["Tipo"] == "Aporte"]["Monto"].sum()
 capital_out = df_aportes_fondo[df_aportes_fondo["Tipo"] == "Retiro"]["Monto"].sum()
@@ -360,7 +194,7 @@ if not ops_cerradas.empty:
     fig = px.line(ops_cerradas, x="Fecha", y="Acumulado", markers=True)
     st.plotly_chart(fig, use_container_width=True)
 
-# === RENDIMIENTO POR SOCIO ===
+# Rendimiento por socio
 st.subheader("🥮 Rendimiento por Socio")
 df_socios = df_aportes_fondo.groupby("Socio")["Monto"].agg([
     ("Aportes", lambda x: x[df_aportes_fondo.loc[x.index, "Tipo"] == "Aporte"].sum()),
@@ -370,13 +204,22 @@ df_socios["Capital Neto"] = df_socios["Aportes"] - df_socios["Retiros"]
 df_socios["Participación"] = df_socios["Capital Neto"] / capital_neto if capital_neto else 0
 df_socios["Ganancia"] = df_socios["Participación"] * ganancia_total
 
-# Asegurar tipos numéricos
-df_socios["Ganancia"] = pd.to_numeric(df_socios["Ganancia"], errors="coerce")
-df_socios["Capital Neto"] = pd.to_numeric(df_socios["Capital Neto"], errors="coerce")
-
-try:
-    df_socios["Rendimiento %"] = ((df_socios["Ganancia"] / df_socios["Capital Neto"].replace(0, pd.NA)) * 100).round(2).fillna(0)
-except Exception:
-    df_socios["Rendimiento %"] = 0
-
+df_socios["Rendimiento %"] = ((df_socios["Ganancia"] / df_socios["Capital Neto"].replace(0, pd.NA)) * 100).round(2).fillna(0)
 st.dataframe(df_socios.round(2), use_container_width=True)
+
+# Históricos
+st.markdown("#### 📋 Aportes del Fondo")
+st.dataframe(df_aportes_fondo.sort_values("Fecha", ascending=False), use_container_width=True)
+
+st.markdown("#### 📋 Operaciones del Fondo")
+st.dataframe(df_ops_fondo.sort_values("Fecha", ascending=False), use_container_width=True)
+
+# Exportar informes
+if rol == "admin":
+    st.markdown("#### Exportar Informes")
+    excel_link = to_excel_download_link({"Aportes": df_aportes_fondo, "Operaciones": df_ops_fondo})
+    texto = f"Fondo: {fondo_actual}\nCapital Neto: ${capital_neto:,.2f}\nGanancia Total: ${ganancia_total:,.2f}\nTotal Final: ${total_final:,.2f}\nRendimiento: {rendimiento_pct:.2f}%"
+    pdf_link = exportar_pdf(texto)
+    st.markdown(excel_link, unsafe_allow_html=True)
+    st.markdown(pdf_link, unsafe_allow_html=True)
+
