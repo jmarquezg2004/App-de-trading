@@ -1,4 +1,4 @@
-import streamlit as st
+""import streamlit as st
 import pandas as pd
 import os
 from datetime import datetime
@@ -24,8 +24,8 @@ def init_csv():
 
 # Cargar datos sin cache
 def load_csv_data():
-    df_aportes = pd.read_csv(CSV_APORTES, parse_dates=["Fecha"])
-    df_ops = pd.read_csv(CSV_OPERACIONES, parse_dates=["Fecha"])
+    df_aportes = pd.read_csv(CSV_APORTES)
+    df_ops = pd.read_csv(CSV_OPERACIONES)
     df_aportes["Fecha"] = pd.to_datetime(df_aportes["Fecha"], errors="coerce")
     df_ops["Fecha"] = pd.to_datetime(df_ops["Fecha"], errors="coerce")
     return df_aportes, df_ops
@@ -108,7 +108,7 @@ usuario_actual = st.session_state.usuario
 if rol_actual == "admin":
     nuevo_fondo = st.sidebar.text_input("Crear nuevo fondo")
     if st.sidebar.button("Agregar Fondo", key="btn_agregar_fondo") and nuevo_fondo.strip():
-        fondos_existentes = set(df_aportes_all["Fondo"]).union(df_ops_all["Fondo"])
+        fondos_existentes = set(df_aportes_all["Fondo"]).union(set(df_ops_all["Fondo"]))
         if nuevo_fondo not in fondos_existentes:
             nueva_fila = pd.DataFrame([[nuevo_fondo, "", "", datetime.today(), "Aporte", 0]], columns=df_aportes_all.columns)
             df_aportes_all = pd.concat([df_aportes_all, nueva_fila], ignore_index=True)
@@ -122,7 +122,7 @@ if rol_actual == "admin":
 # Filtro por mes y año
 st.sidebar.subheader("📅 Filtro por Fecha")
 meses = list(range(1, 13))
-anios = sorted(set(df_aportes_all['Fecha'].dropna().dt.year).union(df_ops_all['Fecha'].dropna().dt.year))
+anios = sorted(set(df_aportes_all['Fecha'].dropna().dt.year).union(set(df_ops_all['Fecha'].dropna().dt.year)))
 anio_sel = st.sidebar.selectbox("Año", options=anios, index=len(anios)-1)
 mes_sel = st.sidebar.selectbox("Mes", options=meses, index=datetime.today().month - 1)
 
@@ -151,6 +151,32 @@ if rol_actual == "admin":
             df_aportes_all = pd.concat([df_aportes_all, nueva_fila], ignore_index=True)
             save_csv(df_aportes_all, df_ops_all)
             st.success("Movimiento registrado exitosamente")
+            st.rerun()
+
+# ========== FORMULARIO OPERACIONES ==========
+if rol_actual == "admin":
+    st.markdown("### 🧾 Registrar Operación")
+    with st.form("form_operacion"):
+        c1, c2, c3 = st.columns(3)
+        moneda = c1.text_input("Moneda")
+        estrategia = c2.selectbox("Estrategia", ["Spot", "Futuros", "Staking", "Holding", "Arbitraje", "Bot o Copy Trading", "Farming", "Launchpool", "ICO"])
+        broker = c3.text_input("Broker")
+        c4, c5, c6 = st.columns(3)
+        valor_pos = c4.number_input("Valor de Posición", step=0.01)
+        tp_pct = c5.number_input("TP %", step=0.01)
+        sl_pct = c6.number_input("SL %", step=0.01)
+        c7, c8, c9 = st.columns(3)
+        tp_usd = c7.number_input("TP USD", step=0.01)
+        sl_usd = c8.number_input("SL USD", step=0.01)
+        comision = c9.number_input("Comisión", step=0.01)
+        fecha_op = st.date_input("Fecha", value=datetime.today())
+        resultado = st.selectbox("Resultado", ["Abierta", "Ganadora", "Perdedora"])
+        if st.form_submit_button("Guardar Operación"):
+            nuevo_id = int(df_ops_all["ID"].max()) + 1 if not df_ops_all.empty else 1
+            nueva_fila = pd.DataFrame([[nuevo_id, fondo_actual, fecha_op, moneda, estrategia, broker, valor_pos, tp_pct, sl_pct, tp_usd, sl_usd, comision, resultado]], columns=df_ops_all.columns)
+            df_ops_all = pd.concat([df_ops_all, nueva_fila], ignore_index=True)
+            save_csv(df_aportes_all, df_ops_all)
+            st.success("Operación registrada exitosamente")
             st.rerun()
 
 # Filtrar por fondo actual y fecha seleccionada
