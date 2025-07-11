@@ -135,6 +135,24 @@ st.sidebar.dataframe(ultimos_aportes.drop(columns=["Cedula"]), use_container_wid
 st.sidebar.write("**Operaciones recientes:**")
 st.sidebar.dataframe(ultimas_ops.drop(columns=["ID"]), use_container_width=True)
 
+# ========== FORMULARIO APORTES ==========
+if rol_actual == "admin":
+    st.markdown("### 💰 Registrar Aporte o Retiro")
+    with st.form("form_aporte"):
+        c1, c2, c3 = st.columns(3)
+        socio = c1.text_input("Nombre del Socio")
+        cedula = c2.text_input("Cédula")
+        tipo = c3.selectbox("Tipo de Movimiento", ["Aporte", "Retiro"])
+        c4, c5 = st.columns(2)
+        monto = c4.number_input("Monto", step=0.01)
+        fecha = c5.date_input("Fecha", value=datetime.today())
+        if st.form_submit_button("Guardar Movimiento"):
+            nueva_fila = pd.DataFrame([[fondo_actual, socio, cedula, fecha, tipo, monto]], columns=df_aportes_all.columns)
+            df_aportes_all = pd.concat([df_aportes_all, nueva_fila], ignore_index=True)
+            save_csv(df_aportes_all, df_ops_all)
+            st.success("Movimiento registrado exitosamente")
+            st.rerun()
+
 # Filtrar por fondo actual y fecha seleccionada
 filtro_aportes = df_aportes_all[(df_aportes_all["Fondo"] == fondo_actual) &
                                  (df_aportes_all['Fecha'].dt.year == anio_sel) &
@@ -180,8 +198,6 @@ if rol_actual == "admin":
     pdf_link = exportar_pdf(pdf_texto)
     st.markdown(excel_link, unsafe_allow_html=True)
     st.markdown(pdf_link, unsafe_allow_html=True)
-
-# Resto del código...
 
 # ... (resto del código sin cambios importantes) ...
 
