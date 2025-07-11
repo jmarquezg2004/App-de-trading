@@ -243,7 +243,7 @@ if rol == "admin":
         c1, c2, c3 = st.columns(3)
         fecha_op = c1.date_input("Fecha", value=datetime.today())
         moneda = c2.text_input("Moneda")
-        estrategia = c3.selectbox("Estrategia", ["spot", "futuros", "staking", "holding", "ICO"])
+        estrategia = c3.selectbox("Estrategia", ["Spot", "Futuros", "Staking", "Holding", "Arbitraje", "Bot o Copy Trading", "Farming", "Launchpool", "ICO"])
 
         c4, c5, c6 = st.columns(3)
         broker = c4.text_input("Broker")
