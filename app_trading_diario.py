@@ -125,6 +125,15 @@ anios = sorted(set(df_aportes['Fecha'].dropna().dt.year).union(df_ops['Fecha'].d
 anio_sel = st.sidebar.selectbox("Año", options=anios, index=len(anios)-1)
 mes_sel = st.sidebar.selectbox("Mes", options=meses, index=datetime.today().month - 1)
 
+# Mostrar últimos registros sin filtrar (ayuda visual)
+st.sidebar.markdown("#### Últimos Movimientos")
+ultimos_aportes = df_aportes[df_aportes["Fondo"] == fondo_actual].sort_values("Fecha", ascending=False).head(3)
+ultimas_ops = df_ops[df_ops["Fondo"] == fondo_actual].sort_values("Fecha", ascending=False).head(3)
+st.sidebar.write("**Aportes recientes:**")
+st.sidebar.dataframe(ultimos_aportes.drop(columns=["Cedula"]), use_container_width=True)
+st.sidebar.write("**Operaciones recientes:**")
+st.sidebar.dataframe(ultimas_ops.drop(columns=["ID"]), use_container_width=True)
+
 # Aplicar filtro por mes y año
 df_aportes = df_aportes[(df_aportes['Fecha'].dt.year == anio_sel) & (df_aportes['Fecha'].dt.month == mes_sel)]
 df_ops = df_ops[(df_ops['Fecha'].dt.year == anio_sel) & (df_ops['Fecha'].dt.month == mes_sel)]
