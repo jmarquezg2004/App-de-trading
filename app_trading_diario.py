@@ -106,7 +106,7 @@ usuario_actual = st.session_state.usuario
 # Crear nuevos fondos
 if rol_actual == "admin":
     nuevo_fondo = st.sidebar.text_input("Crear nuevo fondo")
-    if st.sidebar.button("Agregar Fondo") and nuevo_fondo.strip():
+    if st.sidebar.button("Agregar Fondo", key="btn_agregar_fondo") and nuevo_fondo.strip():
         fondos_existentes = set(df_aportes["Fondo"]).union(df_ops["Fondo"])
         if nuevo_fondo not in fondos_existentes:
             nueva_fila = pd.DataFrame([[nuevo_fondo, "", "", datetime.today(), "Aporte", 0]], columns=df_aportes.columns)
