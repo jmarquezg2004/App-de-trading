@@ -96,17 +96,18 @@ fondo_actual = st.session_state.fondo
 rol = st.session_state.rol
 usuario = st.session_state.usuario
 
-# Fondos disponibles
-fondos_disponibles = sorted(set(df_aportes["Fondo"]).union(set(df_ops["Fondo"])))
+# Filtrar fondos disponibles
 if rol == "admin":
-    fondos_disponibles = sorted(set(fondos_disponibles).union({USUARIOS[usuario]["fondo"]}))
+    fondos_disponibles = sorted(set(df_aportes["Fondo"]).union(df_ops["Fondo"]))
+else:
+    fondos_disponibles = sorted(df_aportes[df_aportes["Socio"] == usuario]["Fondo"].unique())
 
 # Crear nuevo fondo
 if rol == "admin":
     nuevo_fondo = st.sidebar.text_input("➕ Crear nuevo fondo")
     if st.sidebar.button("Agregar Fondo") and nuevo_fondo.strip():
         if nuevo_fondo not in fondos_disponibles:
-            fila = pd.DataFrame([[nuevo_fondo, "", "", datetime.today(), "Aporte", 0]], columns=df_aportes.columns)
+            fila = pd.DataFrame([[nuevo_fondo, usuario, "", datetime.today(), "Aporte", 0]], columns=df_aportes.columns)
             df_aportes = pd.concat([df_aportes, fila], ignore_index=True)
             save_csv(df_aportes, df_ops)
             st.session_state.fondo = nuevo_fondo
@@ -120,7 +121,7 @@ fondo = st.selectbox("Selecciona el fondo", fondos_disponibles, index=fondos_dis
 st.markdown(f"**👤 {usuario}** — **Fondo:** {fondo}")
 st.markdown("---")
 
-# Registrar aportes
+# === MOVIMIENTOS DE CAPITAL ===
 if rol == "admin":
     st.subheader("💰 Movimientos de Capital (Socios)")
     with st.form("form_aporte"):
@@ -139,8 +140,12 @@ if rol == "admin":
 
     df_aportes_fondo = df_aportes[df_aportes["Fondo"] == fondo]
     st.dataframe(df_aportes_fondo.sort_values("Fecha", ascending=False), use_container_width=True)
+    if st.button("🗑 Eliminar último movimiento"):
+        df_aportes = df_aportes.drop(df_aportes_fondo.tail(1).index)
+        save_csv(df_aportes, df_ops)
+        st.rerun()
 
-# Registrar operación
+# === REGISTRAR OPERACIÓN ===
 if rol == "admin":
     st.subheader("📌 Registrar Nueva Operación")
     with st.form("form_op"):
@@ -186,8 +191,12 @@ if rol == "admin":
 
     df_ops_fondo = df_ops[df_ops["Fondo"] == fondo]
     st.dataframe(df_ops_fondo.sort_values("Fecha", ascending=False), use_container_width=True)
+    if st.button("🗑 Eliminar última operación"):
+        df_ops = df_ops.drop(df_ops_fondo.tail(1).index)
+        save_csv(df_aportes, df_ops)
+        st.rerun()
 
-# Resumen
+# === RESUMEN Y GRÁFICAS ===
 st.subheader("📊 Resumen del Fondo")
 df_aportes_fondo = df_aportes[df_aportes["Fondo"] == fondo]
 df_ops_fondo = df_ops[df_ops["Fondo"] == fondo]
@@ -205,11 +214,8 @@ ganancia_total = ops_cerradas["PnL"].sum()
 total_final = capital_neto + ganancia_total
 rendimiento_pct = (ganancia_total / capital_neto * 100).round(2) if capital_neto else 0
 
-col1, col2, col3, col4 = st.columns(4)
-col1.metric("Capital Neto", f"${capital_neto:,.2f}")
-col2.metric("Ganancia Total", f"${ganancia_total:,.2f}")
-col3.metric("Total Final", f"${total_final:,.2f}")
-col4.metric("Rendimiento %", f"{rendimiento_pct:.2f}%")
+color_rend = "green" if rendimiento_pct >= 0 else "red"
+st.markdown(f"### Rendimiento del Fondo: <span style='color:{color_rend}'>**{rendimiento_pct:.2f}%**</span>", unsafe_allow_html=True)
 
 if not ops_cerradas.empty:
     ops_cerradas = ops_cerradas.sort_values("Fecha")
@@ -218,7 +224,7 @@ if not ops_cerradas.empty:
     fig = px.line(ops_cerradas, x="Fecha", y="Acumulado", markers=True)
     st.plotly_chart(fig, use_container_width=True)
 
-# Rendimiento por socio
+# === RENDIMIENTO POR SOCIO ===
 st.subheader("🥮 Rendimiento por Socio")
 df_socios = df_aportes_fondo.groupby("Socio")["Monto"].agg([
     ("Aportes", lambda x: x[df_aportes_fondo.loc[x.index, "Tipo"] == "Aporte"].sum()),
@@ -228,7 +234,6 @@ df_socios["Capital Neto"] = df_socios["Aportes"] - df_socios["Retiros"]
 df_socios["Participación"] = df_socios["Capital Neto"] / capital_neto if capital_neto else 0
 df_socios["Ganancia"] = df_socios["Participación"] * ganancia_total
 
-# Asegurar tipos numéricos
 df_socios["Ganancia"] = pd.to_numeric(df_socios["Ganancia"], errors="coerce")
 df_socios["Capital Neto"] = pd.to_numeric(df_socios["Capital Neto"], errors="coerce")
 
