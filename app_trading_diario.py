@@ -6,6 +6,7 @@ import plotly.express as px
 from io import BytesIO
 import base64
 from fpdf import FPDF
+import requests  # Necesario para comunicarse con la API de Firebase
 
 # Configuración inicial
 st.set_page_config(page_title="Diario de Trading", layout="wide")
@@ -13,6 +14,30 @@ DATA_DIR = "data"
 os.makedirs(DATA_DIR, exist_ok=True)
 CSV_APORTES = os.path.join(DATA_DIR, "aportes.csv")
 CSV_OPERACIONES = os.path.join(DATA_DIR, "operaciones.csv")
+
+# === CONFIGURACIÓN DE FIREBASE API ===
+# Usamos tu Web API Key para validar los usuarios directamente con tu Authentication
+FIREBASE_WEB_API_KEY = "AIzaSyC52gIJJRTE1B4BqeUwDmaX2fWKS3sSw10"
+ADMIN_EMAIL = "jose@arkezinvest.com"
+
+def verificar_credenciales_firebase(email, password):
+    """Verifica el usuario y contraseña directamente en Firebase Authentication"""
+    url = f"https://identitytoolkit.googleapis.com/v1/accounts:signInWithPassword?key={FIREBASE_WEB_API_KEY}"
+    payload = {
+        "email": email,
+        "password": password,
+        "returnSecureToken": True
+    }
+    try:
+        response = requests.post(url, json=payload)
+        if response.status_code == 200:
+            return True, response.json()
+        else:
+            # Captura el error de Firebase (Contraseña incorrecta, usuario no existe, etc.)
+            error_msg = response.json().get("error", {}).get("message", "Error de autenticación")
+            return False, error_msg
+    except Exception as e:
+        return False, str(e)
 
 # Inicializar archivos CSV si no existen
 def init_csv():
@@ -57,31 +82,35 @@ def exportar_pdf(texto, nombre_archivo="informe.pdf"):
         b64 = base64.b64encode(f.read()).decode()
     return f'<a href="data:application/octet-stream;base64,{b64}" download="{nombre_archivo}">📄 Descargar PDF</a>'
 
-# Usuarios demo
-USUARIOS = {
-    "admin": {"pwd": "admin123", "fondo": "Arkez Invest", "rol": "admin"},
-    "juan": {"pwd": "juan123", "fondo": "Cripto Alpha", "rol": "lector"},
-    "maria": {"pwd": "maria123", "fondo": "Arkez Invest", "rol": "lector"},
-}
 
-# Login
+# Login con Firebase
 if "logged_in" not in st.session_state:
     st.session_state.logged_in = False
+
 if not st.session_state.logged_in:
     st.sidebar.title("🔒 Acceso Privado")
-    user = st.sidebar.text_input("Usuario")
+    user = st.sidebar.text_input("Correo Electrónico")
     pwd = st.sidebar.text_input("Contraseña", type="password")
+    
     if st.sidebar.button("Entrar"):
-        if user in USUARIOS and USUARIOS[user]["pwd"] == pwd:
-            st.session_state.update({
-                "logged_in": True,
-                "usuario": user,
-                "rol": USUARIOS[user]["rol"],
-                "fondo": USUARIOS[user]["fondo"]
-            })
-            st.rerun()
+        if user.strip() == "" or pwd.strip() == "":
+            st.sidebar.error("Por favor ingresa correo y contraseña")
         else:
-            st.sidebar.error("Credenciales incorrectas ❌")
+            exito, resultado = verificar_credenciales_firebase(user, pwd)
+            if exito:
+                # Si el correo es el tuyo, eres admin. Si es otro de Firebase, es lector.
+                rol_usuario = "admin" if user.lower() == ADMIN_EMAIL.lower() else "lector"
+                
+                st.session_state.update({
+                    "logged_in": True,
+                    "usuario": user,
+                    "rol": rol_usuario,
+                    "fondo": "Arkez Invest"  # Fondo por defecto
+                })
+                st.success("¡Bienvenido! Cargando...")
+                st.rerun()
+            else:
+                st.sidebar.error("Credenciales incorrectas o usuario no válido en Firebase ❌")
     st.stop()
 
 if st.sidebar.button("Cerrar Sesión"):
@@ -99,8 +128,12 @@ usuario = st.session_state.usuario
 # Filtrar fondos disponibles
 if rol == "admin":
     fondos_disponibles = sorted(set(df_aportes["Fondo"]).union(df_ops["Fondo"]))
+    if not fondos_disponibles:
+        fondos_disponibles = ["Arkez Invest"]
 else:
     fondos_disponibles = sorted(df_aportes[df_aportes["Socio"] == usuario]["Fondo"].unique())
+    if not fondos_disponibles:
+        fondos_disponibles = [st.session_state.fondo]
 
 # Crear nuevo fondo
 if rol == "admin":
@@ -117,8 +150,9 @@ if rol == "admin":
             st.warning("Ese fondo ya existe")
 
 # Selección de fondo
-fondo = st.selectbox("Selecciona el fondo", fondos_disponibles, index=fondos_disponibles.index(fondo_actual))
-st.markdown(f"**👤 {usuario}** — **Fondo:** {fondo}")
+fondo = st.selectbox("Selecciona el fondo", fondos_disponibles, index=0 if fondo_actual not in fondos_disponibles else fondos_disponibles.index(fondo_actual))
+st.session_state.fondo = fondo
+st.markdown(f"**👤 {usuario}** — **Fondo:** {fondo} — **Rol:** {rol}")
 st.markdown("---")
 
 # === MOVIMIENTOS DE CAPITAL ===
@@ -140,7 +174,7 @@ if rol == "admin":
 
     df_aportes_fondo = df_aportes[df_aportes["Fondo"] == fondo]
     st.dataframe(df_aportes_fondo.sort_values("Fecha", ascending=False), use_container_width=True)
-    if st.button("🗑 Eliminar último movimiento"):
+    if st.button("🗑 Eliminar último movimiento") and not df_aportes_fondo.empty:
         df_aportes = df_aportes.drop(df_aportes_fondo.tail(1).index)
         save_csv(df_aportes, df_ops)
         st.rerun()
@@ -191,7 +225,7 @@ if rol == "admin":
 
     df_ops_fondo = df_ops[df_ops["Fondo"] == fondo]
     st.dataframe(df_ops_fondo.sort_values("Fecha", ascending=False), use_container_width=True)
-    if st.button("🗑 Eliminar última operación"):
+    if st.button("🗑 Eliminar última operación") and not df_ops_fondo.empty:
         df_ops = df_ops.drop(df_ops_fondo.tail(1).index)
         save_csv(df_aportes, df_ops)
         st.rerun()
@@ -226,20 +260,23 @@ if not ops_cerradas.empty:
 
 # === RENDIMIENTO POR SOCIO ===
 st.subheader("🥮 Rendimiento por Socio")
-df_socios = df_aportes_fondo.groupby("Socio")["Monto"].agg([
-    ("Aportes", lambda x: x[df_aportes_fondo.loc[x.index, "Tipo"] == "Aporte"].sum()),
-    ("Retiros", lambda x: x[df_aportes_fondo.loc[x.index, "Tipo"] == "Retiro"].sum()),
-])
-df_socios["Capital Neto"] = df_socios["Aportes"] - df_socios["Retiros"]
-df_socios["Participación"] = df_socios["Capital Neto"] / capital_neto if capital_neto else 0
-df_socios["Ganancia"] = df_socios["Participación"] * ganancia_total
+if not df_aportes_fondo.empty:
+    df_socios = df_aportes_fondo.groupby("Socio")["Monto"].agg([
+        ("Aportes", lambda x: x[df_aportes_fondo.loc[x.index, "Tipo"] == "Aporte"].sum()),
+        ("Retiros", lambda x: x[df_aportes_fondo.loc[x.index, "Tipo"] == "Retiro"].sum()),
+    ])
+    df_socios["Capital Neto"] = df_socios["Aportes"] - df_socios["Retiros"]
+    df_socios["Participación"] = df_socios["Capital Neto"] / capital_neto if capital_neto else 0
+    df_socios["Ganancia"] = df_socios["Participación"] * ganancia_total
 
-df_socios["Ganancia"] = pd.to_numeric(df_socios["Ganancia"], errors="coerce")
-df_socios["Capital Neto"] = pd.to_numeric(df_socios["Capital Neto"], errors="coerce")
+    df_socios["Ganancia"] = pd.to_numeric(df_socios["Ganancia"], errors="coerce")
+    df_socios["Capital Neto"] = pd.to_numeric(df_socios["Capital Neto"], errors="coerce")
 
-try:
-    df_socios["Rendimiento %"] = ((df_socios["Ganancia"] / df_socios["Capital Neto"].replace(0, pd.NA)) * 100).round(2).fillna(0)
-except Exception:
-    df_socios["Rendimiento %"] = 0
+    try:
+        df_socios["Rendimiento %"] = ((df_socios["Ganancia"] / df_socios["Capital Neto"].replace(0, pd.NA)) * 100).round(2).fillna(0)
+    except Exception:
+        df_socios["Rendimiento %"] = 0
 
-st.dataframe(df_socios.round(2), use_container_width=True)
+    st.dataframe(df_socios.round(2), use_container_width=True)
+else:
+    st.info("No hay aportes registrados para calcular rendimiento por socio.")
