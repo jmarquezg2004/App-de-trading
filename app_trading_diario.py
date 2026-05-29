@@ -15,8 +15,8 @@ st.set_page_config(page_title="Diario de Trading", layout="wide")
 FIREBASE_WEB_API_KEY = "AIzaSyC52gIJJRTE1B4BqeUwDmaX2fWKS3sSw10"
 FIRESTORE_URL = "https://firestore.googleapis.com/v1/projects/plataforma-de-inversiones/databases/(default)/documents"
 
-ADMIN_EMAIL = "jose@arkezinvest.com"
-USUARIO_ESPECIAL = "jmarquezg2004@gmail.com"
+# 👑 NUEVO ADMINISTRADOR ASIGNADO
+ADMIN_EMAIL = "jmarquezg2004@gmail.com"
 
 # --- AUTENTICACIÓN ---
 def verificar_credenciales_firebase(email, password):
@@ -70,7 +70,7 @@ def obtener_precio_realtime(ticker_simbolo):
     
     simbolo = ticker_simbolo.lower().strip()
     
-    # 1. RUTA CRIPTO (Si el ticker termina en '-usd', busca cualquier cripto en CoinGecko)
+    # 1. RUTA CRIPTO (Si el ticker contiene '-usd', busca de forma dinámica en CoinGecko)
     if "-usd" in simbolo:
         id_cripto = simbolo.replace("-usd", "")
         diccionario_siglas = {"btc": "bitcoin", "eth": "ethereum", "sol": "solana", "ada": "cardano", "link": "chainlink"}
@@ -114,7 +114,7 @@ if not st.session_state.logged_in:
             if user_lower == ADMIN_EMAIL.lower():
                 rol_usuario = "admin"
             else:
-                rol_usuario = "operador"  # jmarquezg2004 y nuevos usuarios serán Operadores
+                rol_usuario = "operador"  # Cualquier otro correo ingresará como operador limitado
                 
             st.session_state.update({
                 "logged_in": True,
@@ -132,7 +132,7 @@ if st.sidebar.button("Cerrar Sesión"):
         st.session_state.pop(key, None)
     st.rerun()
 
-# Cargar Datos directamente desde Firebase (Evita pérdidas al actualizar GitHub)
+# Cargar Datos directamente desde Firebase
 df_aportes = cargar_documentos_firestore("aportes")
 df_ops = cargar_documentos_firestore("operaciones")
 
