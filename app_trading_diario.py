@@ -1,89 +1,104 @@
 import streamlit as st
 import pandas as pd
-import os
 from datetime import datetime
 import plotly.express as px
 from io import BytesIO
 import base64
 from fpdf import FPDF
-import requests  # Necesario para comunicarse con la API de Firebase
+import requests
+import yfinance as yf  # Para Acciones y ETFs con máxima fiabilidad
 
 # Configuración inicial
 st.set_page_config(page_title="Diario de Trading", layout="wide")
-DATA_DIR = "data"
-os.makedirs(DATA_DIR, exist_ok=True)
-CSV_APORTES = os.path.join(DATA_DIR, "aportes.csv")
-CSV_OPERACIONES = os.path.join(DATA_DIR, "operaciones.csv")
 
-# === CONFIGURACIÓN DE FIREBASE API ===
-# Usamos tu Web API Key para validar los usuarios directamente con tu Authentication
+# === CONFIGURACIÓN DE FIREBASE (AUTENTICACIÓN Y BASE DE DATOS) ===
 FIREBASE_WEB_API_KEY = "AIzaSyC52gIJJRTE1B4BqeUwDmaX2fWKS3sSw10"
-ADMIN_EMAIL = "jose@arkezinvest.com"
+FIRESTORE_URL = "https://firestore.googleapis.com/v1/projects/plataforma-de-inversiones/databases/(default)/documents"
 
+ADMIN_EMAIL = "jose@arkezinvest.com"
+USUARIO_ESPECIAL = "jmarquezg2004@gmail.com"
+
+# --- AUTENTICACIÓN ---
 def verificar_credenciales_firebase(email, password):
-    """Verifica el usuario y contraseña directamente en Firebase Authentication"""
     url = f"https://identitytoolkit.googleapis.com/v1/accounts:signInWithPassword?key={FIREBASE_WEB_API_KEY}"
-    payload = {
-        "email": email,
-        "password": password,
-        "returnSecureToken": True
-    }
+    payload = {"email": email, "password": password, "returnSecureToken": True}
     try:
         response = requests.post(url, json=payload)
         if response.status_code == 200:
             return True, response.json()
+        return False, response.json().get("error", {}).get("message", "Error")
+    except Exception:
+        return False, "Error de conexión"
+
+# --- FIRESTORE (PERSISTENCIA TOTAL EN LA NUBE) ---
+def cargar_documentos_firestore(coleccion):
+    url = f"{FIRESTORE_URL}/{coleccion}"
+    try:
+        response = requests.get(url)
+        if response.status_code == 200 and "documents" in response.json():
+            lista_datos = []
+            for doc in response.json()["documents"]:
+                fields = doc.get("fields", {})
+                item = {"id_documento": doc["name"].split("/")[-1]}
+                for key, val in fields.items():
+                    item[key] = list(val.values())[0]
+                lista_datos.append(item)
+            return pd.DataFrame(lista_datos)
+    except Exception:
+        pass
+    return pd.DataFrame()
+
+def guardar_documento_firestore(coleccion, datos):
+    url = f"{FIRESTORE_URL}/{coleccion}"
+    fields = {}
+    for key, value in datos.items():
+        if isinstance(value, (int, float)):
+            fields[key] = {"doubleValue": float(value)}
         else:
-            # Captura el error de Firebase (Contraseña incorrecta, usuario no existe, etc.)
-            error_msg = response.json().get("error", {}).get("message", "Error de autenticación")
-            return False, error_msg
-    except Exception as e:
-        return False, str(e)
+            fields[key] = {"stringValue": str(value)}
+    payload = {"fields": fields}
+    requests.post(url, json=payload)
 
-# Inicializar archivos CSV si no existen
-def init_csv():
-    if not os.path.exists(CSV_APORTES):
-        pd.DataFrame(columns=["Fondo", "Socio", "Cedula", "Fecha", "Tipo", "Monto"]).to_csv(CSV_APORTES, index=False)
-    if not os.path.exists(CSV_OPERACIONES):
-        pd.DataFrame(columns=["ID", "Fondo", "Fecha", "Moneda", "Estrategia", "Broker", "Valor_Pos", "TP_%", "SL_%", "TP_usd", "SL_usd", "Comision", "Resultado"]).to_csv(CSV_OPERACIONES, index=False)
+def eliminar_documento_firestore(coleccion, id_doc):
+    url = f"{FIRESTORE_URL}/{coleccion}/{id_doc}"
+    requests.delete(url)
 
-# Cargar datos
-def load_csv_data():
-    df_aportes = pd.read_csv(CSV_APORTES)
-    df_ops = pd.read_csv(CSV_OPERACIONES)
-    df_aportes["Fecha"] = pd.to_datetime(df_aportes["Fecha"], errors="coerce")
-    df_ops["Fecha"] = pd.to_datetime(df_ops["Fecha"], errors="coerce")
-    return df_aportes, df_ops
+# --- SISTEMA DE PRECIOS HÍBRIDO CONFIABLE (YAHOO FINANCE + COINGECKO) ---
+def obtener_precio_realtime(ticker_simbolo):
+    if not ticker_simbolo:
+        return None
+    
+    simbolo = ticker_simbolo.lower().strip()
+    
+    # 1. RUTA CRIPTO (Si el ticker termina en '-usd', busca cualquier cripto en CoinGecko)
+    if "-usd" in simbolo:
+        id_cripto = simbolo.replace("-usd", "")
+        diccionario_siglas = {"btc": "bitcoin", "eth": "ethereum", "sol": "solana", "ada": "cardano", "link": "chainlink"}
+        if id_cripto in diccionario_siglas:
+            id_cripto = diccionario_siglas[id_cripto]
+            
+        try:
+            url = f"https://api.coingecko.com/api/v3/simple/price?ids={id_cripto}&vs_currencies=usd"
+            response = requests.get(url)
+            if response.status_code == 200:
+                data = response.json()
+                if id_cripto in data:
+                    return float(data[id_cripto]["usd"])
+        except Exception:
+            pass
 
-# Guardar datos
-def save_csv(df_aportes, df_ops):
-    df_aportes.to_csv(CSV_APORTES, index=False)
-    df_ops.to_csv(CSV_OPERACIONES, index=False)
+    # 2. RUTA TRADICIONAL (Yahoo Finance para Acciones y ETFs)
+    try:
+        ticker_data = yf.Ticker(simbolo.upper())
+        precio = ticker_data.fast_info.last_price
+        if precio:
+            return float(precio)
+    except Exception:
+        pass
+        
+    return None
 
-# Exportar a Excel
-def to_excel_download_link(df_dict, nombre_archivo="informe.xlsx"):
-    output = BytesIO()
-    with pd.ExcelWriter(output, engine='xlsxwriter') as writer:
-        for name, df in df_dict.items():
-            df.to_excel(writer, index=False, sheet_name=name[:31])
-    output.seek(0)
-    b64 = base64.b64encode(output.read()).decode()
-    return f'<a href="data:application/octet-stream;base64,{b64}" download="{nombre_archivo}">📥 Descargar Excel</a>'
-
-# Exportar a PDF
-def exportar_pdf(texto, nombre_archivo="informe.pdf"):
-    pdf = FPDF()
-    pdf.add_page()
-    pdf.set_font("Arial", size=12)
-    for linea in texto.split("\n"):
-        pdf.multi_cell(0, 10, txt=linea)
-    path = os.path.join(DATA_DIR, nombre_archivo)
-    pdf.output(path)
-    with open(path, "rb") as f:
-        b64 = base64.b64encode(f.read()).decode()
-    return f'<a href="data:application/octet-stream;base64,{b64}" download="{nombre_archivo}">📄 Descargar PDF</a>'
-
-
-# Login con Firebase
+# --- CONTROL DE ACCESO / LOGIN ---
 if "logged_in" not in st.session_state:
     st.session_state.logged_in = False
 
@@ -93,24 +108,23 @@ if not st.session_state.logged_in:
     pwd = st.sidebar.text_input("Contraseña", type="password")
     
     if st.sidebar.button("Entrar"):
-        if user.strip() == "" or pwd.strip() == "":
-            st.sidebar.error("Por favor ingresa correo y contraseña")
-        else:
-            exito, resultado = verificar_credenciales_firebase(user, pwd)
-            if exito:
-                # Si el correo es el tuyo, eres admin. Si es otro de Firebase, es lector.
-                rol_usuario = "admin" if user.lower() == ADMIN_EMAIL.lower() else "lector"
-                
-                st.session_state.update({
-                    "logged_in": True,
-                    "usuario": user,
-                    "rol": rol_usuario,
-                    "fondo": "Arkez Invest"  # Fondo por defecto
-                })
-                st.success("¡Bienvenido! Cargando...")
-                st.rerun()
+        exito, resultado = verificar_credenciales_firebase(user, pwd)
+        if exito:
+            user_lower = user.lower().strip()
+            if user_lower == ADMIN_EMAIL.lower():
+                rol_usuario = "admin"
             else:
-                st.sidebar.error("Credenciales incorrectas o usuario no válido en Firebase ❌")
+                rol_usuario = "operador"  # jmarquezg2004 y nuevos usuarios serán Operadores
+                
+            st.session_state.update({
+                "logged_in": True,
+                "usuario": user_lower,
+                "rol": rol_usuario,
+                "fondo": "Arkez Invest"
+            })
+            st.rerun()
+        else:
+            st.sidebar.error("Credenciales incorrectas o usuario no registrado en Firebase ❌")
     st.stop()
 
 if st.sidebar.button("Cerrar Sesión"):
@@ -118,165 +132,134 @@ if st.sidebar.button("Cerrar Sesión"):
         st.session_state.pop(key, None)
     st.rerun()
 
-# Datos y contexto
-init_csv()
-df_aportes, df_ops = load_csv_data()
+# Cargar Datos directamente desde Firebase (Evita pérdidas al actualizar GitHub)
+df_aportes = cargar_documentos_firestore("aportes")
+df_ops = cargar_documentos_firestore("operaciones")
+
+if df_aportes.empty:
+    df_aportes = pd.DataFrame(columns=["id_documento", "Fondo", "Socio", "Cedula", "Fecha", "Tipo", "Monto"])
+if df_ops.empty:
+    df_ops = pd.DataFrame(columns=["id_documento", "ID", "Fondo", "Fecha", "Moneda", "Estrategia", "Broker", "Valor_Pos", "TP_%", "SL_%", "TP_usd", "SL_usd", "Comision", "Resultado", "Ticker_API"])
+
 fondo_actual = st.session_state.fondo
 rol = st.session_state.rol
 usuario = st.session_state.usuario
 
-# Filtrar fondos disponibles
-if rol == "admin":
-    fondos_disponibles = sorted(set(df_aportes["Fondo"]).union(df_ops["Fondo"]))
-    if not fondos_disponibles:
-        fondos_disponibles = ["Arkez Invest"]
-else:
-    fondos_disponibles = sorted(df_aportes[df_aportes["Socio"] == usuario]["Fondo"].unique())
-    if not fondos_disponibles:
-        fondos_disponibles = [st.session_state.fondo]
+fondos_disponibles = sorted(set(df_aportes["Fondo"]).union(df_ops["Fondo"])) if not df_aportes.empty or not df_ops.empty else ["Arkez Invest"]
+if "Arkez Invest" not in fondos_disponibles:
+    fondos_disponibles.append("Arkez Invest")
 
-# Crear nuevo fondo
+# Solo el Administrador configura nuevos fondos en la barra lateral
 if rol == "admin":
     nuevo_fondo = st.sidebar.text_input("➕ Crear nuevo fondo")
     if st.sidebar.button("Agregar Fondo") and nuevo_fondo.strip():
         if nuevo_fondo not in fondos_disponibles:
-            fila = pd.DataFrame([[nuevo_fondo, usuario, "", datetime.today(), "Aporte", 0]], columns=df_aportes.columns)
-            df_aportes = pd.concat([df_aportes, fila], ignore_index=True)
-            save_csv(df_aportes, df_ops)
-            st.session_state.fondo = nuevo_fondo
+            guardar_documento_firestore("aportes", {"Fondo": nuevo_fondo, "Socio": usuario, "Cedula": "", "Fecha": str(datetime.today().date()), "Tipo": "Aporte", "Monto": 0.0})
             st.success(f"Fondo '{nuevo_fondo}' creado ✔")
             st.rerun()
-        else:
-            st.warning("Ese fondo ya existe")
 
-# Selección de fondo
 fondo = st.selectbox("Selecciona el fondo", fondos_disponibles, index=0 if fondo_actual not in fondos_disponibles else fondos_disponibles.index(fondo_actual))
 st.session_state.fondo = fondo
-st.markdown(f"**👤 {usuario}** — **Fondo:** {fondo} — **Rol:** {rol}")
+st.markdown(f"**👤 {usuario}** — **Fondo:** {fondo} — **Rol:** {rol.upper()}")
 st.markdown("---")
 
 # === MOVIMIENTOS DE CAPITAL ===
-if rol == "admin":
-    st.subheader("💰 Movimientos de Capital (Socios)")
-    with st.form("form_aporte"):
-        c1, c2, c3, c4 = st.columns(4)
-        socio = c1.text_input("Socio")
-        cedula = c2.text_input("Cédula")
-        tipo = c3.selectbox("Tipo", ["Aporte", "Retiro"])
-        monto = c4.number_input("Monto", step=0.01)
-        fecha = st.date_input("Fecha", value=datetime.today())
-        if st.form_submit_button("Guardar"):
-            nuevo = pd.DataFrame([[fondo, socio, cedula, fecha, tipo, monto]], columns=df_aportes.columns)
-            df_aportes = pd.concat([df_aportes, nuevo], ignore_index=True)
-            save_csv(df_aportes, df_ops)
-            st.success("Movimiento guardado ✔")
-            st.rerun()
+st.subheader("💰 Movimientos de Capital (Socios)")
+with st.form("form_aporte"):
+    c1, c2, c3, c4 = st.columns(4)
+    socio = c1.text_input("Socio")
+    cedula = c2.text_input("Cédula")
+    tipo = c3.selectbox("Tipo", ["Aporte", "Retiro"])
+    monto = c4.number_input("Monto", step=0.01)
+    fecha = st.date_input("Fecha", value=datetime.today())
+    if st.form_submit_button("Guardar Movimiento"):
+        guardar_documento_firestore("aportes", {
+            "Fondo": fondo, "Socio": socio, "Cedula": cedula, 
+            "Fecha": str(fecha), "Tipo": tipo, "Monto": float(monto)
+        })
+        st.success("Movimiento guardado con éxito ✔")
+        st.rerun()
 
-    df_aportes_fondo = df_aportes[df_aportes["Fondo"] == fondo]
+df_aportes_fondo = df_aportes[df_aportes["Fondo"] == fondo] if not df_aportes.empty else pd.DataFrame()
+if not df_aportes_fondo.empty:
     st.dataframe(df_aportes_fondo.sort_values("Fecha", ascending=False), use_container_width=True)
-    if st.button("🗑 Eliminar último movimiento") and not df_aportes_fondo.empty:
-        df_aportes = df_aportes.drop(df_aportes_fondo.tail(1).index)
-        save_csv(df_aportes, df_ops)
+    if rol == "admin" and st.button("🗑 Eliminar último movimiento"):
+        id_a_borrar = df_aportes_fondo.sort_values("Fecha").iloc[-1]["id_documento"]
+        eliminar_documento_firestore("aportes", id_a_borrar)
         st.rerun()
 
 # === REGISTRAR OPERACIÓN ===
-if rol == "admin":
-    st.subheader("📌 Registrar Nueva Operación")
-    with st.form("form_op"):
-        c1, c2, c3 = st.columns(3)
-        fecha_op = c1.date_input("Fecha", value=datetime.today())
-        moneda = c2.text_input("Moneda")
-        estrategia = c3.selectbox("Estrategia", ["Spot", "Futuros", "Staking", "Holding", "Arbitraje", "Bot o Copy Trading", "Farming", "Launchpool", "ICO"])
+st.subheader("📌 Registrar Nueva Operación")
+with st.form("form_op"):
+    c1, c2, c3 = st.columns(3)
+    fecha_op = c1.date_input("Fecha", value=datetime.today())
+    moneda = c2.text_input("Nombre del Activo (ej. Bitcoin o Nubank)")
+    estrategia = c3.selectbox("Estrategia", ["Spot", "Futuros", "Staking", "Holding", "Arbitraje", "Bot o Copy Trading", "Farming", "Launchpool", "ICO"])
 
-        c4, c5, c6 = st.columns(3)
-        broker = c4.text_input("Broker")
-        valor_pos = c5.number_input("Valor Posición", step=0.01)
-        comision = c6.number_input("Comisión USD", step=0.01)
+    c4, c5, c6 = st.columns(3)
+    broker = c4.text_input("Broker / Exchange")
+    valor_pos = c5.number_input("Valor Posición (USD)", step=0.01)
+    comision = c6.number_input("Comisión USD", step=0.01)
 
-        c7, c8, c9 = st.columns(3)
-        tp_pct = c7.number_input("TP %")
-        sl_pct = c8.number_input("SL %")
-        resultado = c9.selectbox("Resultado", ["Abierta", "Ganadora", "Perdedora"])
+    c7, c8, c9 = st.columns(3)
+    tp_pct = c7.number_input("TP %")
+    sl_pct = c8.number_input("SL %")
+    resultado = c9.selectbox("Resultado", ["Abierta", "Ganadora", "Perdedora"])
+    
+    ticker_api = st.text_input("Ticker para API (ej. 'NU' o 'VRT' para acciones | 'bitcoin-usd' o 'solana-usd' para criptos)")
 
-        tp_usd = valor_pos * tp_pct / 100
-        sl_usd = valor_pos * sl_pct / 100
+    tp_usd = valor_pos * tp_pct / 100
+    sl_usd = valor_pos * sl_pct / 100
 
-        if st.form_submit_button("Guardar Operación"):
-            new_id = df_ops["ID"].max() + 1 if not df_ops.empty else 1
-            row = pd.Series({
-                "ID": new_id,
-                "Fondo": fondo,
-                "Fecha": fecha_op,
-                "Moneda": moneda,
-                "Estrategia": estrategia,
-                "Broker": broker,
-                "Valor_Pos": valor_pos,
-                "TP_%": tp_pct,
-                "SL_%": sl_pct,
-                "TP_usd": tp_usd,
-                "SL_usd": sl_usd,
-                "Comision": comision,
-                "Resultado": resultado
-            })
-            df_ops = pd.concat([df_ops, row.to_frame().T], ignore_index=True)
-            save_csv(df_aportes, df_ops)
-            st.success("Operación guardada ✔")
-            st.rerun()
-
-    df_ops_fondo = df_ops[df_ops["Fondo"] == fondo]
-    st.dataframe(df_ops_fondo.sort_values("Fecha", ascending=False), use_container_width=True)
-    if st.button("🗑 Eliminar última operación") and not df_ops_fondo.empty:
-        df_ops = df_ops.drop(df_ops_fondo.tail(1).index)
-        save_csv(df_aportes, df_ops)
+    if st.form_submit_button("Guardar Operación"):
+        new_id = float(df_ops["ID"].max() + 1 if not df_ops.empty and "ID" in df_ops.columns else 1)
+        guardar_documento_firestore("operaciones", {
+            "ID": new_id, "Fondo": fondo, "Fecha": str(fecha_op), "Moneda": moneda,
+            "Estrategia": estrategia, "Broker": broker, "Valor_Pos": float(valor_pos),
+            "TP_%": float(tp_pct), "SL_%": float(sl_pct), "TP_usd": float(tp_usd),
+            "SL_usd": float(sl_usd), "Comision": float(comision), "Resultado": resultado,
+            "Ticker_API": ticker_api
+        })
+        st.success("Operación guardada con éxito ✔")
         st.rerun()
 
-# === RESUMEN Y GRÁFICAS ===
+df_ops_fondo = df_ops[df_ops["Fondo"] == fondo] if not df_ops.empty else pd.DataFrame()
+if not df_ops_fondo.empty:
+    
+    if st.button("🔄 Consultar Cotizaciones en Tiempo Real (Híbrido Yahoo/Gecko)"):
+        st.markdown("### 📈 Precios del Mercado:")
+        tickers_unicos = df_ops_fondo["Ticker_API"].dropna().unique()
+        for t in tickers_unicos:
+            if t.strip():
+                precio = obtener_precio_realtime(t)
+                if precio:
+                    st.success(f"Activo: **{t.upper()}** ➔ Precio Actual: **${precio:,.2f} USD**")
+                else:
+                    st.warning(f"No se pudo consultar el ticker: **{t}**. Recuerda usar '-usd' para criptos.")
+
+    st.dataframe(df_ops_fondo.sort_values("Fecha", ascending=False), use_container_width=True)
+    if rol == "admin" and st.button("🗑 Eliminar última operación"):
+        id_op_borrar = df_ops_fondo.sort_values("Fecha").iloc[-1]["id_documento"]
+        eliminar_documento_firestore("operaciones", id_op_borrar)
+        st.rerun()
+
+# === RESUMEN GENERAL ===
 st.subheader("📊 Resumen del Fondo")
-df_aportes_fondo = df_aportes[df_aportes["Fondo"] == fondo]
-df_ops_fondo = df_ops[df_ops["Fondo"] == fondo]
+if not df_ops_fondo.empty:
+    capital_neto = pd.to_numeric(df_aportes_fondo["Monto"], errors="coerce").sum() if not df_aportes_fondo.empty else 0.0
+    ops_cerradas = df_ops_fondo[df_ops_fondo["Resultado"] != "Abierta"].copy()
+    
+    if not ops_cerradas.empty:
+        ops_cerradas["PnL"] = 0.0
+        ops_cerradas["TP_usd"] = pd.to_numeric(ops_cerradas["TP_usd"], errors="coerce").fillna(0.0)
+        ops_cerradas["SL_usd"] = pd.to_numeric(ops_cerradas["SL_usd"], errors="coerce").fillna(0.0)
+        ops_cerradas["Comision"] = pd.to_numeric(ops_cerradas["Comision"], errors="coerce").fillna(0.0)
+        
+        ops_cerradas.loc[ops_cerradas["Resultado"] == "Ganadora", "PnL"] = ops_cerradas["TP_usd"] - ops_cerradas["Comision"]
+        ops_cerradas.loc[ops_cerradas["Resultado"] == "Perdedora", "PnL"] = -ops_cerradas["SL_usd"] - ops_cerradas["Comision"]
 
-capital_in = df_aportes_fondo[df_aportes_fondo["Tipo"] == "Aporte"]["Monto"].sum()
-capital_out = df_aportes_fondo[df_aportes_fondo["Tipo"] == "Retiro"]["Monto"].sum()
-capital_neto = capital_in - capital_out
-
-ops_cerradas = df_ops_fondo[df_ops_fondo["Resultado"] != "Abierta"].copy()
-ops_cerradas["PnL"] = 0
-ops_cerradas.loc[ops_cerradas["Resultado"] == "Ganadora", "PnL"] = ops_cerradas["TP_usd"] - ops_cerradas["Comision"]
-ops_cerradas.loc[ops_cerradas["Resultado"] == "Perdedora", "PnL"] = -ops_cerradas["SL_usd"] - ops_cerradas["Comision"]
-
-ganancia_total = ops_cerradas["PnL"].sum()
-total_final = capital_neto + ganancia_total
-rendimiento_pct = (ganancia_total / capital_neto * 100).round(2) if capital_neto else 0
-
-color_rend = "green" if rendimiento_pct >= 0 else "red"
-st.markdown(f"### Rendimiento del Fondo: <span style='color:{color_rend}'>**{rendimiento_pct:.2f}%**</span>", unsafe_allow_html=True)
-
-if not ops_cerradas.empty:
-    ops_cerradas = ops_cerradas.sort_values("Fecha")
-    ops_cerradas["Acumulado"] = capital_neto + ops_cerradas["PnL"].cumsum()
-    st.markdown("#### 📈 Evolución del Fondo")
-    fig = px.line(ops_cerradas, x="Fecha", y="Acumulado", markers=True)
-    st.plotly_chart(fig, use_container_width=True)
-
-# === RENDIMIENTO POR SOCIO ===
-st.subheader("🥮 Rendimiento por Socio")
-if not df_aportes_fondo.empty:
-    df_socios = df_aportes_fondo.groupby("Socio")["Monto"].agg([
-        ("Aportes", lambda x: x[df_aportes_fondo.loc[x.index, "Tipo"] == "Aporte"].sum()),
-        ("Retiros", lambda x: x[df_aportes_fondo.loc[x.index, "Tipo"] == "Retiro"].sum()),
-    ])
-    df_socios["Capital Neto"] = df_socios["Aportes"] - df_socios["Retiros"]
-    df_socios["Participación"] = df_socios["Capital Neto"] / capital_neto if capital_neto else 0
-    df_socios["Ganancia"] = df_socios["Participación"] * ganancia_total
-
-    df_socios["Ganancia"] = pd.to_numeric(df_socios["Ganancia"], errors="coerce")
-    df_socios["Capital Neto"] = pd.to_numeric(df_socios["Capital Neto"], errors="coerce")
-
-    try:
-        df_socios["Rendimiento %"] = ((df_socios["Ganancia"] / df_socios["Capital Neto"].replace(0, pd.NA)) * 100).round(2).fillna(0)
-    except Exception:
-        df_socios["Rendimiento %"] = 0
-
-    st.dataframe(df_socios.round(2), use_container_width=True)
-else:
-    st.info("No hay aportes registrados para calcular rendimiento por socio.")
+        ganancia_total = ops_cerradas["PnL"].sum()
+        rendimiento_pct = (ganancia_total / capital_neto * 100) if capital_neto > 0 else 0.0
+        
+        color_rend = "green" if rendimiento_pct >= 0 else "red"
+        st.markdown(f"### Rendimiento del Fondo: <span style='color:{color_rend}'>**{rendimiento_pct:.2f}%**</span>", unsafe_allow_html=True)
