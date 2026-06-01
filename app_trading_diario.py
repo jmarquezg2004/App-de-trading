@@ -6,15 +6,7 @@ from io import BytesIO
 import base64
 from fpdf import FPDF
 import requests
-
-# Instalación automática interna de yfinance para que no falle jamás la nube
-import subprocess
-import sys
-try:
-    import yfinance as yf
-except ModuleNotFoundError:
-    subprocess.check_call([sys.executable, "-m", "pip", "install", "yfinance"])
-    import yfinance as yf
+import yfinance as yf  # Llamada directa y limpia
 
 # Configuración inicial
 st.set_page_config(page_title="Diario de Trading", layout="wide")
@@ -104,7 +96,7 @@ def obtener_precio_realtime(ticker_simbolo):
         
     return None
 
-# --- CONTROL DE ACCESO / LOGIN (CORREGIDO Y FLUIDO) ---
+# --- CONTROL DE ACCESO / LOGIN ---
 if "logged_in" not in st.session_state:
     st.session_state.logged_in = False
 
@@ -135,7 +127,6 @@ if not st.session_state.logged_in:
         else:
             st.sidebar.warning("Por favor completa ambos campos ⚠️")
             
-    # Detiene la carga del resto de la app, pero permite interactuar con los inputs de arriba sin congelarse
     st.markdown("### Por favor, inicia sesión en la barra lateral izquierda para acceder al sistema.")
     st.stop()
 
