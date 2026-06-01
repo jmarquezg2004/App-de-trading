@@ -1,5 +1,6 @@
-streamlit>=1.34
+streamlit
 pandas
-plotly>=5.22
+plotly
 fpdf
-XlsxWriter
+requests
+yfinance
