@@ -6,7 +6,15 @@ from io import BytesIO
 import base64
 from fpdf import FPDF
 import requests
-import yfinance as yf  # Para Acciones y ETFs con máxima fiabilidad
+
+# Instalación automática interna de yfinance para que no falle jamás la nube
+import subprocess
+import sys
+try:
+    import yfinance as yf
+except ModuleNotFoundError:
+    subprocess.check_call([sys.executable, "-m", "pip", "install", "yfinance"])
+    import yfinance as yf
 
 # Configuración inicial
 st.set_page_config(page_title="Diario de Trading", layout="wide")
@@ -15,7 +23,7 @@ st.set_page_config(page_title="Diario de Trading", layout="wide")
 FIREBASE_WEB_API_KEY = "AIzaSyC52gIJJRTE1B4BqeUwDmaX2fWKS3sSw10"
 FIRESTORE_URL = "https://firestore.googleapis.com/v1/projects/plataforma-de-inversiones/databases/(default)/documents"
 
-# 👑 NUEVO ADMINISTRADOR ASIGNADO
+# 👑 ADMINISTRADOR ASIGNADO
 ADMIN_EMAIL = "jmarquezg2004@gmail.com"
 
 # --- AUTENTICACIÓN ---
@@ -70,7 +78,6 @@ def obtener_precio_realtime(ticker_simbolo):
     
     simbolo = ticker_simbolo.lower().strip()
     
-    # 1. RUTA CRIPTO (Si el ticker contiene '-usd', busca de forma dinámica en CoinGecko)
     if "-usd" in simbolo:
         id_cripto = simbolo.replace("-usd", "")
         diccionario_siglas = {"btc": "bitcoin", "eth": "ethereum", "sol": "solana", "ada": "cardano", "link": "chainlink"}
@@ -87,7 +94,6 @@ def obtener_precio_realtime(ticker_simbolo):
         except Exception:
             pass
 
-    # 2. RUTA TRADICIONAL (Yahoo Finance para Acciones y ETFs)
     try:
         ticker_data = yf.Ticker(simbolo.upper())
         precio = ticker_data.fast_info.last_price
@@ -98,33 +104,39 @@ def obtener_precio_realtime(ticker_simbolo):
         
     return None
 
-# --- CONTROL DE ACCESO / LOGIN ---
+# --- CONTROL DE ACCESO / LOGIN (CORREGIDO Y FLUIDO) ---
 if "logged_in" not in st.session_state:
     st.session_state.logged_in = False
 
 if not st.session_state.logged_in:
     st.sidebar.title("🔒 Acceso Privado")
-    user = st.sidebar.text_input("Correo Electrónico")
-    pwd = st.sidebar.text_input("Contraseña", type="password")
+    user = st.sidebar.text_input("Correo Electrónico", key="input_user")
+    pwd = st.sidebar.text_input("Contraseña", type="password", key="input_pwd")
     
     if st.sidebar.button("Entrar"):
-        exito, resultado = verificar_credenciales_firebase(user, pwd)
-        if exito:
-            user_lower = user.lower().strip()
-            if user_lower == ADMIN_EMAIL.lower():
-                rol_usuario = "admin"
+        if user and pwd:
+            exito, resultado = verificar_credenciales_firebase(user, pwd)
+            if exito:
+                user_lower = user.lower().strip()
+                if user_lower == ADMIN_EMAIL.lower():
+                    rol_usuario = "admin"
+                else:
+                    rol_usuario = "operador"
+                    
+                st.session_state.update({
+                    "logged_in": True,
+                    "usuario": user_lower,
+                    "rol": rol_usuario,
+                    "fondo": "Arkez Invest"
+                })
+                st.rerun()
             else:
-                rol_usuario = "operador"  # Cualquier otro correo ingresará como operador limitado
-                
-            st.session_state.update({
-                "logged_in": True,
-                "usuario": user_lower,
-                "rol": rol_usuario,
-                "fondo": "Arkez Invest"
-            })
-            st.rerun()
+                st.sidebar.error("Credenciales incorrectas o usuario no registrado en Firebase ❌")
         else:
-            st.sidebar.error("Credenciales incorrectas o usuario no registrado en Firebase ❌")
+            st.sidebar.warning("Por favor completa ambos campos ⚠️")
+            
+    # Detiene la carga del resto de la app, pero permite interactuar con los inputs de arriba sin congelarse
+    st.markdown("### Por favor, inicia sesión en la barra lateral izquierda para acceder al sistema.")
     st.stop()
 
 if st.sidebar.button("Cerrar Sesión"):
@@ -149,7 +161,6 @@ fondos_disponibles = sorted(set(df_aportes["Fondo"]).union(df_ops["Fondo"])) if 
 if "Arkez Invest" not in fondos_disponibles:
     fondos_disponibles.append("Arkez Invest")
 
-# Solo el Administrador configura nuevos fondos en la barra lateral
 if rol == "admin":
     nuevo_fondo = st.sidebar.text_input("➕ Crear nuevo fondo")
     if st.sidebar.button("Agregar Fondo") and nuevo_fondo.strip():
@@ -194,7 +205,7 @@ with st.form("form_op"):
     c1, c2, c3 = st.columns(3)
     fecha_op = c1.date_input("Fecha", value=datetime.today())
     moneda = c2.text_input("Nombre del Activo (ej. Bitcoin o Nubank)")
-    estrategia = c3.selectbox("Estrategia", ["Spot", "Futuros", "Staking", "Holding", "Arbitraje", "Bot o Copy Trading", "Farming", "Launchpool", "ICO"])
+    estrategia = st.selectbox("Estrategia", ["Spot", "Futuros", "Staking", "Holding", "Arbitraje", "Bot o Copy Trading", "Farming", "Launchpool", "ICO"])
 
     c4, c5, c6 = st.columns(3)
     broker = c4.text_input("Broker / Exchange")
