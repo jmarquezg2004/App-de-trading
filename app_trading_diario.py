@@ -45,9 +45,49 @@ input,textarea{
     font-family:'IBM Plex Mono',monospace!important; font-size:13px!important;
 }
 input:focus,textarea:focus{ border-color:#C8A84B!important; box-shadow:0 0 0 1px #C8A84B!important; }
-input::placeholder,textarea::placeholder{ color:#8BA5C8!important; opacity:1!important; font-size:13px!important; }
-input:disabled{ color:#C8A84B!important; opacity:1!important; -webkit-text-fill-color:#C8A84B!important; }
-[data-testid="stSelectbox"] [data-baseweb="select"] [data-testid="stMarkdownContainer"] p{ color:#DCE5F0!important; }
+/* Forzar blanco en TODOS los textos de inputs, placeholders y disabled */
+input, textarea, input::placeholder, textarea::placeholder {
+    color: #ffffff !important;
+    -webkit-text-fill-color: #ffffff !important;
+    opacity: 1 !important;
+}
+input:disabled, textarea:disabled {
+    color: #C8A84B !important;
+    -webkit-text-fill-color: #C8A84B !important;
+    opacity: 1 !important;
+}
+input::placeholder, textarea::placeholder {
+    color: #8BA5C8 !important;
+    -webkit-text-fill-color: #8BA5C8 !important;
+}
+/* Selectbox: texto seleccionado y opciones */
+[data-baseweb="select"] *,
+[data-baseweb="select"] input,
+[data-baseweb="select"] span,
+[data-baseweb="select"] div,
+[data-baseweb="popover"] *,
+[data-baseweb="menu"] *,
+[role="listbox"] *,
+[role="option"] * {
+    color: #ffffff !important;
+    -webkit-text-fill-color: #ffffff !important;
+}
+/* Número inputs */
+[data-testid="stNumberInput"] input {
+    color: #ffffff !important;
+    -webkit-text-fill-color: #ffffff !important;
+}
+/* Date input */
+[data-testid="stDateInput"] input {
+    color: #ffffff !important;
+    -webkit-text-fill-color: #ffffff !important;
+}
+/* Selectbox placeholder (cuando no hay nada seleccionado) */
+[data-baseweb="select"] [data-testid="stMarkdownContainer"] p,
+[data-baseweb="select"] placeholder {
+    color: #8BA5C8 !important;
+    -webkit-text-fill-color: #8BA5C8 !important;
+}
 
 /* ── SELECTBOX COMPLETO — cerrado + abierto ── */
 /* Control visible (cerrado) */
