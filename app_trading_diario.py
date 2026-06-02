@@ -45,6 +45,9 @@ input,textarea{
     font-family:'IBM Plex Mono',monospace!important; font-size:13px!important;
 }
 input:focus,textarea:focus{ border-color:#C8A84B!important; box-shadow:0 0 0 1px #C8A84B!important; }
+input::placeholder,textarea::placeholder{ color:#8BA5C8!important; opacity:1!important; font-size:13px!important; }
+input:disabled{ color:#C8A84B!important; opacity:1!important; -webkit-text-fill-color:#C8A84B!important; }
+[data-testid="stSelectbox"] [data-baseweb="select"] [data-testid="stMarkdownContainer"] p{ color:#DCE5F0!important; }
 
 /* ── SELECTBOX COMPLETO — cerrado + abierto ── */
 /* Control visible (cerrado) */
