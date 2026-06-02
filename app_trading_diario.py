@@ -270,19 +270,96 @@ def get_prices(df):
 
 @st.cache_data(ttl=60)
 def load_inv():
-    df = fs_get("inversiones")
-    if df.empty:
-        return pd.DataFrame(columns=["_id","Fondo","Usuario","Fecha_Compra","Activo",
-                                     "Categoria","Cantidad","Precio_Compra","Broker",
-                                     "Ticker_API","Fecha_Venta","Precio_Venta","Estado","Notas"])
-    num = ["Cantidad","Precio_Compra","Precio_Venta"]
-    for c in num:
-        if c in df.columns: df[c] = pd.to_numeric(df[c], errors="coerce").fillna(0.0)
-        else: df[c] = 0.0
-    for c in ["_id","Fondo","Usuario","Fecha_Compra","Activo","Categoria","Broker",
-              "Ticker_API","Fecha_Venta","Estado","Notas"]:
-        if c not in df.columns: df[c] = ""
-    return df
+    """Lee colección 'inversiones' (nueva) + 'operaciones' (legacy) y unifica formato."""
+
+    COLS = ["_id","Fondo","Usuario","Fecha_Compra","Activo","Categoria",
+            "Cantidad","Precio_Compra","Broker","Ticker_API",
+            "Fecha_Venta","Precio_Venta","Estado","Notas"]
+
+    def normalizar(df):
+        num = ["Cantidad","Precio_Compra","Precio_Venta"]
+        for c in num:
+            if c in df.columns: df[c] = pd.to_numeric(df[c], errors="coerce").fillna(0.0)
+            else: df[c] = 0.0
+        for c in COLS:
+            if c not in df.columns: df[c] = ""
+        return df[COLS]
+
+    # ── Colección nueva: inversiones ──────────────────────
+    df_new = fs_get("inversiones")
+    if not df_new.empty:
+        df_new = normalizar(df_new)
+    else:
+        df_new = pd.DataFrame(columns=COLS)
+
+    # ── Colección legacy: operaciones → convertir al formato nuevo ──
+    df_ops = fs_get("operaciones")
+    rows_legacy = []
+    if not df_ops.empty:
+        for _, r in df_ops.iterrows():
+            # Mapeo de campos operaciones → inversiones
+            resultado = str(r.get("Resultado","Abierta"))
+            if resultado == "Abierta":
+                estado = "Abierta"
+                fv, pv = "", 0.0
+            elif resultado in ("Ganadora","Perdedora","Cancelada"):
+                estado = "Cerrada"
+                # Precio de venta aproximado desde TP/SL o precio entrada
+                pe = float(r.get("Precio_Entrada",0) or 0)
+                tp = float(r.get("TP_%",0) or r.get("TP_pct",0) or 0)
+                sl = float(r.get("SL_%",0) or r.get("SL_pct",0) or 0)
+                if resultado == "Ganadora" and tp > 0:
+                    pv = pe * (1 + tp/100)
+                elif resultado == "Perdedora" and sl > 0:
+                    pv = pe * (1 - sl/100)
+                else:
+                    pv = pe
+                fv = str(r.get("Fecha",""))
+            else:
+                estado = "Abierta"
+                fv, pv = "", 0.0
+
+            # Cantidad: usar Cantidad si existe, sino calcular desde Valor_Pos / Precio_Entrada
+            cant = float(r.get("Cantidad",0) or 0)
+            pe   = float(r.get("Precio_Entrada",0) or 0)
+            vp   = float(r.get("Valor_Pos",0) or 0)
+            if cant == 0 and pe > 0 and vp > 0:
+                cant = round(vp / pe, 8)
+
+            # Categoria: mapear si viene de campo "Categoria" o "Moneda"
+            cat = str(r.get("Categoria","") or r.get("Moneda","") or "Otro")
+
+            rows_legacy.append({
+                "_id":           str(r.get("_id","")),
+                "Fondo":         str(r.get("Fondo","")),
+                "Usuario":       str(r.get("Usuario","")),
+                "Fecha_Compra":  str(r.get("Fecha","")),
+                "Activo":        str(r.get("Activo","") or r.get("Moneda","")),
+                "Categoria":     cat,
+                "Cantidad":      cant,
+                "Precio_Compra": pe,
+                "Broker":        str(r.get("Broker","")),
+                "Ticker_API":    str(r.get("Ticker_API","")),
+                "Fecha_Venta":   fv,
+                "Precio_Venta":  pv,
+                "Estado":        estado,
+                "Notas":         str(r.get("Notas","")),
+            })
+
+    if rows_legacy:
+        df_leg = pd.DataFrame(rows_legacy)
+        df_leg["Cantidad"]      = pd.to_numeric(df_leg["Cantidad"],      errors="coerce").fillna(0.0)
+        df_leg["Precio_Compra"] = pd.to_numeric(df_leg["Precio_Compra"], errors="coerce").fillna(0.0)
+        df_leg["Precio_Venta"]  = pd.to_numeric(df_leg["Precio_Venta"],  errors="coerce").fillna(0.0)
+    else:
+        df_leg = pd.DataFrame(columns=COLS)
+
+    # Unir ambas — los _id de operaciones tienen prefijo para no colisionar
+    if not df_leg.empty:
+        df_leg["_id"] = "ops_" + df_leg["_id"].astype(str)
+
+    combined = pd.concat([df_new, df_leg], ignore_index=True)
+    return combined if not combined.empty else pd.DataFrame(columns=COLS)
 
 @st.cache_data(ttl=60)
 def load_aportes():
