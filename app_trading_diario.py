@@ -562,21 +562,71 @@ st.markdown(f"""<div style="display:flex;align-items:center;gap:14px;flex-wrap:w
     {datetime.now().strftime('%d/%m/%Y %H:%M')}</div></div>
 <hr style="margin:12px 0 18px">""", unsafe_allow_html=True)
 
-gc = "#2ECC87" if total_gp >= 0 else "#E85555"
+# ── FILTRO DE PERIODO ──────────────────────────────────
+col_per1, col_per2, col_per3 = st.columns([2,2,4])
+with col_per1:
+    periodo = st.selectbox("📅 Ver período",
+        ["Todo el historial","Este mes","Este año",
+         "Última semana","Últimos 3 meses","Personalizado"],
+        key="periodo_sel")
+with col_per2:
+    if periodo == "Personalizado":
+        fecha_desde = st.date_input("Desde", value=date(date.today().year,1,1), key="f_desde")
+        fecha_hasta = st.date_input("Hasta", value=date.today(), key="f_hasta")
+    else:
+        fecha_desde = None
+        fecha_hasta = None
+
+# Calcular rango de fechas según periodo
+hoy = pd.Timestamp.now().normalize()
+if   periodo == "Este mes":        f_ini = hoy.replace(day=1);              f_fin = hoy
+elif periodo == "Este año":        f_ini = hoy.replace(month=1,day=1);      f_fin = hoy
+elif periodo == "Última semana":   f_ini = hoy - pd.Timedelta(days=7);      f_fin = hoy
+elif periodo == "Últimos 3 meses": f_ini = hoy - pd.Timedelta(days=90);     f_fin = hoy
+elif periodo == "Personalizado" and fecha_desde and fecha_hasta:
+    f_ini = pd.Timestamp(fecha_desde); f_fin = pd.Timestamp(fecha_hasta)
+else:
+    f_ini = None; f_fin = None  # Todo el historial
+
+# Aplicar filtro de periodo a las posiciones
+def en_periodo(p):
+    if f_ini is None: return True
+    try:
+        fc = pd.to_datetime(p["F_Compra"])
+        fv = pd.to_datetime(p["F_Venta"]) if p["F_Venta"] else hoy
+        # Incluir si hay superposición con el rango
+        return fc <= f_fin and fv >= f_ini
+    except: return True
+
+pos_periodo   = [p for p in posiciones if en_periodo(p) and p["Estado"] != "Archivada"]
+pos_ab_per    = [p for p in pos_periodo if p["Estado"] == "Abierta"]
+pos_cer_per   = [p for p in pos_periodo if p["Estado"] == "Cerrada"]
+inv_per       = sum(p["Invertido"]  for p in pos_periodo)
+act_per       = sum(p["Val_Actual"] for p in pos_periodo)
+gp_per        = sum(p["GP_usd"]     for p in pos_periodo)
+rend_per      = gp_per / inv_per * 100 if inv_per > 0 else 0
+
+# Badge de periodo
+per_badge = f'<span style="font:400 10px IBM Plex Mono,mono;color:#8BA5C8;margin-left:8px">Período: {periodo}</span>'
+if f_ini:
+    per_badge = f'<span style="font:400 10px IBM Plex Mono,mono;color:#8BA5C8;margin-left:8px">{f_ini.strftime("%d/%m/%Y")} → {f_fin.strftime("%d/%m/%Y")}</span>'
+
+st.markdown(f'<div style="margin:4px 0 12px">{per_badge}</div>', unsafe_allow_html=True)
+
+gc = "#2ECC87" if gp_per >= 0 else "#E85555"
 k1,k2,k3,k4,k5 = st.columns(5)
-with k1: st.markdown(card("Portafolio actual",   money(total_actual,factor)+sfx), unsafe_allow_html=True)
-with k2: st.markdown(card("Total invertido",     money(total_invertido,factor)+sfx, color="#8BA5C8"), unsafe_allow_html=True)
+with k1: st.markdown(card("Portafolio actual",   money(act_per,factor)+sfx), unsafe_allow_html=True)
+with k2: st.markdown(card("Total invertido",     money(inv_per,factor)+sfx, color="#8BA5C8"), unsafe_allow_html=True)
 with k3: st.markdown(card("Ganancia / Pérdida",
-    f"{'+'if total_gp>=0 else ''}{money(total_gp,factor)}{sfx}",
-    f"{'▲' if rend_pct>=0 else '▼'} {abs(rend_pct):.2f}%", color=gc), unsafe_allow_html=True)
-with k4: st.markdown(card("Posiciones abiertas", str(len(pos_abiertas)),
-    f"{len(pos_cerradas)} cerradas", color="#F0C040"), unsafe_allow_html=True)
+    f"{'+'if gp_per>=0 else ''}{money(gp_per,factor)}{sfx}",
+    f"{'▲' if rend_per>=0 else '▼'} {abs(rend_per):.2f}%", color=gc), unsafe_allow_html=True)
+with k4: st.markdown(card("Posiciones abiertas", str(len(pos_ab_per)),
+    f"{len(pos_cer_per)} cerradas en período", color="#F0C040"), unsafe_allow_html=True)
 with k5:
-    # Win rate real: % de posiciones cerradas con ganancia
-    cerradas_ganadoras = sum(1 for p in pos_cerradas if p["GP_usd"] > 0)
-    wr = cerradas_ganadoras/len(pos_cerradas)*100 if pos_cerradas else 0
+    ganadoras_per = sum(1 for p in pos_cer_per if p["GP_usd"] > 0)
+    wr = ganadoras_per/len(pos_cer_per)*100 if pos_cer_per else 0
     st.markdown(card("Win rate", f"{wr:.1f}%",
-        f"{cerradas_ganadoras}/{len(pos_cerradas)} cerradas en verde", color="#9B8EC4"), unsafe_allow_html=True)
+        f"{ganadoras_per}/{len(pos_cer_per)} cerradas en verde", color="#9B8EC4"), unsafe_allow_html=True)
 
 st.markdown("<br>", unsafe_allow_html=True)
 
@@ -604,10 +654,10 @@ with t_dash:
     with cl:
         sec("Evolución del portafolio")
         # Construir serie temporal: para cada inversión, agregar su valor en cada fecha
-        if posiciones:
+        if pos_periodo:
             # Puntos clave: fecha compra y hoy (o fecha venta si cerrada)
             puntos = []
-            for p in posiciones:
+            for p in pos_periodo:
                 try:
                     fc = pd.to_datetime(p["F_Compra"])
                     # En la fecha de compra: valor = invertido
@@ -694,9 +744,9 @@ with t_dash:
 # PORTAFOLIO — posiciones con P&L en vivo
 # ══════════════════════════════════════════════════════
 with t_port:
-    if pos_abiertas:
+    if pos_ab_per:
         sec("Posiciones abiertas — P&L en tiempo real")
-        for p in pos_abiertas:
+        for p in pos_ab_per:
             gc2 = "#2ECC87" if p["GP_usd"]>=0 else "#E85555"
             sg  = "+" if p["GP_usd"]>=0 else ""
             pxd = prices.get(p["Ticker"].upper(), {})
@@ -741,9 +791,9 @@ with t_port:
               </div>
             </div>""", unsafe_allow_html=True)
 
-    if pos_cerradas:
+    if pos_cer_per:
         sec("Posiciones cerradas")
-        for p in pos_cerradas:
+        for p in pos_cer_per:
             gc3 = "#2ECC87" if p["GP_usd"]>=0 else "#E85555"
             sg3 = "+" if p["GP_usd"]>=0 else ""
             st.markdown(f"""<div style="background:#0F1A2B;border:1px solid #1E3354;
@@ -845,7 +895,7 @@ if puede_registrar:
 
         # ── REGISTRAR VENTA ──
         if posiciones:
-            abiertas_lista = [p for p in posiciones if p["Estado"]=="Abierta"]
+            abiertas_lista = [p for p in posiciones if p["Estado"]=="Abierta" and p["Estado"]!="Archivada"]
             if abiertas_lista:
                 st.markdown("---")
                 sec("Registrar venta de activo")
@@ -892,14 +942,22 @@ if puede_registrar:
                         else:
                             st.error("❌ Error actualizando")
 
-            # Eliminar posición
-            sec("Eliminar posición")
-            all_lbs = [f"{p['F_Compra']} — {p['Activo']} ({p['Estado']})" for p in posiciones]
-            del_sel = st.selectbox("Selecciona posición a eliminar", range(len(all_lbs)),
-                                   format_func=lambda i: all_lbs[i], key="del_pos")
-            if st.button("🗑 Eliminar posición"):
-                fs_delete("inversiones", posiciones[del_sel]["_id"])
-                st.success("✓ Eliminada"); st.cache_data.clear(); st.rerun()
+            # Archivar posición (nunca se borra — se marca como Archivada)
+            st.markdown("---")
+            sec("Archivar posición")
+            st.markdown('''<div style="font:400 11px IBM Plex Mono,mono;color:#8BA5C8;margin-bottom:8px">
+              Las posiciones archivadas se ocultan del portafolio activo pero quedan guardadas
+              en el historial completo. Nunca se eliminan datos.</div>''', unsafe_allow_html=True)
+            all_lbs = [f"{p['F_Compra']} — {p['Activo']} ({p['Estado']})" for p in posiciones
+                       if p["Estado"] != "Archivada"]
+            all_ids = [p["_id"] for p in posiciones if p["Estado"] != "Archivada"]
+            if all_lbs:
+                arc_sel = st.selectbox("Selecciona posición a archivar", range(len(all_lbs)),
+                                       format_func=lambda i: all_lbs[i], key="arc_pos")
+                if st.button("📦 Archivar posición"):
+                    fs_patch("inversiones", all_ids[arc_sel], {"Estado": "Archivada"})
+                    st.success("✓ Archivada — sigue en el historial completo")
+                    st.cache_data.clear(); st.rerun()
 
 # ══════════════════════════════════════════════════════
 # CAPITAL / SOCIOS (admin)
