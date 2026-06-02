@@ -19,18 +19,23 @@ st.markdown("""
 <style>
 @import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@300;400;500;600&display=swap');
 
-html,body,[class*="css"]{ font-family:'IBM Plex Sans',sans-serif; color:#DCE5F0; }
-.stApp{ background:#111827; }
-p,span,div{ color:#DCE5F0; }
+html,body{ font-family:'IBM Plex Sans',sans-serif; }
+.stApp{ background:#111827; color:#DCE5F0; }
+/* Solo texto de contenido — NO los componentes de Streamlit */
+.stMarkdown p, .stMarkdown span, .stText{ color:#DCE5F0; }
 h1{ font-family:'IBM Plex Mono',monospace!important; color:#C8A84B!important; letter-spacing:2px; }
 h2{ font-family:'IBM Plex Mono',monospace!important; font-size:11px!important;
     letter-spacing:1.5px; text-transform:uppercase; color:#8BA5C8!important; }
 h3{ font-family:'IBM Plex Mono',monospace!important; font-size:13px!important; color:#C8A84B!important; }
 hr{ border-color:#1E3354!important; }
 
-/* Sidebar */
+/* Sidebar — sin sobreescribir * que rompe el toggle */
 section[data-testid="stSidebar"]{ background:#0D1929!important; border-right:1px solid #1E3354; }
-section[data-testid="stSidebar"] *{ color:#DCE5F0!important; }
+section[data-testid="stSidebar"] .stMarkdown,
+section[data-testid="stSidebar"] .stMarkdown p,
+section[data-testid="stSidebar"] .stMarkdown span,
+section[data-testid="stSidebar"] label,
+section[data-testid="stSidebar"] .stRadio label span { color:#DCE5F0!important; }
 section[data-testid="stSidebar"] label{ color:#B0C4DC!important; font-size:12px!important; }
 
 /* Inputs */
