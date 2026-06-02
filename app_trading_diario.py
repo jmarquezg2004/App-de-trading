@@ -243,9 +243,11 @@ def fs_post(col, datos: dict):
     fields = {k: _field(v) for k, v in datos.items()}
     try:
         r = requests.post(f"{FS_URL}/{col}", json={"fields": fields}, timeout=10)
-        return r.status_code in (200, 201)
-    except Exception:
-        return False
+        if r.status_code in (200, 201):
+            return True, ""
+        return False, f"Error {r.status_code}: {r.text[:500]}"
+    except Exception as e:
+        return False, str(e)
 
 def fs_patch(col, doc_id, datos: dict):
     fields = {k: _field(v) for k, v in datos.items()}
@@ -845,7 +847,7 @@ if rol == "admin" or modo_usuario == MODO_INDIVIDUAL:
                     except Exception:
                         nid = 1
 
-                    ok = fs_post("operaciones", {
+                    ok, err_msg = fs_post("operaciones", {
                         "ID":             nid,
                         "Fondo":          fondo,
                         "Usuario":        usuario,
@@ -871,7 +873,7 @@ if rol == "admin" or modo_usuario == MODO_INDIVIDUAL:
                         st.success("✓ Operación guardada correctamente")
                         st.cache_data.clear(); time.sleep(0.6); st.rerun()
                     else:
-                        st.error("❌ Error guardando. Intenta de nuevo.")
+                        st.error(f"❌ Error Firestore: {err_msg}")
 
         # Editar solo las propias (o todas si admin)
         mis_ops_e = df_ops if rol=="admin" else (
@@ -924,7 +926,7 @@ if rol == "admin":
                 if not socio.strip():
                     st.error("❌ Nombre del socio obligatorio")
                 else:
-                    ok = fs_post("aportes", {
+                    ok, err_msg = fs_post("aportes", {
                         "Fondo": fondo, "Socio": socio.strip(), "Cedula": cedula.strip(),
                         "Fecha": str(fecha_a), "Tipo": tipo_mov, "Monto": float(monto),
                         "TipoCuenta": tipo_cta, "Usuario": usuario,
@@ -933,7 +935,7 @@ if rol == "admin":
                         st.success(f"✓ Guardado — {tipo_cta}")
                         st.cache_data.clear(); st.rerun()
                     else:
-                        st.error("❌ Error guardando")
+                        st.error(f"❌ Error Firestore: {err_msg}")
 
         if not df_ap.empty and "Socio" in df_ap.columns and df_ap["Socio"].str.strip().any():
             st.markdown("---"); sec("Resumen por socio")
@@ -1069,7 +1071,7 @@ if rol == "admin":
                             "Activo":    "Si",
                             "CreadoPor": usuario,
                             "Fecha":     str(date.today()),
-                        })
+                        })  # resultado ignorado intencionalmente
                         if "EMAIL_EXISTS" in str(msg_fb):
                             st.warning(f"⚠ El email ya existía. Se actualizó su perfil → Modo: {u_modo}"
                                        + (f" · Fondo: {u_fondo}" if u_fondo else " · Sin fondo asignado"))
@@ -1124,7 +1126,7 @@ if rol == "admin":
                 if nf_i.strip() and nf_i not in fondos_list:
                     fs_post("aportes",{"Fondo":nf_i.strip(),"Socio":"","Cedula":"",
                                        "Fecha":str(date.today()),"Tipo":"Aporte",
-                                       "Monto":0.0,"TipoCuenta":"Fondo Grupal","Usuario":usuario})
+                                       "Monto":0.0,"TipoCuenta":"Fondo Grupal","Usuario":usuario})  # ok ignorado
                     st.success(f"✓ Fondo '{nf_i}' creado")
                     st.cache_data.clear(); st.rerun()
                 elif nf_i in fondos_list:
