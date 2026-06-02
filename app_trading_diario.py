@@ -23,50 +23,50 @@ st.markdown("""
 /* ── BASE ─────────────────────────────────────────── */
 html, body, [class*="css"] {
     font-family: 'IBM Plex Sans', sans-serif;
-    color: #dce9f5;
+    color: #DCE5F0;
 }
-.stApp { background: #0f1923; }
-p, span, div { color: #dce9f5; }
-h1 { font-family:'IBM Plex Mono',monospace!important; color:#00c8f0!important; letter-spacing:2px; }
+.stApp { background: #111827; }
+p, span, div { color: #DCE5F0; }
+h1 { font-family:'IBM Plex Mono',monospace!important; color:#C8A84B!important; letter-spacing:2px; }
 h2 { font-family:'IBM Plex Mono',monospace!important; font-size:12px!important;
-     letter-spacing:1.5px; text-transform:uppercase; color:#7aabcc!important; }
-h3 { font-family:'IBM Plex Mono',monospace!important; font-size:13px!important; color:#00c8f0!important; }
+     letter-spacing:1.5px; text-transform:uppercase; color:#8BA5C8!important; }
+h3 { font-family:'IBM Plex Mono',monospace!important; font-size:13px!important; color:#C8A84B!important; }
 hr { border-color:#2a3f5a!important; }
  
 /* ── SIDEBAR ──────────────────────────────────────── */
 section[data-testid="stSidebar"] {
-    background: #131f2e !important;
-    border-right: 1px solid #2a3f5a;
+    background: #0D1929 !important;
+    border-right: 1px solid #1E3354;
 }
-section[data-testid="stSidebar"] * { color: #dce9f5 !important; }
-section[data-testid="stSidebar"] label { color: #a8c4dc !important; font-size:12px!important; }
+section[data-testid="stSidebar"] * { color: #DCE5F0 !important; }
+section[data-testid="stSidebar"] label { color: #B0C4DC !important; font-size:12px!important; }
  
 /* ── INPUTS — fondo oscuro, texto claro ───────────── */
 input, textarea {
-    background: #1a2d42 !important;
-    color: #dce9f5 !important;
-    border: 1px solid #2a3f5a !important;
+    background: #162236 !important;
+    color: #DCE5F0 !important;
+    border: 1px solid #1E3354 !important;
     border-radius: 6px !important;
     font-family: 'IBM Plex Mono', monospace !important;
     font-size: 13px !important;
 }
 input:focus, textarea:focus {
-    border-color: #00c8f0 !important;
-    box-shadow: 0 0 0 1px #00c8f0 !important;
+    border-color: #C8A84B !important;
+    box-shadow: 0 0 0 1px #C8A84B !important;
 }
  
 /* ── SELECTBOX — el más problemático ─────────────── */
 /* Contenedor visible del selectbox */
 [data-testid="stSelectbox"] > div > div {
-    background: #1a2d42 !important;
-    border: 1px solid #2a3f5a !important;
+    background: #162236 !important;
+    border: 1px solid #1E3354 !important;
     border-radius: 6px !important;
-    color: #dce9f5 !important;
+    color: #DCE5F0 !important;
 }
 /* Texto seleccionado */
 [data-testid="stSelectbox"] span,
 [data-testid="stSelectbox"] p {
-    color: #dce9f5 !important;
+    color: #DCE5F0 !important;
     font-family: 'IBM Plex Mono', monospace !important;
     font-size: 13px !important;
 }
@@ -75,25 +75,25 @@ input:focus, textarea:focus {
 [data-baseweb="popover"] ul,
 [data-baseweb="menu"],
 [data-baseweb="select"] ul {
-    background: #1a2d42 !important;
-    border: 1px solid #2a3f5a !important;
+    background: #162236 !important;
+    border: 1px solid #1E3354 !important;
 }
 /* Cada opción de la lista */
 [data-baseweb="select"] [role="option"],
 [data-baseweb="menu"] li,
 [data-baseweb="select"] li {
-    background: #1a2d42 !important;
-    color: #dce9f5 !important;
+    background: #162236 !important;
+    color: #DCE5F0 !important;
     font-family: 'IBM Plex Mono', monospace !important;
     font-size: 13px !important;
 }
 [data-baseweb="select"] [role="option"]:hover,
 [data-baseweb="menu"] li:hover {
-    background: #243b55 !important;
-    color: #00c8f0 !important;
+    background: #1A3050 !important;
+    color: #C8A84B !important;
 }
 /* Flecha del selectbox */
-[data-baseweb="select"] svg { fill: #7aabcc !important; }
+[data-baseweb="select"] svg { fill: #8BA5C8 !important; }
  
 /* ── LABELS ───────────────────────────────────────── */
 [data-testid="stTextInput"] label,
@@ -103,7 +103,7 @@ input:focus, textarea:focus {
 [data-testid="stTextArea"] label,
 [data-testid="stRadio"] > label,
 [data-testid="stCheckbox"] label {
-    color: #a8c4dc !important;
+    color: #B0C4DC !important;
     font-size: 13px !important;
     font-weight: 500 !important;
     font-family: 'IBM Plex Sans', sans-serif !important;
@@ -111,20 +111,20 @@ input:focus, textarea:focus {
  
 /* ── DATE INPUT ───────────────────────────────────── */
 [data-testid="stDateInput"] input {
-    background: #1a2d42 !important;
-    color: #dce9f5 !important;
+    background: #162236 !important;
+    color: #DCE5F0 !important;
 }
  
 /* ── NUMBER INPUT ─────────────────────────────────── */
 [data-testid="stNumberInput"] button {
-    background: #243b55 !important;
-    color: #dce9f5 !important;
-    border-color: #2a3f5a !important;
+    background: #1A3050 !important;
+    color: #DCE5F0 !important;
+    border-color: #1E3354 !important;
 }
  
 /* ── BUTTONS ──────────────────────────────────────── */
 .stButton > button {
-    background: linear-gradient(135deg, #00c8f0, #0090b3) !important;
+    background: linear-gradient(135deg, #C8A84B, #A07830) !important;
     color: #0a1520 !important;
     border: none !important;
     border-radius: 6px !important;
@@ -137,9 +137,9 @@ input:focus, textarea:focus {
 }
 .stButton > button:hover { filter: brightness(1.1) !important; }
 .stButton > button[kind="secondary"] {
-    background: #1a2d42 !important;
-    color: #dce9f5 !important;
-    border: 1px solid #2a3f5a !important;
+    background: #162236 !important;
+    color: #DCE5F0 !important;
+    border: 1px solid #1E3354 !important;
 }
  
 /* ── TABS ─────────────────────────────────────────── */
@@ -148,19 +148,19 @@ input:focus, textarea:focus {
     font-size: 11px !important;
     letter-spacing: 1px;
     text-transform: uppercase;
-    color: #7aabcc !important;
+    color: #8BA5C8 !important;
     background: transparent !important;
 }
 [data-testid="stTabs"] button[aria-selected="true"] {
-    color: #00c8f0 !important;
-    border-bottom: 2px solid #00c8f0 !important;
+    color: #C8A84B !important;
+    border-bottom: 2px solid #C8A84B !important;
 }
 [data-testid="stTabs"] { border-bottom: 1px solid #2a3f5a; }
  
 /* ── METRICS ──────────────────────────────────────── */
 [data-testid="metric-container"] {
-    background: #1a2d42;
-    border: 1px solid #2a3f5a;
+    background: #162236;
+    border: 1px solid #1E3354;
     border-radius: 10px;
     padding: 16px !important;
     position: relative;
@@ -168,12 +168,12 @@ input:focus, textarea:focus {
 }
 [data-testid="metric-container"]::before {
     content:''; position:absolute; top:0; left:0; right:0; height:2px;
-    background: linear-gradient(90deg, #00c8f0, #00e880);
+    background: linear-gradient(90deg, #C8A84B, #2ECC87);
 }
 [data-testid="stMetricValue"] {
     font-family: 'IBM Plex Mono', monospace !important;
     font-size: 1.4rem !important;
-    color: #ffffff !important;
+    color: #F0EAD6 !important;
     font-weight: 600 !important;
 }
 [data-testid="stMetricLabel"] {
@@ -181,53 +181,53 @@ input:focus, textarea:focus {
     font-size: 0.68rem !important;
     letter-spacing: 1.2px;
     text-transform: uppercase;
-    color: #7aabcc !important;
+    color: #8BA5C8 !important;
 }
  
 /* ── DATAFRAME ────────────────────────────────────── */
 [data-testid="stDataFrame"] {
-    border: 1px solid #2a3f5a;
+    border: 1px solid #1E3354;
     border-radius: 8px;
     overflow: hidden;
 }
-.stDataFrame th { background:#162030!important; color:#7aabcc!important; }
-.stDataFrame td { color:#dce9f5!important; }
+.stDataFrame th { background:#0F1A2B!important; color:#8BA5C8!important; }
+.stDataFrame td { color:#DCE5F0!important; }
  
 /* ── ALERTS ───────────────────────────────────────── */
 [data-testid="stAlert"] {
     border-radius: 8px !important;
     border-left-width: 3px !important;
-    background: #1a2d42 !important;
+    background: #162236 !important;
     font-family: 'IBM Plex Mono', monospace !important;
-    color: #dce9f5 !important;
+    color: #DCE5F0 !important;
 }
-.stSuccess { border-left-color: #00e880 !important; }
-.stError   { border-left-color: #ff5566 !important; }
-.stWarning { border-left-color: #ffcc44 !important; }
-.stInfo    { border-left-color: #00c8f0 !important; }
+.stSuccess { border-left-color: #2ECC87 !important; }
+.stError   { border-left-color: #E85555 !important; }
+.stWarning { border-left-color: #F0C040 !important; }
+.stInfo    { border-left-color: #C8A84B !important; }
  
 /* ── FORM ─────────────────────────────────────────── */
 [data-testid="stForm"] {
-    background: #162030 !important;
-    border: 1px solid #2a3f5a !important;
+    background: #0F1A2B !important;
+    border: 1px solid #1E3354 !important;
     border-radius: 10px !important;
     padding: 20px !important;
 }
  
 /* ── EXPANDER ─────────────────────────────────────── */
 [data-testid="stExpander"] {
-    background: #1a2d42 !important;
-    border: 1px solid #2a3f5a !important;
+    background: #162236 !important;
+    border: 1px solid #1E3354 !important;
     border-radius: 8px !important;
 }
 [data-testid="stExpander"] summary,
-[data-testid="stExpander"] summary p { color: #dce9f5 !important; }
+[data-testid="stExpander"] summary p { color: #DCE5F0 !important; }
  
 /* ── RADIO ────────────────────────────────────────── */
-[data-testid="stRadio"] label span { color: #dce9f5 !important; }
+[data-testid="stRadio"] label span { color: #DCE5F0 !important; }
  
 /* ── SPINNER ──────────────────────────────────────── */
-.stSpinner > div { border-top-color: #00c8f0 !important; }
+.stSpinner > div { border-top-color: #C8A84B !important; }
 </style>
 """, unsafe_allow_html=True)
  
@@ -495,22 +495,22 @@ def valor_abierta(row, prices):
 # ══════════════════════════════════════════════════════════════
 PLOTLY_THEME = dict(
     paper_bgcolor="rgba(0,0,0,0)", plot_bgcolor="rgba(0,0,0,0)",
-    font=dict(family="IBM Plex Mono", color="#dce9f5", size=11),
+    font=dict(family="IBM Plex Mono", color="#DCE5F0", size=11),
     margin=dict(l=0, r=0, t=36, b=0),
-    xaxis=dict(gridcolor="#1e3350", linecolor="#2a3f5a"),
-    yaxis=dict(gridcolor="#1e3350", linecolor="#2a3f5a"),
+    xaxis=dict(gridcolor="#152034", linecolor="#1E3354"),
+    yaxis=dict(gridcolor="#152034", linecolor="#1E3354"),
 )
-CAT_COLORS = {"Acción":"#00c8f0","ETF":"#00e880","Cripto":"#ff7744",
-              "CDT":"#ffcc44","Fondo":"#c084fc","Cuenta Remunerada":"#f59e0b","Otro":"#7aabcc"}
+CAT_COLORS = {"Acción":"#C8A84B","ETF":"#2ECC87","Cripto":"#E87844",
+              "CDT":"#F0C040","Fondo":"#9B8EC4","Cuenta Remunerada":"#f59e0b","Otro":"#8BA5C8"}
  
-def card(label, val, sub=None, color="#00c8f0"):
+def card(label, val, sub=None, color="#C8A84B"):
     sub_h = f'<div style="font:500 11px/1.3 IBM Plex Mono,mono;color:{color};margin-top:3px">{sub}</div>' if sub else ""
     return f"""<div style="background:#1a2d42;border:1px solid #2a3f5a;border-radius:10px;
         padding:16px 18px;position:relative;overflow:hidden;height:100%">
       <div style="position:absolute;top:0;left:0;right:0;height:2px;background:{color}"></div>
-      <div style="font:400 9px/1 IBM Plex Mono,mono;color:#7aabcc;letter-spacing:1.5px;
+      <div style="font:400 9px/1 IBM Plex Mono,mono;color:#8BA5C8;letter-spacing:1.5px;
                   text-transform:uppercase;margin-bottom:8px">{label}</div>
-      <div style="font:600 22px/1 IBM Plex Mono,mono;color:#fff">{val}</div>{sub_h}</div>"""
+      <div style="font:600 22px/1 IBM Plex Mono,mono;color:#F0EAD6">{val}</div>{sub_h}</div>"""
  
 def money(v, f=1):
     v2 = v * f
@@ -529,11 +529,11 @@ if "logged_in" not in st.session_state:
 if not st.session_state.logged_in:
     st.markdown("""<div style="text-align:center;padding:50px 0 24px">
       <div style="display:inline-block;width:52px;height:52px;margin-bottom:14px;
-                  background:linear-gradient(135deg,#00c8f0,#00e880);
+                  background:linear-gradient(135deg,#C8A84B,#2ECC87);
                   clip-path:polygon(50% 0%,100% 25%,100% 75%,50% 100%,0% 75%,0% 25%)"></div>
-      <div style="font:600 26px/1 IBM Plex Mono,mono;color:#00c8f0;letter-spacing:3px">
-        ARKEZ INVEST</div>
-      <div style="font:400 11px/1 IBM Plex Mono,mono;color:#7aabcc;letter-spacing:2px;margin-top:8px">
+      <div style="font:600 26px/1 IBM Plex Mono,mono;color:#C8A84B;letter-spacing:3px">
+        ARKEZ</div>
+      <div style="font:400 11px/1 IBM Plex Mono,mono;color:#8BA5C8;letter-spacing:2px;margin-top:8px">
         PLATAFORMA DE INVERSIONES · ACCESO PRIVADO</div></div>""", unsafe_allow_html=True)
  
     _, col, _ = st.columns([1,1.2,1])
@@ -595,18 +595,18 @@ else:
 with st.sidebar:
     st.markdown("""<div style="text-align:center;padding:14px 0 10px">
       <div style="display:inline-block;width:34px;height:34px;margin-bottom:7px;
-                  background:linear-gradient(135deg,#00c8f0,#00e880);
+                  background:linear-gradient(135deg,#C8A84B,#2ECC87);
                   clip-path:polygon(50% 0%,100% 25%,100% 75%,50% 100%,0% 75%,0% 25%)"></div>
-      <div style="font:600 13px/1 IBM Plex Mono,mono;color:#00c8f0;letter-spacing:2px">
-        ARKEZ INVEST</div></div>""", unsafe_allow_html=True)
+      <div style="font:600 13px/1 IBM Plex Mono,mono;color:#C8A84B;letter-spacing:2px">
+        ARKEZ</div></div>""", unsafe_allow_html=True)
  
-    col_r = "#00c8f0" if rol == "admin" else "#00e880"
-    col_b = "rgba(0,200,240,.12)" if rol == "admin" else "rgba(0,232,128,.12)"
-    st.markdown(f"""<div style="background:#1e3350;border:1px solid #2a3f5a;border-radius:8px;
+    col_r = "#C8A84B" if rol == "admin" else "#2ECC87"
+    col_b = "rgba(200,168,75,.12)" if rol == "admin" else "rgba(0,232,128,.12)"
+    st.markdown(f"""<div style="background:#152034;border:1px solid #2a3f5a;border-radius:8px;
         padding:10px 12px;margin-bottom:12px">
-      <div style="font:400 9px/1 IBM Plex Mono,mono;color:#7aabcc;letter-spacing:1px;
+      <div style="font:400 9px/1 IBM Plex Mono,mono;color:#8BA5C8;letter-spacing:1px;
                   margin-bottom:3px">USUARIO</div>
-      <div style="font:400 11px/1.4 IBM Plex Mono,mono;color:#dce9f5;word-break:break-all">{usuario}</div>
+      <div style="font:400 11px/1.4 IBM Plex Mono,mono;color:#DCE5F0;word-break:break-all">{usuario}</div>
       <span style="display:inline-block;margin-top:5px;background:{col_b};color:{col_r};
                    border:1px solid {col_r};padding:1px 9px;border-radius:20px;
                    font:600 9px/1.8 IBM Plex Mono,mono">
@@ -621,11 +621,11 @@ with st.sidebar:
  
     # TRM
     trm = get_trm()
-    st.markdown(f"""<div style="background:#1e3350;border:1px solid #2a3f5a;border-radius:8px;
+    st.markdown(f"""<div style="background:#152034;border:1px solid #2a3f5a;border-radius:8px;
         padding:9px 12px;margin:10px 0">
-      <div style="font:400 9px/1 IBM Plex Mono,mono;color:#7aabcc;letter-spacing:1px">
+      <div style="font:400 9px/1 IBM Plex Mono,mono;color:#8BA5C8;letter-spacing:1px">
         TRM USD/COP (tiempo real)</div>
-      <div style="font:600 16px/1.5 IBM Plex Mono,mono;color:#ffcc44">${trm:,.2f}</div>
+      <div style="font:600 16px/1.5 IBM Plex Mono,mono;color:#F0C040">${trm:,.2f}</div>
     </div>""", unsafe_allow_html=True)
  
     moneda = st.radio("Moneda", ["USD", "COP"], horizontal=True)
@@ -678,29 +678,29 @@ wr        = ((ops_c["Resultado"] == "Ganadora").sum() / len(ops_c) * 100) if not
 # ══════════════════════════════════════════════════════════════
 st.markdown(f"""<div style="display:flex;align-items:center;gap:14px;flex-wrap:wrap;margin-bottom:4px">
   <div style="width:38px;height:38px;flex-shrink:0;
-              background:linear-gradient(135deg,#00c8f0,#00e880);
+              background:linear-gradient(135deg,#C8A84B,#2ECC87);
               clip-path:polygon(50% 0%,100% 25%,100% 75%,50% 100%,0% 75%,0% 25%)"></div>
   <div>
-    <div style="font:600 18px/1 IBM Plex Mono,mono;color:#00c8f0;letter-spacing:2px">
+    <div style="font:600 18px/1 IBM Plex Mono,mono;color:#C8A84B;letter-spacing:2px">
       {fondo.upper()}</div>
-    <div style="font:400 10px/1.5 IBM Plex Mono,mono;color:#7aabcc;letter-spacing:1px">
+    <div style="font:400 10px/1.5 IBM Plex Mono,mono;color:#8BA5C8;letter-spacing:1px">
       PORTAFOLIO DE INVERSIONES · PRECIOS EN TIEMPO REAL</div>
   </div>
-  <div style="margin-left:auto;font:400 10px/1 IBM Plex Mono,mono;color:#7aabcc">
+  <div style="margin-left:auto;font:400 10px/1 IBM Plex Mono,mono;color:#8BA5C8">
     {datetime.now().strftime('%d/%m/%Y %H:%M')}</div></div>
 <hr style="margin:12px 0 18px">""", unsafe_allow_html=True)
  
-gp_col = "#00e880" if total_gp >= 0 else "#ff5566"
+gp_col = "#2ECC87" if total_gp >= 0 else "#E85555"
 k1,k2,k3,k4,k5 = st.columns(5)
 with k1: st.markdown(card("Patrimonio total",  money(patrimonio,factor)), unsafe_allow_html=True)
-with k2: st.markdown(card("Capital aportado",  money(capital,factor), accent="#7aabcc"), unsafe_allow_html=True)
+with k2: st.markdown(card("Capital aportado",  money(capital,factor), color="#8BA5C8"), unsafe_allow_html=True)
 with k3: st.markdown(card("Ganancia / Pérdida",
     f"{'+'if total_gp>=0 else ''}{money(total_gp,factor)}",
     f"{'▲' if rend>=0 else '▼'} {abs(rend):.2f}%", color=gp_col), unsafe_allow_html=True)
 with k4: st.markdown(card("Posiciones abiertas", money(val_ab,factor),
-    f"{len(abiertas)} posiciones", color="#ffcc44"), unsafe_allow_html=True)
+    f"{len(abiertas)} posiciones", color="#F0C040"), unsafe_allow_html=True)
 with k5: st.markdown(card("Win rate", f"{wr:.1f}%",
-    f"{len(ops_c)} ops cerradas", color="#c084fc"), unsafe_allow_html=True)
+    f"{len(ops_c)} ops cerradas", color="#9B8EC4"), unsafe_allow_html=True)
 st.markdown("<br>", unsafe_allow_html=True)
  
 # ══════════════════════════════════════════════════════════════
@@ -727,11 +727,11 @@ with t_dash:
             dfe = dfe.dropna(subset=["Fecha"]).sort_values("Fecha")
             dfe["cap"] = dfe.apply(lambda r: r["Monto"] if r["Tipo"]=="Aporte" else -r["Monto"], axis=1).cumsum() * factor
             fig = go.Figure(go.Scatter(x=dfe["Fecha"], y=dfe["cap"], mode="lines+markers",
-                line=dict(color="#00c8f0",width=2), fill="tozeroy",
-                fillcolor="rgba(0,200,240,.07)", marker=dict(color="#00c8f0",size=5),
+                line=dict(color="#C8A84B",width=2), fill="tozeroy",
+                fillcolor="rgba(200,168,75,.07)", marker=dict(color="#C8A84B",size=5),
                 hovertemplate="<b>%{x|%d %b %Y}</b><br>%{y:$,.0f}<extra></extra>"))
             fig.update_layout(**PLOTLY_THEME,
-                title=dict(text="Evolución del capital",font=dict(size=11,color="#7aabcc"),x=.5))
+                title=dict(text="Evolución del capital",font=dict(size=11,color="#8BA5C8"),x=.5))
             st.plotly_chart(fig, use_container_width=True, config={"displayModeBar":False})
         else:
             st.info("Sin movimientos de capital registrados.")
@@ -742,11 +742,11 @@ with t_dash:
             if not dist.empty:
                 fig2 = go.Figure(go.Pie(
                     labels=dist["Categoria"], values=dist["Valor_Pos"]*factor, hole=.6,
-                    marker=dict(colors=[CAT_COLORS.get(c,"#7aabcc") for c in dist["Categoria"]],
+                    marker=dict(colors=[CAT_COLORS.get(c,"#8BA5C8") for c in dist["Categoria"]],
                                 line=dict(color="#0f1923",width=2)),
                     hovertemplate="<b>%{label}</b><br>%{value:$,.0f}<br>%{percent}<extra></extra>"))
                 fig2.update_layout(**PLOTLY_THEME,
-                    title=dict(text="Distribución por tipo",font=dict(size=11,color="#7aabcc"),x=.5))
+                    title=dict(text="Distribución por tipo",font=dict(size=11,color="#8BA5C8"),x=.5))
                 st.plotly_chart(fig2, use_container_width=True, config={"displayModeBar":False})
         else:
             st.info("Sin operaciones registradas.")
@@ -756,13 +756,13 @@ with t_dash:
         cols_p = st.columns(min(len(prices),5))
         for i,(tk,d) in enumerate(list(prices.items())[:10]):
             chg = d.get("chg24",0); px = d.get("price",0)
-            clr = "#00e880" if chg>=0 else "#ff5566"
+            clr = "#2ECC87" if chg>=0 else "#E85555"
             px_s= f"${px:,.4f}" if px<10 else f"${px:,.2f}"
             with cols_p[i % min(len(prices),5)]:
                 st.markdown(f"""<div style="background:#1a2d42;border:1px solid #2a3f5a;
                     border-radius:8px;padding:12px;text-align:center;margin-bottom:8px">
-                  <div style="font:600 11px/1.5 IBM Plex Mono,mono;color:#00c8f0">{tk}</div>
-                  <div style="font:600 15px/1.4 IBM Plex Mono,mono;color:#fff">{px_s}</div>
+                  <div style="font:600 11px/1.5 IBM Plex Mono,mono;color:#C8A84B">{tk}</div>
+                  <div style="font:600 15px/1.4 IBM Plex Mono,mono;color:#F0EAD6">{px_s}</div>
                   <div style="font:400 10px/1.3 IBM Plex Mono,mono;color:{clr}">
                     {'▲' if chg>=0 else '▼'} {abs(chg):.2f}%</div></div>""", unsafe_allow_html=True)
  
@@ -777,7 +777,7 @@ with t_pos:
     if mis_ab:
         section("Posiciones abiertas — valorización actual")
         for a in mis_ab:
-            gc = "#00e880" if a["GP_usd"]>=0 else "#ff5566"
+            gc = "#2ECC87" if a["GP_usd"]>=0 else "#E85555"
             sg = "+" if a["GP_usd"]>=0 else ""
             pxd= prices.get(a["Ticker"].upper(),{})
             pxs= (f"${pxd['price']:,.4f}" if pxd.get("price",0)<10 else f"${pxd['price']:,.2f}") if pxd else "—"
@@ -785,25 +785,25 @@ with t_pos:
                 border-radius:10px;padding:14px 18px;margin-bottom:10px;
                 display:flex;align-items:center;gap:18px;flex-wrap:wrap">
               <div style="min-width:130px">
-                <div style="font:600 14px/1.3 IBM Plex Mono,mono;color:#00c8f0">{a['Activo']}</div>
-                <div style="font:400 10px/1.4 IBM Plex Mono,mono;color:#7aabcc">
+                <div style="font:600 14px/1.3 IBM Plex Mono,mono;color:#C8A84B">{a['Activo']}</div>
+                <div style="font:400 10px/1.4 IBM Plex Mono,mono;color:#8BA5C8">
                   {a['Ticker']} · {a['Categoria']}</div>
                 <div style="font:400 9px/1.4 IBM Plex Mono,mono;color:#4a6f8a">{a['Fecha']}</div>
               </div>
               <div style="text-align:center;min-width:90px">
-                <div style="font:400 9px/1 IBM Plex Mono,mono;color:#7aabcc;letter-spacing:1px">PRECIO HOY</div>
-                <div style="font:500 13px/1.5 IBM Plex Mono,mono;color:#dce9f5">{pxs}</div>
+                <div style="font:400 9px/1 IBM Plex Mono,mono;color:#8BA5C8;letter-spacing:1px">PRECIO HOY</div>
+                <div style="font:500 13px/1.5 IBM Plex Mono,mono;color:#DCE5F0">{pxs}</div>
               </div>
               <div style="text-align:center;min-width:100px">
-                <div style="font:400 9px/1 IBM Plex Mono,mono;color:#7aabcc;letter-spacing:1px">ENTRADA</div>
-                <div style="font:500 13px/1.5 IBM Plex Mono,mono;color:#dce9f5">{money(a['Val_ent'],factor)}</div>
+                <div style="font:400 9px/1 IBM Plex Mono,mono;color:#8BA5C8;letter-spacing:1px">ENTRADA</div>
+                <div style="font:500 13px/1.5 IBM Plex Mono,mono;color:#DCE5F0">{money(a['Val_ent'],factor)}</div>
               </div>
               <div style="text-align:center;min-width:100px">
-                <div style="font:400 9px/1 IBM Plex Mono,mono;color:#7aabcc;letter-spacing:1px">VALOR ACTUAL</div>
-                <div style="font:600 14px/1.5 IBM Plex Mono,mono;color:#fff">{money(a['Val_act'],factor)}</div>
+                <div style="font:400 9px/1 IBM Plex Mono,mono;color:#8BA5C8;letter-spacing:1px">VALOR ACTUAL</div>
+                <div style="font:600 14px/1.5 IBM Plex Mono,mono;color:#F0EAD6">{money(a['Val_act'],factor)}</div>
               </div>
               <div style="text-align:center;min-width:90px">
-                <div style="font:400 9px/1 IBM Plex Mono,mono;color:#7aabcc;letter-spacing:1px">G/P</div>
+                <div style="font:400 9px/1 IBM Plex Mono,mono;color:#8BA5C8;letter-spacing:1px">G/P</div>
                 <div style="font:600 15px/1.3 IBM Plex Mono,mono;color:{gc}">{sg}{money(a['GP_usd'],factor)}</div>
                 <div style="font:500 10px/1.3 IBM Plex Mono,mono;color:{gc}">{sg}{a['GP_pct']:.2f}%</div>
               </div>
@@ -819,9 +819,9 @@ with t_pos:
         if "Valor_Pos" in dfs.columns:
             dfs["Valor_Pos"] = dfs["Valor_Pos"] * factor
         def cr_res(v):
-            if v=="Ganadora":  return "color:#00e880;font-weight:600"
-            if v=="Perdedora": return "color:#ff5566;font-weight:600"
-            if v=="Abierta":   return "color:#00c8f0"
+            if v=="Ganadora":  return "color:#2ECC87;font-weight:600"
+            if v=="Perdedora": return "color:#E85555;font-weight:600"
+            if v=="Abierta":   return "color:#C8A84B"
             return ""
         styled = dfs.style
         if "Resultado" in dfs.columns:
@@ -835,9 +835,9 @@ with t_pos:
 # ══════════════════════════════════════════════════════════════
 with t_reg:
     section("Registrar nueva operación")
-    st.markdown(f'<div style="font:400 11px/1.5 IBM Plex Mono,mono;color:#7aabcc;margin-bottom:12px">'
-                f'Registrando como: <strong style="color:#00c8f0">{usuario}</strong> · '
-                f'Fondo: <strong style="color:#00c8f0">{fondo}</strong></div>', unsafe_allow_html=True)
+    st.markdown(f'<div style="font:400 11px/1.5 IBM Plex Mono,mono;color:#8BA5C8;margin-bottom:12px">'
+                f'Registrando como: <strong style="color:#C8A84B">{usuario}</strong> · '
+                f'Fondo: <strong style="color:#C8A84B">{fondo}</strong></div>', unsafe_allow_html=True)
  
     with st.form("form_op", clear_on_submit=True):
         c1,c2,c3,c4 = st.columns(4)
@@ -1010,8 +1010,8 @@ if rol == "admin":
             dfh = df_ap[cols_h].sort_values("Fecha",ascending=False).copy()
             if "Monto" in dfh.columns: dfh["Monto"] = dfh["Monto"]*factor
             def cr_tipo(v):
-                if v=="Aporte":  return "color:#00e880;font-weight:600"
-                if v=="Retiro":  return "color:#ff5566;font-weight:600"
+                if v=="Aporte":  return "color:#2ECC87;font-weight:600"
+                if v=="Retiro":  return "color:#E85555;font-weight:600"
                 return ""
             styled_h = dfh.style.format({"Monto":"${:,.2f}"})
             if "Tipo" in dfh.columns:
@@ -1037,12 +1037,12 @@ with t_anal:
             fig_b = go.Figure(go.Bar(
                 x=anal_ops.apply(lambda r:f"{r.get('Activo','?')} ({r.get('Fecha','?')})",axis=1),
                 y=anal_ops["PnL"],
-                marker_color=anal_ops["PnL"].apply(lambda x:"#00e880" if x>=0 else "#ff5566"),
+                marker_color=anal_ops["PnL"].apply(lambda x:"#2ECC87" if x>=0 else "#E85555"),
                 text=anal_ops["PnL"].apply(lambda x:f"${x:,.0f}"),
                 textposition="outside", textfont=dict(size=10),
                 hovertemplate="<b>%{x}</b><br>P&L: $%{y:,.2f}<extra></extra>"))
             fig_b.update_layout(**PLOTLY_THEME,
-                title=dict(text="P&L por operación cerrada",font=dict(size=11,color="#7aabcc"),x=.5))
+                title=dict(text="P&L por operación cerrada",font=dict(size=11,color="#8BA5C8"),x=.5))
             st.plotly_chart(fig_b, use_container_width=True, config={"displayModeBar":False})
         with c_a2:
             pv = anal_ops["PnL"]
@@ -1054,23 +1054,23 @@ with t_anal:
             wr2   = (pv>0).sum()/len(pv)*100
             st.markdown(f"""<div style="background:#1a2d42;border:1px solid #2a3f5a;
                 border-radius:10px;padding:16px">
-              <div style="font:400 9px/2 IBM Plex Mono,mono;color:#7aabcc;
+              <div style="font:400 9px/2 IBM Plex Mono,mono;color:#8BA5C8;
                           letter-spacing:1.5px;text-transform:uppercase">Estadísticas</div>
               <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
-                <div><div style="font:400 9px IBM Plex Mono,mono;color:#7aabcc">WIN RATE</div>
-                  <div style="font:600 18px IBM Plex Mono,mono;color:#c084fc">{wr2:.1f}%</div></div>
-                <div><div style="font:400 9px IBM Plex Mono,mono;color:#7aabcc">PROFIT FACTOR</div>
-                  <div style="font:600 18px IBM Plex Mono,mono;color:#00c8f0">{min(pf,9.99):.2f}x</div></div>
-                <div><div style="font:400 9px IBM Plex Mono,mono;color:#7aabcc">AVG GANADORA</div>
-                  <div style="font:600 14px IBM Plex Mono,mono;color:#00e880">+${avg_g:,.2f}</div></div>
-                <div><div style="font:400 9px IBM Plex Mono,mono;color:#7aabcc">AVG PERDEDORA</div>
-                  <div style="font:600 14px IBM Plex Mono,mono;color:#ff5566">${avg_p:,.2f}</div></div>
-                <div><div style="font:400 9px IBM Plex Mono,mono;color:#7aabcc">MEJOR OP.</div>
-                  <div style="font:600 12px IBM Plex Mono,mono;color:#00e880">{mejor.get('Activo','?')}</div>
-                  <div style="font:500 11px IBM Plex Mono,mono;color:#00e880">+${mejor['PnL']:,.2f}</div></div>
-                <div><div style="font:400 9px IBM Plex Mono,mono;color:#7aabcc">PEOR OP.</div>
-                  <div style="font:600 12px IBM Plex Mono,mono;color:#ff5566">{peor.get('Activo','?')}</div>
-                  <div style="font:500 11px IBM Plex Mono,mono;color:#ff5566">${peor['PnL']:,.2f}</div></div>
+                <div><div style="font:400 9px IBM Plex Mono,mono;color:#8BA5C8">WIN RATE</div>
+                  <div style="font:600 18px IBM Plex Mono,mono;color:#9B8EC4">{wr2:.1f}%</div></div>
+                <div><div style="font:400 9px IBM Plex Mono,mono;color:#8BA5C8">PROFIT FACTOR</div>
+                  <div style="font:600 18px IBM Plex Mono,mono;color:#C8A84B">{min(pf,9.99):.2f}x</div></div>
+                <div><div style="font:400 9px IBM Plex Mono,mono;color:#8BA5C8">AVG GANADORA</div>
+                  <div style="font:600 14px IBM Plex Mono,mono;color:#2ECC87">+${avg_g:,.2f}</div></div>
+                <div><div style="font:400 9px IBM Plex Mono,mono;color:#8BA5C8">AVG PERDEDORA</div>
+                  <div style="font:600 14px IBM Plex Mono,mono;color:#E85555">${avg_p:,.2f}</div></div>
+                <div><div style="font:400 9px IBM Plex Mono,mono;color:#8BA5C8">MEJOR OP.</div>
+                  <div style="font:600 12px IBM Plex Mono,mono;color:#2ECC87">{mejor.get('Activo','?')}</div>
+                  <div style="font:500 11px IBM Plex Mono,mono;color:#2ECC87">+${mejor['PnL']:,.2f}</div></div>
+                <div><div style="font:400 9px IBM Plex Mono,mono;color:#8BA5C8">PEOR OP.</div>
+                  <div style="font:600 12px IBM Plex Mono,mono;color:#E85555">{peor.get('Activo','?')}</div>
+                  <div style="font:500 11px IBM Plex Mono,mono;color:#E85555">${peor['PnL']:,.2f}</div></div>
               </div></div>""", unsafe_allow_html=True)
     else:
         st.info("Aún no hay operaciones cerradas para analizar.")
@@ -1081,9 +1081,9 @@ with t_anal:
 if rol == "admin":
     with t_usr:
         section("Gestión de usuarios")
-        st.markdown("""<div style="background:#162030;border:1px solid #2a3f5a;border-left:3px solid #00c8f0;
+        st.markdown("""<div style="background:#0F1A2B;border:1px solid #2a3f5a;border-left:3px solid #C8A84B;
             border-radius:0 8px 8px 0;padding:10px 14px;margin-bottom:16px;
-            font:400 12px/1.7 IBM Plex Mono,mono;color:#a8c4dc">
+            font:400 12px/1.7 IBM Plex Mono,mono;color:#B0C4DC">
           Aquí creas los accesos para tus clientes. Cada usuario verá solo su fondo.<br>
           La contraseña que pongas aquí es la que ellos usarán para ingresar a la plataforma.
         </div>""", unsafe_allow_html=True)
@@ -1186,12 +1186,12 @@ if rol == "admin":
             section("Estado de APIs")
             st.markdown(f"""<div style="background:#1a2d42;border:1px solid #2a3f5a;
                 border-radius:8px;padding:14px;font:400 11px/1.9 IBM Plex Mono,mono">
-              <div style="color:#7aabcc;font-size:9px;letter-spacing:1px;margin-bottom:8px">
+              <div style="color:#8BA5C8;font-size:9px;letter-spacing:1px;margin-bottom:8px">
                 FUENTES ACTIVAS</div>
-              <div style="color:#ffcc44">● CoinMarketCap API — Cripto</div>
-              <div style="color:#00c8f0">● Yahoo Finance (yfinance) — Acciones / ETF</div>
-              <div style="color:#00e880">● ExchangeRate-API / Frankfurter — TRM</div>
-              <div style="color:#7aabcc;font-size:9px;margin-top:10px">
+              <div style="color:#F0C040">● CoinMarketCap API — Cripto</div>
+              <div style="color:#C8A84B">● Yahoo Finance (yfinance) — Acciones / ETF</div>
+              <div style="color:#2ECC87">● ExchangeRate-API / Frankfurter — TRM</div>
+              <div style="color:#8BA5C8;font-size:9px;margin-top:10px">
                 TRM actual: ${trm:,.2f} · CMC key: …{CMC_KEY[-6:]}<br>
                 Caché precios: 5 min · Caché TRM: 1 hora</div></div>""",
                 unsafe_allow_html=True)
