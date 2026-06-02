@@ -788,7 +788,7 @@ with t_pos:
             return ""
         styled = dfs.style
         if "Resultado" in dfs.columns:
-            styled = styled.applymap(cr, subset=["Resultado"])
+            styled = styled.map(cr, subset=["Resultado"])
         if "Valor_Pos" in dfs.columns:
             styled = styled.format({"Valor_Pos":"${:,.2f}"})
         st.dataframe(styled, use_container_width=True, hide_index=True)
@@ -963,7 +963,7 @@ if rol == "admin":
                 if v=="Retiro":  return "color:#E85555;font-weight:600"
                 return ""
             sh = dfh.style.format({"Monto":"${:,.2f}"})
-            if "Tipo" in dfh.columns: sh = sh.applymap(crt,subset=["Tipo"])
+            if "Tipo" in dfh.columns: sh = sh.map(crt,subset=["Tipo"])
             st.dataframe(sh, use_container_width=True, hide_index=True)
             if st.button("🗑 Eliminar último movimiento"):
                 lid = df_ap.sort_values("Fecha").iloc[-1]["_id"]
