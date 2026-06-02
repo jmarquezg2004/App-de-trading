@@ -1,10 +1,11 @@
+
 import streamlit as st
 import pandas as pd
 import plotly.graph_objects as go
 from datetime import datetime, date
 import requests
 import time
-
+ 
 # ══════════════════════════════════════════════════════════════
 # CONFIGURACIÓN
 # ══════════════════════════════════════════════════════════════
@@ -14,11 +15,11 @@ st.set_page_config(
     layout="wide",
     initial_sidebar_state="expanded"
 )
-
+ 
 st.markdown("""
 <style>
 @import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@300;400;500;600&display=swap');
-
+ 
 html,body{ font-family:'IBM Plex Sans',sans-serif; }
 .stApp{ background:#111827; color:#DCE5F0; }
 /* Solo texto de contenido — NO los componentes de Streamlit */
@@ -28,7 +29,7 @@ h2{ font-family:'IBM Plex Mono',monospace!important; font-size:11px!important;
     letter-spacing:1.5px; text-transform:uppercase; color:#8BA5C8!important; }
 h3{ font-family:'IBM Plex Mono',monospace!important; font-size:13px!important; color:#C8A84B!important; }
 hr{ border-color:#1E3354!important; }
-
+ 
 /* Sidebar — sin sobreescribir * que rompe el toggle */
 section[data-testid="stSidebar"]{ background:#0D1929!important; border-right:1px solid #1E3354; }
 section[data-testid="stSidebar"] .stMarkdown,
@@ -37,7 +38,7 @@ section[data-testid="stSidebar"] .stMarkdown span,
 section[data-testid="stSidebar"] label,
 section[data-testid="stSidebar"] .stRadio label span { color:#DCE5F0!important; }
 section[data-testid="stSidebar"] label{ color:#B0C4DC!important; font-size:12px!important; }
-
+ 
 /* Inputs */
 input,textarea{
     background:#162236!important; color:#DCE5F0!important;
@@ -45,28 +46,54 @@ input,textarea{
     font-family:'IBM Plex Mono',monospace!important; font-size:13px!important;
 }
 input:focus,textarea:focus{ border-color:#C8A84B!important; box-shadow:0 0 0 1px #C8A84B!important; }
-
-/* Selectbox — fix dropdown invisible */
-[data-testid="stSelectbox"]>div>div{
-    background:#162236!important; border:1px solid #1E3354!important;
-    border-radius:6px!important; color:#DCE5F0!important;
+ 
+/* ── SELECTBOX COMPLETO — cerrado + abierto ── */
+/* Control visible (cerrado) */
+[data-testid="stSelectbox"] > div > div,
+[data-baseweb="select"] > div {
+    background: #162236 !important;
+    border: 1px solid #2a4060 !important;
+    border-radius: 6px !important;
 }
-[data-testid="stSelectbox"] span,[data-testid="stSelectbox"] p{
-    color:#DCE5F0!important; font-family:'IBM Plex Mono',monospace!important; font-size:13px!important;
+/* Texto seleccionado */
+[data-testid="stSelectbox"] span,
+[data-testid="stSelectbox"] p,
+[data-baseweb="select"] span,
+[data-baseweb="select"] input {
+    color: #DCE5F0 !important;
+    font-family: 'IBM Plex Mono', monospace !important;
+    font-size: 13px !important;
 }
-[data-baseweb="select"] [role="listbox"],
-[data-baseweb="popover"] ul,[data-baseweb="menu"]{
-    background:#162236!important; border:1px solid #1E3354!important;
+/* Flecha */
+[data-baseweb="select"] svg { fill: #8BA5C8 !important; }
+ 
+/* Popup flotante — se renderiza fuera del árbol normal */
+[data-baseweb="popover"],
+[data-baseweb="popover"] *,
+ul[data-baseweb="menu"],
+ul[data-baseweb="menu"] *,
+[role="listbox"],
+[role="listbox"] *,
+div[data-baseweb="menu"],
+div[data-baseweb="menu"] * {
+    background: #1a2d42 !important;
+    color: #DCE5F0 !important;
+    font-family: 'IBM Plex Mono', monospace !important;
+    font-size: 13px !important;
+    border-color: #2a4060 !important;
 }
-[data-baseweb="select"] [role="option"],[data-baseweb="menu"] li{
-    background:#162236!important; color:#DCE5F0!important;
-    font-family:'IBM Plex Mono',monospace!important; font-size:13px!important;
+/* Opción al hacer hover */
+[role="option"]:hover,
+li[role="option"]:hover {
+    background: #243b55 !important;
+    color: #C8A84B !important;
 }
-[data-baseweb="select"] [role="option"]:hover,[data-baseweb="menu"] li:hover{
-    background:#1A3050!important; color:#C8A84B!important;
+/* Opción seleccionada activa */
+[aria-selected="true"] {
+    background: #1e3a5a !important;
+    color: #C8A84B !important;
 }
-[data-baseweb="select"] svg{ fill:#8BA5C8!important; }
-
+ 
 /* Labels */
 [data-testid="stTextInput"] label,[data-testid="stNumberInput"] label,
 [data-testid="stSelectbox"] label,[data-testid="stDateInput"] label,
@@ -77,7 +104,7 @@ input:focus,textarea:focus{ border-color:#C8A84B!important; box-shadow:0 0 0 1px
 [data-testid="stNumberInput"] button{
     background:#1A3050!important; color:#DCE5F0!important; border-color:#1E3354!important;
 }
-
+ 
 /* Botones */
 .stButton>button{
     background:linear-gradient(135deg,#C8A84B,#A07830)!important;
@@ -89,7 +116,7 @@ input:focus,textarea:focus{ border-color:#C8A84B!important; box-shadow:0 0 0 1px
 .stButton>button[kind="secondary"]{
     background:#162236!important; color:#DCE5F0!important; border:1px solid #1E3354!important;
 }
-
+ 
 /* Tabs */
 [data-testid="stTabs"] button{
     font-family:'IBM Plex Mono',monospace!important; font-size:11px!important;
@@ -99,7 +126,7 @@ input:focus,textarea:focus{ border-color:#C8A84B!important; box-shadow:0 0 0 1px
     color:#C8A84B!important; border-bottom:2px solid #C8A84B!important;
 }
 [data-testid="stTabs"]{ border-bottom:1px solid #1E3354; }
-
+ 
 /* Métricas */
 [data-testid="metric-container"]{
     background:#162236; border:1px solid #1E3354; border-radius:10px;
@@ -117,27 +144,27 @@ input:focus,textarea:focus{ border-color:#C8A84B!important; box-shadow:0 0 0 1px
     font-family:'IBM Plex Mono',monospace!important; font-size:0.68rem!important;
     letter-spacing:1.2px; text-transform:uppercase; color:#8BA5C8!important;
 }
-
+ 
 /* DataFrames */
 [data-testid="stDataFrame"]{ border:1px solid #1E3354; border-radius:8px; overflow:hidden; }
 .stDataFrame th{ background:#0F1A2B!important; color:#8BA5C8!important; }
 .stDataFrame td{ color:#DCE5F0!important; }
-
+ 
 /* Alerts */
 [data-testid="stAlert"]{
     border-radius:8px!important; border-left-width:3px!important;
     background:#162236!important; font-family:'IBM Plex Mono',monospace!important; color:#DCE5F0!important;
 }
-
+ 
 /* Form */
 [data-testid="stForm"]{
     background:#0F1A2B!important; border:1px solid #1E3354!important;
     border-radius:10px!important; padding:20px!important;
 }
-
+ 
 /* Radio */
 [data-testid="stRadio"] label span{ color:#DCE5F0!important; }
-
+ 
 /* Expander */
 [data-testid="stExpander"]{
     background:#162236!important; border:1px solid #1E3354!important; border-radius:8px!important;
@@ -145,7 +172,7 @@ input:focus,textarea:focus{ border-color:#C8A84B!important; box-shadow:0 0 0 1px
 [data-testid="stExpander"] summary,[data-testid="stExpander"] summary p{ color:#DCE5F0!important; }
 </style>
 """, unsafe_allow_html=True)
-
+ 
 # ══════════════════════════════════════════════════════════════
 # CONSTANTES
 # ══════════════════════════════════════════════════════════════
@@ -153,16 +180,16 @@ FIREBASE_KEY = "AIzaSyC52gIJJRTE1B4BqeUwDmaX2fWKS3sSw10"
 FS_URL       = "https://firestore.googleapis.com/v1/projects/plataforma-de-inversiones/databases/(default)/documents"
 ADMIN_EMAIL  = "jmarquezg2004@gmail.com"
 CMC_KEY      = st.secrets.get("CMC_KEY", "d67913f039804c6b900905ebad7c1aaf")
-
+ 
 CATEGORIAS  = ["Acción","ETF","Cripto","CDT","Fondo","Cuenta Remunerada","Otro"]
 ESTRATEGIAS = ["Spot","Holding","Futuros","Staking","Farming",
                "Arbitraje","Bot/Copy Trading","Launchpool","ICO","Renta Fija"]
 RESULTADOS  = ["Abierta","Ganadora","Perdedora","Cancelada"]
-
+ 
 # Modos de acceso del usuario
 MODO_INDIVIDUAL = "Portafolio Individual"   # el usuario registra y ve solo sus ops
 MODO_OBSERVADOR = "Observador de Fondo"     # el usuario solo ve, no puede editar
-
+ 
 # ══════════════════════════════════════════════════════════════
 # FIREBASE AUTH
 # ══════════════════════════════════════════════════════════════
@@ -176,7 +203,7 @@ def firebase_login(email, password):
         return False, r.json().get("error", {}).get("message", "Error")
     except Exception as e:
         return False, str(e)
-
+ 
 def firebase_crear(email, password):
     try:
         r = requests.post(
@@ -187,7 +214,7 @@ def firebase_crear(email, password):
         return False, r.json().get("error", {}).get("message", "Error")
     except Exception as e:
         return False, str(e)
-
+ 
 # ══════════════════════════════════════════════════════════════
 # FIRESTORE CRUD
 # ══════════════════════════════════════════════════════════════
@@ -196,7 +223,7 @@ def _field(v):
     if isinstance(v, int):    return {"integerValue": str(v)}
     if isinstance(v, float):  return {"doubleValue": v}
     return {"stringValue": str(v)}
-
+ 
 def fs_get(col):
     try:
         r = requests.get(f"{FS_URL}/{col}", timeout=10)
@@ -212,7 +239,7 @@ def fs_get(col):
     except Exception:
         pass
     return pd.DataFrame()
-
+ 
 def fs_post(col, datos: dict):
     fields = {k: _field(v) for k, v in datos.items()}
     try:
@@ -220,7 +247,7 @@ def fs_post(col, datos: dict):
         return r.status_code in (200, 201)
     except Exception:
         return False
-
+ 
 def fs_patch(col, doc_id, datos: dict):
     fields = {k: _field(v) for k, v in datos.items()}
     mask   = "&".join(f"updateMask.fieldPaths={k}" for k in datos)
@@ -229,14 +256,14 @@ def fs_patch(col, doc_id, datos: dict):
         return True
     except Exception:
         return False
-
+ 
 def fs_delete(col, doc_id):
     try:
         requests.delete(f"{FS_URL}/{col}/{doc_id}", timeout=10)
         return True
     except Exception:
         return False
-
+ 
 # ══════════════════════════════════════════════════════════════
 # PRECIOS
 # ══════════════════════════════════════════════════════════════
@@ -259,7 +286,7 @@ def get_trm():
     except Exception:
         pass
     return 4200.0
-
+ 
 @st.cache_data(ttl=300)
 def get_cmc(syms):
     if not syms: return {}
@@ -278,7 +305,7 @@ def get_cmc(syms):
         return out
     except Exception:
         return {}
-
+ 
 @st.cache_data(ttl=300)
 def get_stock(ticker):
     try:
@@ -290,7 +317,7 @@ def get_stock(ticker):
         return float(price) if price else None, float(chg)
     except Exception:
         return None, 0
-
+ 
 def get_prices(df_ops):
     out = {}
     if df_ops.empty: return out
@@ -301,7 +328,7 @@ def get_prices(df_ops):
         px, chg = get_stock(t)
         if px: out[t] = {"price": px, "chg24": chg}
     return out
-
+ 
 # ══════════════════════════════════════════════════════════════
 # CARGA DE DATOS
 # ══════════════════════════════════════════════════════════════
@@ -310,7 +337,7 @@ COLS_OPS = ["_id","ID","Fondo","Usuario","Fecha","Activo","Categoria","Estrategi
             "Broker","Valor_Pos","TP_pct","SL_pct","TP_usd","SL_usd","Comision",
             "Resultado","Ticker_API","Precio_Entrada","Cantidad","TEA","Notas"]
 COLS_USR = ["_id","Email","Nombre","Modo","Fondo","Activo","CreadoPor","Fecha"]
-
+ 
 @st.cache_data(ttl=60)
 def load_aportes():
     df = fs_get("aportes")
@@ -319,7 +346,7 @@ def load_aportes():
         if c not in df.columns: df[c] = ""
     df["Monto"] = pd.to_numeric(df["Monto"], errors="coerce").fillna(0.0)
     return df
-
+ 
 @st.cache_data(ttl=60)
 def load_ops():
     df = fs_get("operaciones")
@@ -332,7 +359,7 @@ def load_ops():
     for c in num:
         df[c] = pd.to_numeric(df[c], errors="coerce").fillna(0.0)
     return df
-
+ 
 @st.cache_data(ttl=60)
 def load_usuarios():
     df = fs_get("usuarios")
@@ -340,7 +367,7 @@ def load_usuarios():
     for c in COLS_USR:
         if c not in df.columns: df[c] = ""
     return df
-
+ 
 # ══════════════════════════════════════════════════════════════
 # CÁLCULOS
 # ══════════════════════════════════════════════════════════════
@@ -350,7 +377,7 @@ def pnl(row):
     if row.get("Resultado") == "Perdedora":
         return -float(row.get("SL_usd",0) or 0) - float(row.get("Comision",0) or 0)
     return 0.0
-
+ 
 def valorar(row, prices):
     t   = str(row.get("Ticker_API","")).strip().upper()
     cat = str(row.get("Categoria",""))
@@ -374,7 +401,7 @@ def valorar(row, prices):
             val = vp*px/pe; gp = val-vp
             return val, gp, gp/vp*100
     return vp, 0.0, 0.0
-
+ 
 # ══════════════════════════════════════════════════════════════
 # UI HELPERS
 # ══════════════════════════════════════════════════════════════
@@ -383,10 +410,10 @@ PT = dict(paper_bgcolor="rgba(0,0,0,0)", plot_bgcolor="rgba(0,0,0,0)",
           margin=dict(l=0,r=0,t=36,b=0),
           xaxis=dict(gridcolor="#152034",linecolor="#1E3354"),
           yaxis=dict(gridcolor="#152034",linecolor="#1E3354"))
-
+ 
 CAT_CLR = {"Acción":"#C8A84B","ETF":"#2ECC87","Cripto":"#E87844",
            "CDT":"#F0C040","Fondo":"#9B8EC4","Cuenta Remunerada":"#6BA3BE","Otro":"#8BA5C8"}
-
+ 
 def card(label, val, sub=None, color="#C8A84B"):
     s = f'<div style="font:500 11px/1.3 IBM Plex Mono,mono;color:{color};margin-top:3px">{sub}</div>' if sub else ""
     return f"""<div style="background:#162236;border:1px solid #1E3354;border-radius:10px;
@@ -395,28 +422,28 @@ def card(label, val, sub=None, color="#C8A84B"):
       <div style="font:400 9px/1 IBM Plex Mono,mono;color:#8BA5C8;letter-spacing:1.5px;
                   text-transform:uppercase;margin-bottom:8px">{label}</div>
       <div style="font:600 22px/1 IBM Plex Mono,mono;color:#F0EAD6">{val}</div>{s}</div>"""
-
+ 
 def money(v, f=1):
     v2 = v*f
     if abs(v2) >= 1e6: return f"${v2/1e6:.2f}M"
     return f"${v2:,.2f}"
-
+ 
 def sec(t):
     st.markdown(f'<h2 style="margin:18px 0 10px">{t}</h2>', unsafe_allow_html=True)
-
+ 
 def info_box(msg, color="#C8A84B"):
     st.markdown(f"""<div style="background:#162236;border:1px solid #1E3354;
         border-left:3px solid {color};border-radius:0 8px 8px 0;
         padding:10px 14px;margin-bottom:14px;
         font:400 12px/1.7 IBM Plex Mono,mono;color:#B0C4DC">{msg}</div>""",
         unsafe_allow_html=True)
-
+ 
 # ══════════════════════════════════════════════════════════════
 # LOGIN
 # ══════════════════════════════════════════════════════════════
 if "logged_in" not in st.session_state:
     st.session_state.logged_in = False
-
+ 
 if not st.session_state.logged_in:
     st.markdown("""<div style="text-align:center;padding:50px 0 24px">
       <div style="display:inline-block;width:52px;height:52px;margin-bottom:14px;
@@ -425,7 +452,7 @@ if not st.session_state.logged_in:
       <div style="font:600 28px/1 IBM Plex Mono,mono;color:#C8A84B;letter-spacing:3px">ARKEZ</div>
       <div style="font:400 11px/1.5 IBM Plex Mono,mono;color:#8BA5C8;letter-spacing:2px;margin-top:6px">
         PLATAFORMA DE INVERSIONES · ACCESO PRIVADO</div></div>""", unsafe_allow_html=True)
-
+ 
     _, col, _ = st.columns([1,1.2,1])
     with col:
         email = st.text_input("Correo electrónico", placeholder="usuario@email.com")
@@ -457,7 +484,7 @@ if not st.session_state.logged_in:
             else:
                 st.warning("Completa los dos campos")
     st.stop()
-
+ 
 # ══════════════════════════════════════════════════════════════
 # SESIÓN
 # ══════════════════════════════════════════════════════════════
@@ -465,18 +492,18 @@ rol           = st.session_state.rol
 usuario       = st.session_state.usuario
 modo_usuario  = st.session_state.get("modo_usuario", MODO_INDIVIDUAL)
 fondo_asignado= st.session_state.get("fondo_asignado")   # None si no tiene fondo asignado
-
+ 
 # Cargar datos globales
 df_ap_all  = load_aportes()
 df_ops_all = load_ops()
 df_usrs    = load_usuarios()
-
+ 
 # Lista de fondos existentes
 fondos_set  = (set(df_ap_all["Fondo"].dropna()) | set(df_ops_all["Fondo"].dropna())) - {""}
 fondos_list = sorted(fondos_set) or []
 if "Arkez Invest" not in fondos_list:
     fondos_list.insert(0, "Arkez Invest")
-
+ 
 # ══════════════════════════════════════════════════════════════
 # SIDEBAR
 # ══════════════════════════════════════════════════════════════
@@ -487,7 +514,7 @@ with st.sidebar:
                   clip-path:polygon(50% 0%,100% 25%,100% 75%,50% 100%,0% 75%,0% 25%)"></div>
       <div style="font:600 14px/1 IBM Plex Mono,mono;color:#C8A84B;letter-spacing:3px">ARKEZ</div>
     </div>""", unsafe_allow_html=True)
-
+ 
     rc = "#C8A84B" if rol=="admin" else "#2ECC87"
     rb = "rgba(200,168,75,.12)" if rol=="admin" else "rgba(46,204,135,.12)"
     st.markdown(f"""<div style="background:#152034;border:1px solid #1E3354;border-radius:8px;
@@ -500,7 +527,7 @@ with st.sidebar:
         {'⬡ ADMIN' if rol=='admin' else '● '+modo_usuario.split()[0].upper()}
       </span>
     </div>""", unsafe_allow_html=True)
-
+ 
     # Selección de fondo según rol
     if rol == "admin":
         fondo = st.selectbox("🏦 Fondo activo", fondos_list,
@@ -523,63 +550,66 @@ with st.sidebar:
               <div style="font:400 9px IBM Plex Mono,mono;color:#8BA5C8;letter-spacing:1px">PORTAFOLIO</div>
               <div style="font:600 12px IBM Plex Mono,mono;color:#C8A84B">Personal</div>
             </div>""", unsafe_allow_html=True)
-
+ 
     trm = get_trm()
     st.markdown(f"""<div style="background:#152034;border:1px solid #1E3354;border-radius:8px;
         padding:9px 12px;margin:8px 0">
       <div style="font:400 9px IBM Plex Mono,mono;color:#8BA5C8;letter-spacing:1px">TRM USD/COP</div>
       <div style="font:600 16px/1.5 IBM Plex Mono,mono;color:#F0C040">${trm:,.2f}</div>
     </div>""", unsafe_allow_html=True)
-
+ 
     moneda = st.radio("Moneda", ["USD","COP"], horizontal=True)
     factor = trm if moneda=="COP" else 1.0
-
+ 
     st.markdown("---")
     if st.button("🚪 Cerrar sesión", use_container_width=True):
         for k in list(st.session_state.keys()): del st.session_state[k]
         st.rerun()
-
+ 
 # ══════════════════════════════════════════════════════════════
 # FILTRAR DATOS POR FONDO Y MODO
 # ══════════════════════════════════════════════════════════════
 # Para un Observador de Fondo: ve todas las ops del fondo, no puede editar
 # Para un Portafolio Individual: ve y edita solo sus propias ops
 # Para Admin: ve y edita todo
-
+ 
 def ops_visibles(df):
     """Retorna las operaciones que el usuario actual puede ver."""
     if df.empty: return df
     if rol == "admin":
         return df[df["Fondo"] == fondo]
     if modo_usuario == MODO_OBSERVADOR:
-        # Ve todo el fondo asignado (solo lectura)
         return df[df["Fondo"] == fondo]
     else:
-        # Portafolio individual: solo sus ops (en cualquier fondo)
+        # Portafolio individual: filtra por Usuario (funciona con o sin fondo asignado)
         if "Usuario" in df.columns:
-            return df[(df["Fondo"] == fondo) & (df["Usuario"] == usuario)]
+            mask = df["Usuario"] == usuario
+            # También incluir ops con el fondo personal (compatibilidad)
+            if "Fondo" in df.columns:
+                mask = mask | (df["Fondo"] == fondo)
+            return df[mask]
         return df[df["Fondo"] == fondo]
-
+ 
 def puede_editar():
     """Retorna True si el usuario puede registrar/editar operaciones."""
     if rol == "admin": return True
     if modo_usuario == MODO_OBSERVADOR: return False
     return True  # Portafolio individual: sí puede
-
+ 
 df_ap  = df_ap_all[df_ap_all["Fondo"] == fondo].copy()  if not df_ap_all.empty  else pd.DataFrame()
 df_ops = ops_visibles(df_ops_all).copy() if not df_ops_all.empty else pd.DataFrame()
 prices = get_prices(df_ops)
-
+ 
 capital = df_ap["Monto"].sum() if not df_ap.empty else 0.0
 ops_c   = df_ops[df_ops["Resultado"].isin(["Ganadora","Perdedora"])].copy() if not df_ops.empty else pd.DataFrame()
 ops_a   = df_ops[df_ops["Resultado"] == "Abierta"].copy() if not df_ops.empty else pd.DataFrame()
-
+ 
 if not ops_c.empty:
     ops_c["PnL"] = ops_c.apply(pnl, axis=1)
     pnl_c = ops_c["PnL"].sum()
 else:
     pnl_c = 0.0
-
+ 
 abiertas, val_ab, pnl_ab = [], 0.0, 0.0
 if not ops_a.empty:
     for _, row in ops_a.iterrows():
@@ -592,12 +622,12 @@ if not ops_a.empty:
             "GP_pct":  pct,                         "Fecha":    row.get("Fecha","—"),
             "_id":     row.get("_id",""),            "Usuario":  row.get("Usuario","—"),
         })
-
+ 
 total_gp   = pnl_c + pnl_ab
 patrimonio = capital + total_gp
 rend       = total_gp/capital*100 if capital > 0 else 0
 wr         = (ops_c["Resultado"]=="Ganadora").sum()/len(ops_c)*100 if not ops_c.empty else 0
-
+ 
 # ══════════════════════════════════════════════════════════════
 # HEADER + KPIs
 # ══════════════════════════════════════════════════════════════
@@ -607,7 +637,7 @@ if rol != "admin":
         modo_badge = ' <span style="font:600 9px IBM Plex Mono,mono;background:rgba(155,142,196,.15);color:#9B8EC4;border:1px solid #9B8EC4;padding:1px 7px;border-radius:20px;vertical-align:middle">SOLO LECTURA</span>'
     else:
         modo_badge = ' <span style="font:600 9px IBM Plex Mono,mono;background:rgba(46,204,135,.12);color:#2ECC87;border:1px solid #2ECC87;padding:1px 7px;border-radius:20px;vertical-align:middle">PORTAFOLIO PERSONAL</span>'
-
+ 
 st.markdown(f"""<div style="display:flex;align-items:center;gap:14px;flex-wrap:wrap;margin-bottom:4px">
   <div style="width:36px;height:36px;flex-shrink:0;background:linear-gradient(135deg,#C8A84B,#A07830);
               clip-path:polygon(50% 0%,100% 25%,100% 75%,50% 100%,0% 75%,0% 25%)"></div>
@@ -620,7 +650,7 @@ st.markdown(f"""<div style="display:flex;align-items:center;gap:14px;flex-wrap:w
   <div style="margin-left:auto;font:400 10px IBM Plex Mono,mono;color:#8BA5C8">
     {datetime.now().strftime('%d/%m/%Y %H:%M')}</div></div>
 <hr style="margin:12px 0 18px">""", unsafe_allow_html=True)
-
+ 
 gc = "#2ECC87" if total_gp>=0 else "#E85555"
 k1,k2,k3,k4,k5 = st.columns(5)
 with k1: st.markdown(card("Patrimonio total",   money(patrimonio,factor)), unsafe_allow_html=True)
@@ -633,7 +663,7 @@ with k4: st.markdown(card("Posiciones abiertas", money(val_ab,factor),
 with k5: st.markdown(card("Win rate", f"{wr:.1f}%",
     f"{len(ops_c)} ops cerradas", color="#9B8EC4"), unsafe_allow_html=True)
 st.markdown("<br>", unsafe_allow_html=True)
-
+ 
 # ══════════════════════════════════════════════════════════════
 # TABS — dinámicos según rol y modo
 # ══════════════════════════════════════════════════════════════
@@ -648,7 +678,7 @@ else:
     # Portafolio individual: puede registrar sus ops
     t_dash,t_pos,t_reg,t_anal = st.tabs([
         "⬡ Dashboard","◈ Mis posiciones","📌 Registrar Op.","📊 Análisis"])
-
+ 
 # ══════════════════════════════════════════════════════════════
 # DASHBOARD
 # ══════════════════════════════════════════════════════════════
@@ -687,7 +717,7 @@ with t_dash:
                 st.plotly_chart(fig2, use_container_width=True, config={"displayModeBar":False})
         else:
             st.info("Sin operaciones registradas.")
-
+ 
     if prices:
         sec("Precios en tiempo real")
         cols_p = st.columns(min(len(prices),5))
@@ -702,7 +732,7 @@ with t_dash:
                   <div style="font:600 15px/1.4 IBM Plex Mono,mono;color:#F0EAD6">{pxs}</div>
                   <div style="font:400 10px/1.3 IBM Plex Mono,mono;color:{clr}">
                     {'▲' if chg>=0 else '▼'} {abs(chg):.2f}%</div></div>""", unsafe_allow_html=True)
-
+ 
 # ══════════════════════════════════════════════════════════════
 # POSICIONES
 # ══════════════════════════════════════════════════════════════
@@ -743,7 +773,7 @@ with t_pos:
             </div>""", unsafe_allow_html=True)
     else:
         st.info("Sin posiciones abiertas actualmente.")
-
+ 
     if not df_ops.empty:
         sec("Historial de operaciones")
         cols_s = [c for c in ["Fecha","Activo","Categoria","Estrategia",
@@ -761,7 +791,7 @@ with t_pos:
         if "Valor_Pos" in dfs.columns:
             styled = styled.format({"Valor_Pos":"${:,.2f}"})
         st.dataframe(styled, use_container_width=True, hide_index=True)
-
+ 
 # ══════════════════════════════════════════════════════════════
 # REGISTRAR OPERACIÓN (admin + portafolio individual)
 # ══════════════════════════════════════════════════════════════
@@ -772,25 +802,37 @@ if rol == "admin" or modo_usuario == MODO_INDIVIDUAL:
                     f'Registrando como: <strong style="color:#C8A84B">{usuario}</strong> · '
                     f'Fondo: <strong style="color:#C8A84B">{fondo}</strong></div>',
                     unsafe_allow_html=True)
-
+ 
         with st.form("form_op", clear_on_submit=True):
             c1,c2,c3,c4 = st.columns(4)
             fecha_op   = c1.date_input("Fecha", value=date.today())
             activo     = c2.text_input("Nombre del activo", placeholder="Bitcoin, Nubank, VTI…")
             categoria  = c3.selectbox("Categoría", CATEGORIAS)
             estrategia = c4.selectbox("Estrategia", ESTRATEGIAS)
-
+ 
             c5,c6,c7 = st.columns(3)
             broker    = c5.text_input("Broker / Exchange")
             valor_pos = c6.number_input("Valor posición USD", min_value=0.0, step=0.01, format="%.2f")
             comision  = c7.number_input("Comisión USD", min_value=0.0, step=0.01, format="%.2f")
-
+ 
             c8,c9,c10,c11 = st.columns(4)
             pe   = c8.number_input("Precio de entrada",    min_value=0.0, step=0.0001, format="%.4f")
-            qty  = c9.number_input("Cantidad / Unidades",  min_value=0.0, step=0.000001, format="%.6f")
-            tp   = c10.number_input("TP %",                min_value=0.0, step=0.1,     format="%.2f")
-            sl   = c11.number_input("SL %",                min_value=0.0, step=0.1,     format="%.2f")
-
+ 
+            # Cantidad calculada automáticamente: valor_pos / precio_entrada
+            qty_calc = round(valor_pos / pe, 6) if pe > 0 and valor_pos > 0 else 0.0
+            c9.markdown(f"""<div style="background:#162236;border:1px solid #2a4060;border-radius:6px;
+                padding:8px 12px;height:68px">
+              <div style="font:400 12px/1.3 IBM Plex Mono,mono;color:#B0C4DC;margin-bottom:4px">
+                Cantidad / Unidades</div>
+              <div style="font:600 16px/1.3 IBM Plex Mono,mono;color:#C8A84B">
+                {qty_calc:,.6f}</div>
+              <div style="font:400 9px IBM Plex Mono,mono;color:#8BA5C8">
+                = ${valor_pos:.2f} ÷ ${pe:.4f}</div>
+            </div>""", unsafe_allow_html=True)
+ 
+            tp   = c10.number_input("TP %",  min_value=0.0, step=0.1, format="%.2f")
+            sl   = c11.number_input("SL %",  min_value=0.0, step=0.1, format="%.2f")
+ 
             c12,c13,c14 = st.columns(3)
             resultado  = c12.selectbox("Resultado actual", RESULTADOS)
             ticker_api = c13.text_input("Ticker para precios", placeholder="BTC · AAPL · VTI")
@@ -798,32 +840,47 @@ if rol == "admin" or modo_usuario == MODO_INDIVIDUAL:
                              min_value=0.0, max_value=100.0, step=0.01, format="%.2f",
                              help="Solo para CDT o Cuenta Remunerada. Ej: 12.85")
             notas = st.text_area("Notas", height=60, placeholder="Observaciones opcionales…")
-
+ 
             if st.form_submit_button("💾 GUARDAR OPERACIÓN", use_container_width=True):
                 if not activo.strip():
                     st.error("❌ El nombre del activo es obligatorio")
                 else:
-                    max_id = pd.to_numeric(df_ops_all["ID"], errors="coerce").max() if not df_ops_all.empty else 0
-                    nid    = float(max_id + 1) if not pd.isna(max_id) and max_id > 0 else 1.0
+                    # ID como int para evitar problemas de tipo en Firestore
+                    try:
+                        max_id = int(pd.to_numeric(df_ops_all["ID"], errors="coerce").max()) if not df_ops_all.empty else 0
+                        if pd.isna(max_id): max_id = 0
+                    except Exception:
+                        max_id = 0
+                    nid = max_id + 1
+ 
                     ok = fs_post("operaciones", {
-                        "ID": nid, "Fondo": fondo, "Usuario": usuario,
-                        "Fecha": str(fecha_op), "Activo": activo.strip(),
-                        "Categoria": categoria, "Estrategia": estrategia,
-                        "Broker": broker.strip(), "Valor_Pos": float(valor_pos),
-                        "TP_pct": float(tp), "SL_pct": float(sl),
-                        "TP_usd": float(valor_pos*tp/100), "SL_usd": float(valor_pos*sl/100),
-                        "Comision": float(comision), "Resultado": resultado,
-                        "Ticker_API": ticker_api.strip().upper(),
-                        "Precio_Entrada": float(pe), "Cantidad": float(qty),
-                        "TEA": float(tea_pct/100) if tea_pct>0 else 0.0,
-                        "Notas": notas.strip(),
+                        "ID":             nid,
+                        "Fondo":          fondo,
+                        "Usuario":        usuario,
+                        "Fecha":          str(fecha_op),
+                        "Activo":         activo.strip(),
+                        "Categoria":      categoria,
+                        "Estrategia":     estrategia,
+                        "Broker":         broker.strip(),
+                        "Valor_Pos":      float(valor_pos),
+                        "TP_pct":         float(tp),
+                        "SL_pct":         float(sl),
+                        "TP_usd":         float(valor_pos * tp / 100),
+                        "SL_usd":         float(valor_pos * sl / 100),
+                        "Comision":       float(comision),
+                        "Resultado":      resultado,
+                        "Ticker_API":     ticker_api.strip().upper(),
+                        "Precio_Entrada": float(pe),
+                        "Cantidad":       float(qty_calc),
+                        "TEA":            float(tea_pct / 100) if tea_pct > 0 else 0.0,
+                        "Notas":          notas.strip(),
                     })
                     if ok:
                         st.success("✓ Operación guardada correctamente")
                         st.cache_data.clear(); time.sleep(0.6); st.rerun()
                     else:
-                        st.error("❌ Error guardando. Verifica tu conexión.")
-
+                        st.error("❌ Error guardando. Intenta de nuevo.")
+ 
         # Editar solo las propias (o todas si admin)
         mis_ops_e = df_ops if rol=="admin" else (
             df_ops[df_ops["Usuario"]==usuario] if not df_ops.empty and "Usuario" in df_ops.columns
@@ -853,7 +910,7 @@ if rol == "admin" or modo_usuario == MODO_INDIVIDUAL:
                     if st.button("🗑 Eliminar"):
                         fs_delete("operaciones", sr["_id"])
                         st.success("✓ Eliminada"); st.cache_data.clear(); st.rerun()
-
+ 
 # ══════════════════════════════════════════════════════════════
 # SOCIOS / CAPITAL (admin)
 # ══════════════════════════════════════════════════════════════
@@ -885,7 +942,7 @@ if rol == "admin":
                         st.cache_data.clear(); st.rerun()
                     else:
                         st.error("❌ Error guardando")
-
+ 
         if not df_ap.empty and "Socio" in df_ap.columns and df_ap["Socio"].str.strip().any():
             st.markdown("---"); sec("Resumen por socio")
             df_s = df_ap.copy()
@@ -902,7 +959,7 @@ if rol == "admin":
             st.dataframe(res.style.format({
                 "Aportes":"${:,.2f}","Retiros":"${:,.2f}","Neto":"${:,.2f}","% Fondo":"{:.2f}%"}),
                 use_container_width=True, hide_index=True)
-
+ 
             sec("Historial de movimientos")
             hc = [c for c in ["Fecha","Socio","Cedula","Tipo","TipoCuenta","Monto"] if c in df_ap.columns]
             dfh = df_ap[hc].sort_values("Fecha",ascending=False).copy()
@@ -917,7 +974,7 @@ if rol == "admin":
             if st.button("🗑 Eliminar último movimiento"):
                 lid = df_ap.sort_values("Fecha").iloc[-1]["_id"]
                 fs_delete("aportes",lid); st.cache_data.clear(); st.rerun()
-
+ 
 # ══════════════════════════════════════════════════════════════
 # ANÁLISIS
 # ══════════════════════════════════════════════════════════════
@@ -965,7 +1022,7 @@ with t_anal:
               </div></div>""", unsafe_allow_html=True)
     else:
         st.info("Aún no hay operaciones cerradas para analizar.")
-
+ 
 # ══════════════════════════════════════════════════════════════
 # GESTIÓN DE USUARIOS (admin)
 # ══════════════════════════════════════════════════════════════
@@ -984,12 +1041,12 @@ if rol == "admin":
             "portafolio personal con su propio espacio de datos.",
             color="#8BA5C8"
         )
-
+ 
         with st.form("form_usr", clear_on_submit=True):
             cu1,cu2 = st.columns(2)
             u_email  = cu1.text_input("Email del usuario (será su login)")
             u_nombre = cu2.text_input("Nombre / Empresa")
-
+ 
             cu3,cu4,cu5 = st.columns(3)
             u_pwd  = cu3.text_input("Contraseña inicial", type="password",
                         help="Mínimo 6 caracteres.")
@@ -1000,7 +1057,7 @@ if rol == "admin":
             fondos_con_ninguno = ["(Sin fondo — portafolio personal)"] + fondos_list
             u_fondo_sel = cu5.selectbox("Fondo asignado (opcional)", fondos_con_ninguno)
             u_fondo = "" if u_fondo_sel.startswith("(Sin fondo") else u_fondo_sel
-
+ 
             if st.form_submit_button("👤 CREAR USUARIO Y DAR ACCESO", use_container_width=True):
                 if not u_email.strip() or not u_nombre.strip() or not u_pwd.strip():
                     st.error("❌ Email, nombre y contraseña son obligatorios")
@@ -1030,14 +1087,14 @@ if rol == "admin":
                         st.cache_data.clear()
                     else:
                         st.error(f"❌ Firebase: {msg_fb}")
-
+ 
         # Lista de usuarios
         st.markdown("---"); sec("Usuarios con acceso")
         df_u2 = load_usuarios()
         if not df_u2.empty:
             show_u = [c for c in ["Email","Nombre","Modo","Fondo","Activo","Fecha"] if c in df_u2.columns]
             st.dataframe(df_u2[show_u], use_container_width=True, hide_index=True)
-
+ 
             sec("Eliminar acceso")
             ul = [f"{r.get('Email','?')} — {r.get('Nombre','?')} ({r.get('Modo','?')})"
                   for _,r in df_u2.iterrows()]
@@ -1051,7 +1108,7 @@ if rol == "admin":
                     st.cache_data.clear(); st.rerun()
         else:
             st.info("Aún no has creado usuarios con acceso.")
-
+ 
 # ══════════════════════════════════════════════════════════════
 # ADMINISTRACIÓN (admin)
 # ══════════════════════════════════════════════════════════════
@@ -1068,7 +1125,7 @@ if rol == "admin":
                 rows_r.append({"Fondo":f, "Capital USD":cap*factor, "# Ops":nop})
             st.dataframe(pd.DataFrame(rows_r).style.format({"Capital USD":"${:,.2f}"}),
                          use_container_width=True, hide_index=True)
-
+ 
             sec("Crear nuevo fondo")
             nf_i = st.text_input("Nombre del fondo", key="nf_adm")
             if st.button("➕ CREAR FONDO"):
@@ -1080,7 +1137,7 @@ if rol == "admin":
                     st.cache_data.clear(); st.rerun()
                 elif nf_i in fondos_list:
                     st.warning("Ese fondo ya existe")
-
+ 
         with ca2:
             sec("Estado de APIs")
             st.markdown(f"""<div style="background:#162236;border:1px solid #1E3354;
@@ -1096,7 +1153,7 @@ if rol == "admin":
             if st.button("🔄 Limpiar caché"):
                 st.cache_data.clear()
                 st.success("✓ Caché limpiado")
-
+ 
         st.markdown("---"); sec("Todas las operaciones")
         if not df_ops_all.empty:
             cols_a = [c for c in ["Fondo","Usuario","Fecha","Activo","Categoria",
@@ -1107,3 +1164,4 @@ if rol == "admin":
                          use_container_width=True, hide_index=True)
         else:
             st.info("Sin operaciones registradas aún.")
+ 
