@@ -12,21 +12,44 @@ st.markdown("""
 <style>
 @import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@300;400;500;600&display=swap');
 
+/* Variables de tema — oscuro por defecto */
+:root {
+    --bg:         #111827;
+    --sidebar-bg: #0D1929;
+    --surface:    #162236;
+    --surface2:   #0F1A2B;
+    --border:     #1E3354;
+    --text:       #ffffff;
+    --muted:      #8BA5C8;
+    --label:      #B0C4DC;
+}
+/* Tema claro */
+body.tema-claro {
+    --bg:         #F0F4F8;
+    --sidebar-bg: #E2EAF4;
+    --surface:    #FFFFFF;
+    --surface2:   #EDF2F7;
+    --border:     #C4D4E8;
+    --text:       #1A2640;
+    --muted:      #4A6080;
+    --label:      #3A5070;
+}
+
 html, body { font-family: 'IBM Plex Sans', sans-serif; }
-.stApp { background: #111827; color: #ffffff; }
+.stApp { background: var(--bg); color: var(--text); }
 h1 { font-family:'IBM Plex Mono',monospace!important; color:#C8A84B!important; letter-spacing:2px; }
-h2 { font-family:'IBM Plex Mono',monospace!important; font-size:11px!important; letter-spacing:1.5px; text-transform:uppercase; color:#8BA5C8!important; }
+h2 { font-family:'IBM Plex Mono',monospace!important; font-size:11px!important; letter-spacing:1.5px; text-transform:uppercase; color:var(--muted)!important; }
 h3 { font-family:'IBM Plex Mono',monospace!important; font-size:13px!important; color:#C8A84B!important; }
-hr { border-color:#1E3354!important; }
+hr { border-color:var(--border)!important; }
 
-section[data-testid="stSidebar"] { background:#0D1929!important; border-right:1px solid #1E3354; }
-section[data-testid="stSidebar"] label { color:#B0C4DC!important; font-size:12px!important; }
+section[data-testid="stSidebar"] { background:var(--sidebar-bg)!important; border-right:1px solid var(--border); }
+section[data-testid="stSidebar"] label { color:var(--muted)!important; font-size:12px!important; }
 
-/* TODOS los inputs — texto blanco */
+/* TODOS los inputs */
 input, textarea {
-    background:#162236!important; color:#ffffff!important;
-    -webkit-text-fill-color:#ffffff!important;
-    border:1px solid #2a4060!important; border-radius:6px!important;
+    background:var(--surface)!important; color:var(--text)!important;
+    -webkit-text-fill-color:var(--text)!important;
+    border:1px solid var(--border)!important; border-radius:6px!important;
     font-family:'IBM Plex Mono',monospace!important; font-size:13px!important;
     opacity:1!important;
 }
@@ -40,8 +63,8 @@ input:disabled {
 
 /* Selectbox */
 [data-testid="stSelectbox"]>div>div {
-    background:#162236!important; border:1px solid #2a4060!important;
-    border-radius:6px!important; color:#ffffff!important;
+    background:var(--surface)!important; border:1px solid var(--border)!important;
+    border-radius:6px!important; color:var(--text)!important;
 }
 [data-testid="stSelectbox"] span,
 [data-testid="stSelectbox"] p { color:#ffffff!important; font-size:13px!important; }
@@ -50,7 +73,7 @@ input:disabled {
 [data-baseweb="popover"], [data-baseweb="popover"] *,
 [data-baseweb="menu"], [data-baseweb="menu"] *,
 [role="listbox"], [role="listbox"] * {
-    background:#1a2d42!important; color:#ffffff!important;
+    background:var(--surface)!important; color:var(--text)!important;
     font-family:'IBM Plex Mono',monospace!important; font-size:13px!important;
     border-color:#2a4060!important;
 }
@@ -90,7 +113,7 @@ input:disabled {
 
 /* Métricas */
 [data-testid="metric-container"] {
-    background:#162236; border:1px solid #1E3354; border-radius:10px;
+    background:var(--surface); border:1px solid var(--border); border-radius:10px;
     padding:16px!important; position:relative; overflow:hidden;
 }
 [data-testid="metric-container"]::before {
@@ -99,7 +122,7 @@ input:disabled {
 }
 [data-testid="stMetricValue"] {
     font-family:'IBM Plex Mono',monospace!important; font-size:1.4rem!important;
-    color:#ffffff!important; font-weight:600!important;
+    color:var(--text)!important; font-weight:600!important;
 }
 [data-testid="stMetricLabel"] {
     font-family:'IBM Plex Mono',monospace!important; font-size:0.68rem!important;
@@ -107,24 +130,77 @@ input:disabled {
 }
 
 /* DataFrames */
-[data-testid="stDataFrame"] { border:1px solid #1E3354; border-radius:8px; overflow:hidden; }
+[data-testid="stDataFrame"] { border:1px solid var(--border); border-radius:8px; overflow:hidden; }
 
 /* Alerts */
 [data-testid="stAlert"] {
     border-radius:8px!important; border-left-width:3px!important;
-    background:#162236!important; font-family:'IBM Plex Mono',monospace!important; color:#ffffff!important;
+    background:var(--surface)!important; font-family:'IBM Plex Mono',monospace!important; color:#ffffff!important;
 }
 
 /* Form */
 [data-testid="stForm"] {
-    background:#0F1A2B!important; border:1px solid #1E3354!important;
+    background:var(--bg)!important; border:1px solid var(--border)!important;
     border-radius:10px!important; padding:20px!important;
 }
 
 /* Radio */
-[data-testid="stRadio"] label span { color:#ffffff!important; }
+[data-testid="stRadio"] label span,
+[data-testid="stRadio"] label p,
+[data-testid="stRadio"] p { color:#ffffff!important; font-weight:600!important; }
 </style>
 """, unsafe_allow_html=True)
+
+# ── Tema claro — sobreescribe variables oscuras ──────────
+_tc = st.session_state.get("tema_sel", "🌙 Oscuro") == "☀️ Claro"
+if _tc:
+    st.markdown("""<style>
+    .stApp { background:#F0F4F8 !important; color:#1A2640 !important; }
+    section[data-testid="stSidebar"] { background:#E2EAF4 !important; }
+    section[data-testid="stSidebar"] * { color:#1A2640 !important; }
+    input, textarea {
+        background:#FFFFFF !important; color:#1A2640 !important;
+        -webkit-text-fill-color:#1A2640 !important; border-color:#C4D4E8 !important;
+    }
+    input::placeholder, textarea::placeholder {
+        color:#6A8090 !important; -webkit-text-fill-color:#6A8090 !important;
+    }
+    input:disabled { color:#C8A84B !important; -webkit-text-fill-color:#C8A84B !important; }
+    [data-testid="stSelectbox"]>div>div {
+        background:#FFFFFF !important; color:#1A2640 !important; border-color:#C4D4E8 !important;
+    }
+    [data-testid="stSelectbox"] span,
+    [data-testid="stSelectbox"] p { color:#1A2640 !important; }
+    [data-baseweb="popover"], [data-baseweb="popover"] *,
+    [data-baseweb="menu"], [data-baseweb="menu"] *,
+    [role="listbox"], [role="listbox"] * {
+        background:#FFFFFF !important; color:#1A2640 !important;
+    }
+    [role="option"]:hover { background:#E2EAF4 !important; color:#C8A84B !important; }
+    [data-testid="metric-container"] {
+        background:#FFFFFF !important; border-color:#C4D4E8 !important;
+    }
+    [data-testid="stMetricValue"] { color:#1A2640 !important; }
+    [data-testid="stMetricLabel"] { color:#4A6080 !important; }
+    [data-testid="stForm"] { background:#EDF2F7 !important; border-color:#C4D4E8 !important; }
+    [data-testid="stDataFrame"] { border-color:#C4D4E8 !important; }
+    [data-testid="stAlert"] { background:#FFFFFF !important; color:#1A2640 !important; }
+    [data-testid="stTabs"] button { color:#4A6080 !important; background:transparent !important; }
+    [data-testid="stTabs"] button[aria-selected="true"] {
+        color:#C8A84B !important; border-bottom-color:#C8A84B !important;
+    }
+    [data-testid="stRadio"] label span,
+    [data-testid="stRadio"] label p { color:#1A2640 !important; font-weight:600 !important; }
+    [data-testid="stNumberInput"] button {
+        background:#E2EAF4 !important; color:#1A2640 !important; border-color:#C4D4E8 !important;
+    }
+    hr { border-color:#C4D4E8 !important; }
+    h1 { color:#C8A84B !important; }
+    h2 { color:#4A6080 !important; }
+    h3 { color:#A07830 !important; }
+    .stButton>button { color:#0D1929 !important; }
+    </style>""", unsafe_allow_html=True)
+
 
 # ══════════════════════════════════════════════════════
 # CONSTANTES
@@ -358,6 +434,24 @@ def load_inv():
     if not df_leg.empty:
         df_leg["_id"] = "ops_" + df_leg["_id"].astype(str)
 
+    # Deduplicar: si ya existe en inversiones (df_new) con mismo Activo+Fecha_Compra+Usuario,
+    # no incluir la versión legacy para evitar duplicados tras migración
+    if not df_new.empty and not df_leg.empty:
+        keys_new = set(
+            zip(df_new["Activo"].str.upper().str.strip(),
+                df_new["Fecha_Compra"].astype(str).str[:10],
+                df_new["Usuario"].str.lower().str.strip())
+        )
+        mask_dup = df_leg.apply(
+            lambda r: (
+                str(r["Activo"]).upper().strip(),
+                str(r["Fecha_Compra"])[:10],
+                str(r["Usuario"]).lower().strip()
+            ) in keys_new,
+            axis=1
+        )
+        df_leg = df_leg[~mask_dup]
+
     combined = pd.concat([df_new, df_leg], ignore_index=True)
     return combined if not combined.empty else pd.DataFrame(columns=COLS)
 
@@ -559,6 +653,11 @@ with st.sidebar:
     moneda = st.radio("Moneda", ["USD","COP"], horizontal=True)
     factor = trm if moneda=="COP" else 1.0
     sfx    = " COP" if moneda=="COP" else " USD"
+
+    st.markdown("---")
+    tema = st.radio("🎨 Tema", ["🌙 Oscuro","☀️ Claro"], horizontal=True,
+                    key="tema_sel")
+    tema_claro = tema == "☀️ Claro"
 
     st.markdown("---")
     if st.button("🚪 Cerrar sesión", use_container_width=True):
@@ -784,7 +883,7 @@ with t_dash:
                 fig.add_trace(go.Scatter(
                     x=df_val["fecha"], y=df_val["invertido"],
                     mode="lines",
-                    line=dict(color="#8BA5C8", width=1.5, dash="dot"),
+                    line=dict(color="#38BDF8", width=2, dash="dash"),
                     name=f"Invertido ({moneda})",
                     hovertemplate="Invertido: %{y:$,.2f}"+sfx+"<extra></extra>"
                 ))
@@ -821,25 +920,34 @@ with t_dash:
             st.info("Registra tu primera inversión para ver la gráfica.")
 
     with cr:
-        sec("Distribución por tipo")
-        if posiciones:
-            dist = {}
-            for p in posiciones:
-                cat = p["Categoria"]
-                dist[cat] = dist.get(cat,0) + p["Val_Actual"]
-            if dist:
-                fig2 = go.Figure(go.Pie(
-                    labels=list(dist.keys()),
-                    values=[v*factor for v in dist.values()],
-                    hole=.6,
-                    marker=dict(colors=[CAT_CLR.get(c,"#8BA5C8") for c in dist.keys()],
-                                line=dict(color="#111827",width=2)),
-                    hovertemplate="<b>%{label}</b><br>%{value:$,.0f}"+sfx+"<br>%{percent}<extra></extra>",
-                    textfont=dict(color="#ffffff")
-                ))
-                fig2.update_layout(**PT,
-                    title=dict(text="Por categoría",font=dict(size=11,color="#8BA5C8"),x=.5))
-                st.plotly_chart(fig2, use_container_width=True, config={"displayModeBar":False})
+        sec("Distribución por activo")
+        # Solo posiciones abiertas — muestra % real de cada ticker en el portafolio activo
+        pos_ab_activas = [p for p in posiciones if p["Estado"]=="Abierta"]
+        if pos_ab_activas:
+            total_ab = sum(p["Val_Actual"] for p in pos_ab_activas)
+            tickers_d = [p["Activo"] for p in pos_ab_activas]
+            valores_d  = [p["Val_Actual"]*factor for p in pos_ab_activas]
+            # Colores distintos por posición
+            PALETTE = ["#C8A84B","#2ECC87","#6BA3BE","#9B8EC4","#E87844","#E85555","#F0C040","#8BA5C8"]
+            colors_d = [PALETTE[i % len(PALETTE)] for i in range(len(tickers_d))]
+            fig2 = go.Figure(go.Pie(
+                labels=tickers_d,
+                values=valores_d,
+                hole=.58,
+                marker=dict(colors=colors_d, line=dict(color="#111827",width=2)),
+                textinfo="percent+label",
+                textfont=dict(color="#ffffff", size=11),
+                hovertemplate="<b>%{label}</b><br>Valor: %{value:$,.2f}"+sfx+"<br>Del portafolio: %{percent}<extra></extra>",
+            ))
+            fig2.update_layout(**PT,
+                title=dict(text="% por activo (posiciones abiertas)",font=dict(size=11,color="#8BA5C8"),x=.5),
+                showlegend=True,
+                legend=dict(font=dict(color="#ffffff",size=10),bgcolor="rgba(0,0,0,0)"))
+            st.plotly_chart(fig2, use_container_width=True, config={"displayModeBar":False})
+        elif posiciones:
+            st.info("Todas las posiciones están cerradas.")
+        else:
+            st.info("Sin posiciones registradas.")
 
     # Precios en tiempo real
     if prices:
@@ -911,7 +1019,7 @@ with t_port:
               <div style="text-align:center;min-width:90px">
                 <div style="font:400 9px IBM Plex Mono,mono;color:#8BA5C8;letter-spacing:1px">P&L</div>
                 <div style="font:600 15px IBM Plex Mono,mono;color:{gc2}">{sg}{money(p['GP_usd'],factor)}{sfx}</div>
-                <div style="font:500 10px IBM Plex Mono,mono;color:{gc2}">{sg}{p['GP_pct']:.2f}%</div>
+                <div style="font:600 13px IBM Plex Mono,mono;color:{gc2}">{sg}{p['GP_pct']:.2f}%</div>
               </div>
             </div>""", unsafe_allow_html=True)
 
