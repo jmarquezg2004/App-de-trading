@@ -612,6 +612,20 @@ for _, row in df_inv.iterrows():
         "Usuario":    row.get("Usuario","—"),
     })
 
+# Cash neto: depósitos extra + retiros (no son compras de activos)
+# Aporte = entró dinero al fondo/portafolio
+# Retiro = salió dinero → reduce el valor real del portafolio
+cash_aportes = 0.0
+cash_retiros = 0.0
+if not df_ap.empty and "Tipo" in df_ap.columns:
+    cash_aportes = df_ap[df_ap["Tipo"]=="Aporte"]["Monto"].sum()
+    cash_retiros = df_ap[df_ap["Tipo"]=="Retiro"]["Monto"].sum()
+cash_neto = cash_aportes - cash_retiros  # positivo = hay cash disponible, negativo = retiraron más
+
+# Portafolio real = valor de posiciones abiertas + cash neto (retiros ya restan)
+# Si hay retiros, el valor total baja aunque las posiciones estén bien
+total_actual_real = total_actual + max(cash_neto, 0)  # solo suma cash si es positivo
+total_gp_real     = total_gp + cash_neto if cash_neto < 0 else total_gp
 rend_pct = total_gp / total_invertido * 100 if total_invertido > 0 else 0
 
 pos_abiertas = [p for p in posiciones if p["Estado"]=="Abierta"]
@@ -713,11 +727,11 @@ st.markdown("<br>", unsafe_allow_html=True)
 puede_registrar = (rol=="admin") or (modo==MODO_IND)
 
 if rol == "admin":
-    tabs = st.tabs(["⬡ Dashboard","◈ Portafolio","📌 Registrar","💰 Capital","👥 Usuarios","⚙ Admin"])
+    tabs = st.tabs(["⬡ Dashboard","◈ Portafolio","📌 Registrar","💵 Capital","👥 Usuarios","⚙ Admin"])
     t_dash,t_port,t_reg,t_cap,t_usr,t_adm = tabs
 elif puede_registrar:
-    tabs = st.tabs(["⬡ Dashboard","◈ Mi portafolio","📌 Registrar"])
-    t_dash,t_port,t_reg = tabs
+    tabs = st.tabs(["⬡ Dashboard","◈ Mi portafolio","📌 Registrar","💵 Capital"])
+    t_dash,t_port,t_reg,t_cap = tabs
 else:
     tabs = st.tabs(["⬡ Dashboard","◈ Portafolio"])
     t_dash,t_port = tabs
@@ -730,52 +744,79 @@ with t_dash:
 
     with cl:
         sec("Evolución del portafolio")
-        # Construir serie temporal: para cada inversión, agregar su valor en cada fecha
         if pos_periodo:
-            # Puntos clave: fecha compra y hoy (o fecha venta si cerrada)
-            puntos = []
+            # Serie de puntos: fecha_compra con valor invertido, fecha_actual/venta con valor actual
+            # Para cada posición construimos dos puntos y luego interpolamos
+            eventos = []
             for p in pos_periodo:
                 try:
                     fc = pd.to_datetime(p["F_Compra"])
-                    # En la fecha de compra: valor = invertido
-                    puntos.append({"fecha": fc, "valor": p["Invertido"]})
-                    # Hoy o fecha venta: valor actual
-                    fv = pd.to_datetime(p["F_Venta"]) if p["F_Venta"] else pd.Timestamp.now()
-                    puntos.append({"fecha": fv, "valor": p["Val_Actual"]})
+                    fv = pd.to_datetime(p["F_Venta"]) if p["F_Venta"] else pd.Timestamp.now().normalize()
+                    # Punto de entrada: el día de compra el valor era = invertido
+                    eventos.append({"fecha": fc, "invertido": p["Invertido"], "actual": p["Invertido"]})
+                    # Punto de salida: valor actual (precio de hoy o de venta)
+                    eventos.append({"fecha": fv, "invertido": p["Invertido"], "actual": p["Val_Actual"]})
                 except: pass
 
-            if puntos:
-                df_ev = pd.DataFrame(puntos).sort_values("fecha")
-                df_ev = df_ev.groupby("fecha")["valor"].sum().reset_index()
-                df_ev["valor"] = df_ev["valor"] * factor
+            if eventos:
+                df_ev = pd.DataFrame(eventos).sort_values("fecha")
+                # Agrupar por fecha sumando todas las posiciones activas en ese momento
+                df_val = df_ev.groupby("fecha").agg(
+                    invertido=("invertido","sum"),
+                    actual=("actual","sum")
+                ).reset_index()
+                df_val["invertido"] *= factor
+                df_val["actual"]    *= factor
 
                 fig = go.Figure()
+                # Área de valor actual (portafolio)
                 fig.add_trace(go.Scatter(
-                    x=df_ev["fecha"], y=df_ev["valor"],
+                    x=df_val["fecha"], y=df_val["actual"],
                     mode="lines+markers",
                     line=dict(color="#C8A84B", width=2.5),
                     fill="tozeroy", fillcolor="rgba(200,168,75,0.08)",
-                    marker=dict(color="#C8A84B", size=6),
-                    name="Valor portafolio",
-                    hovertemplate="<b>%{x|%d %b %Y}</b><br>%{y:$,.0f}"+sfx+"<extra></extra>"
+                    marker=dict(color="#C8A84B", size=7,
+                                line=dict(color="#111827", width=1.5)),
+                    name=f"Valor ({moneda})",
+                    hovertemplate="<b>%{x|%d/%m/%Y}</b><br>Valor: %{y:$,.2f}"+sfx+"<extra></extra>"
                 ))
-                # Línea de costo (invertido)
-                df_cost = pd.DataFrame(puntos).sort_values("fecha")
-                df_cost = df_cost.groupby("fecha")["valor"].first().reset_index()
+                # Línea de capital invertido
                 fig.add_trace(go.Scatter(
-                    x=df_ev["fecha"],
-                    y=[total_invertido * factor] * len(df_ev),
+                    x=df_val["fecha"], y=df_val["invertido"],
                     mode="lines",
-                    line=dict(color="#8BA5C8", width=1, dash="dash"),
-                    name="Capital invertido",
-                    hovertemplate="Capital: %{y:$,.0f}"+sfx+"<extra></extra>"
+                    line=dict(color="#8BA5C8", width=1.5, dash="dot"),
+                    name=f"Invertido ({moneda})",
+                    hovertemplate="Invertido: %{y:$,.2f}"+sfx+"<extra></extra>"
+                ))
+                # Zona verde/roja entre ambas líneas
+                fig.add_trace(go.Scatter(
+                    x=list(df_val["fecha"])+list(df_val["fecha"][::-1]),
+                    y=list(df_val["actual"])+list(df_val["invertido"][::-1]),
+                    fill="toself",
+                    fillcolor="rgba(46,204,135,0.07)" if gp_per>=0 else "rgba(232,85,85,0.07)",
+                    line=dict(color="rgba(0,0,0,0)"),
+                    showlegend=False, hoverinfo="skip"
                 ))
                 fig.update_layout(**PT,
-                    title=dict(text=f"Valor del portafolio ({moneda})",
+                    title=dict(text=f"Portafolio vs Capital invertido ({moneda})",
                                font=dict(size=11,color="#8BA5C8"),x=.5),
                     yaxis_title=moneda,
-                    legend=dict(bgcolor="rgba(0,0,0,0)", font=dict(color="#8BA5C8", size=10)))
+                    legend=dict(bgcolor="rgba(0,0,0,0)",
+                                font=dict(color="#8BA5C8",size=10),
+                                orientation="h", y=-0.15))
                 st.plotly_chart(fig, use_container_width=True, config={"displayModeBar":False})
+
+            # Mini resumen textual bajo la gráfica
+            gp_color = "#2ECC87" if gp_per>=0 else "#E85555"
+            st.markdown(f"""<div style="display:flex;gap:24px;flex-wrap:wrap;padding:8px 4px">
+              <div><div style="font:400 9px IBM Plex Mono,mono;color:#8BA5C8;letter-spacing:1px">INVERTIDO</div>
+                <div style="font:600 14px IBM Plex Mono,mono;color:#ffffff">{money(inv_per,factor)}{sfx}</div></div>
+              <div><div style="font:400 9px IBM Plex Mono,mono;color:#8BA5C8;letter-spacing:1px">VALOR HOY</div>
+                <div style="font:600 14px IBM Plex Mono,mono;color:#ffffff">{money(act_per,factor)}{sfx}</div></div>
+              <div><div style="font:400 9px IBM Plex Mono,mono;color:#8BA5C8;letter-spacing:1px">GANANCIA TOTAL</div>
+                <div style="font:600 14px IBM Plex Mono,mono;color:{gp_color}">
+                  {'+'if gp_per>=0 else ''}{money(gp_per,factor)}{sfx} ({'+' if rend_per>=0 else ''}{rend_per:.2f}%)</div></div>
+            </div>""", unsafe_allow_html=True)
         else:
             st.info("Registra tu primera inversión para ver la gráfica.")
 
@@ -803,18 +844,24 @@ with t_dash:
     # Precios en tiempo real
     if prices:
         sec("Precios en tiempo real")
+        st.markdown('<div style="font:400 10px IBM Plex Mono,mono;color:#8BA5C8;margin:-8px 0 10px">% = variación del día (no es tu P&L total)</div>', unsafe_allow_html=True)
         cols_p = st.columns(min(len(prices),5))
         for i,(tk,d) in enumerate(list(prices.items())[:10]):
             chg=d.get("chg24",0); px=d.get("price",0)
             clr="#2ECC87" if chg>=0 else "#E85555"
             pxs=f"${px:,.4f}" if px<10 else f"${px:,.2f}"
+            # Buscar P&L real de esta posición
+            pnl_real = next((p["GP_pct"] for p in posiciones
+                             if p["Ticker"].upper()==tk.upper() and p["Estado"]=="Abierta"), None)
+            pnl_html = f'<div style="font:400 9px IBM Plex Mono,mono;color:{"#2ECC87" if pnl_real>=0 else "#E85555"}">P&L: {"+" if pnl_real>=0 else ""}{pnl_real:.2f}%</div>' if pnl_real is not None else ""
             with cols_p[i%min(len(prices),5)]:
                 st.markdown(f"""<div style="background:#162236;border:1px solid #1E3354;
                     border-radius:8px;padding:12px;text-align:center;margin-bottom:8px">
                   <div style="font:600 11px/1.5 IBM Plex Mono,mono;color:#C8A84B">{tk}</div>
                   <div style="font:600 15px/1.4 IBM Plex Mono,mono;color:#ffffff">{pxs}</div>
                   <div style="font:400 10px/1.3 IBM Plex Mono,mono;color:{clr}">
-                    {'▲' if chg>=0 else '▼'} {abs(chg):.2f}%</div></div>""",
+                    {'▲' if chg>=0 else '▼'} {abs(chg):.2f}% hoy</div>
+                  {pnl_html}</div>""",
                     unsafe_allow_html=True)
 
 # ══════════════════════════════════════════════════════
@@ -1008,16 +1055,85 @@ if puede_registrar:
                     if precio_v <= 0:
                         st.error("❌ Ingresa el precio de venta")
                     else:
-                        ok = fs_patch("inversiones", pos_sel["_id"], {
+                        _id = pos_sel["_id"]
+                        datos_venta = {
                             "Estado":       "Cerrada",
                             "Fecha_Venta":  str(fecha_v),
                             "Precio_Venta": float(precio_v),
-                        })
-                        if ok:
-                            st.success(f"✓ Venta de {pos_sel['Activo']} registrada el {fecha_v}")
-                            st.cache_data.clear(); time.sleep(0.5); st.rerun()
+                        }
+                        if _id.startswith("ops_"):
+                            # Viene de colección 'operaciones' — guardar como nueva inversión cerrada
+                            real_id = _id.replace("ops_","",1)
+                            ok2, msg2 = fs_post("inversiones", {
+                                "Fondo":         pos_sel.get("Usuario","").split("@")[0] if not fondo else fondo,
+                                "Usuario":       pos_sel.get("Usuario", usuario),
+                                "Fecha_Compra":  pos_sel["F_Compra"],
+                                "Activo":        pos_sel["Activo"],
+                                "Categoria":     pos_sel["Categoria"],
+                                "Cantidad":      float(pos_sel["Cantidad"]),
+                                "Precio_Compra": float(pos_sel["Px_Compra"]),
+                                "Broker":        pos_sel.get("Broker",""),
+                                "Ticker_API":    pos_sel["Ticker"],
+                                "Fecha_Venta":   str(fecha_v),
+                                "Precio_Venta":  float(precio_v),
+                                "Estado":        "Cerrada",
+                                "Notas":         f"Migrado de operaciones/{real_id}",
+                            })
+                            if ok2:
+                                # Actualizar también en operaciones para consistencia
+                                fs_patch("operaciones", real_id, {"Resultado": "Ganadora" if precio_v > pos_sel["Px_Compra"] else "Perdedora"})
+                                st.success(f"✓ Venta de {pos_sel['Activo']} registrada — guardada en historial")
+                                st.cache_data.clear(); time.sleep(0.5); st.rerun()
+                            else:
+                                st.error(f"❌ Error: {msg2}")
                         else:
-                            st.error("❌ Error actualizando")
+                            # Nueva colección inversiones — patch directo
+                            ok = fs_patch("inversiones", _id, datos_venta)
+                            if ok:
+                                st.success(f"✓ Venta de {pos_sel['Activo']} registrada el {fecha_v}")
+                                st.cache_data.clear(); time.sleep(0.5); st.rerun()
+                            else:
+                                st.error("❌ Error actualizando")
+
+            # ── EDITAR POSICIÓN CERRADA ──
+            pos_cerradas_todas = [p for p in posiciones if p["Estado"]=="Cerrada"]
+            if pos_cerradas_todas:
+                st.markdown("---")
+                sec("Editar posición cerrada")
+                st.markdown('<div style="font:400 11px IBM Plex Mono,mono;color:#8BA5C8;margin-bottom:8px">Corrige fecha o precio de venta de cualquier posición ya cerrada.</div>', unsafe_allow_html=True)
+                lbs_c = [f"{p['F_Compra']} → {p['F_Venta']} — {p['Activo']} (vendido a ${p['Px_Actual']:,.4f})"
+                         for p in pos_cerradas_todas]
+                sel_c = st.selectbox("Selecciona posición cerrada", range(len(lbs_c)),
+                                     format_func=lambda i: lbs_c[i], key="sel_cerrada")
+                pc_sel = pos_cerradas_todas[sel_c]
+                ec1,ec2 = st.columns(2)
+                nueva_fv = ec1.date_input("Nueva fecha de venta",
+                                          value=pd.to_datetime(pc_sel["F_Venta"]).date()
+                                          if pc_sel["F_Venta"] else date.today(),
+                                          key="edit_fv")
+                nuevo_pv = ec2.number_input("Nuevo precio de venta (USD)",
+                                            value=float(pc_sel["Px_Actual"]) if pc_sel["Px_Actual"] else 0.0,
+                                            min_value=0.0, step=0.0001, format="%.4f", key="edit_pv")
+                if st.button("✏️ ACTUALIZAR POSICIÓN CERRADA"):
+                    _id_c = pc_sel["_id"]
+                    datos_edit = {"Fecha_Venta": str(nueva_fv), "Precio_Venta": float(nuevo_pv), "Estado": "Cerrada"}
+                    if _id_c.startswith("ops_"):
+                        # Legacy: crear/actualizar en inversiones
+                        ok2, msg2 = fs_post("inversiones", {
+                            "Fondo": fondo, "Usuario": usuario,
+                            "Fecha_Compra": pc_sel["F_Compra"], "Activo": pc_sel["Activo"],
+                            "Categoria": pc_sel["Categoria"], "Cantidad": float(pc_sel["Cantidad"]),
+                            "Precio_Compra": float(pc_sel["Px_Compra"]), "Broker": "",
+                            "Ticker_API": pc_sel["Ticker"], "Fecha_Venta": str(nueva_fv),
+                            "Precio_Venta": float(nuevo_pv), "Estado": "Cerrada",
+                            "Notas": f"Editado desde operaciones/{_id_c.replace('ops_','')}",
+                        })
+                        if ok2: st.success("✓ Posición actualizada"); st.cache_data.clear(); st.rerun()
+                        else:   st.error(f"❌ {msg2}")
+                    else:
+                        ok = fs_patch("inversiones", _id_c, datos_edit)
+                        if ok: st.success("✓ Posición actualizada"); st.cache_data.clear(); st.rerun()
+                        else:  st.error("❌ Error actualizando")
 
             # Archivar posición (nunca se borra — se marca como Archivada)
             st.markdown("---")
@@ -1037,40 +1153,117 @@ if puede_registrar:
                     st.cache_data.clear(); st.rerun()
 
 # ══════════════════════════════════════════════════════
-# CAPITAL / SOCIOS (admin)
+# CAPITAL — disponible para admin y portafolio individual
+# Lógica: compra → capital invertido sube automáticamente
+#         depósito → cash disponible (aún no invertido)
+#         retiro → baja el valor real del portafolio
 # ══════════════════════════════════════════════════════
-if rol == "admin":
+if rol == "admin" or puede_registrar:
     with t_cap:
-        sec("Movimientos de capital — Socios")
-        with st.form("form_ap", clear_on_submit=True):
-            c1,c2,c3,c4 = st.columns(4)
-            socio    = c1.text_input("Nombre del socio")
-            cedula   = c2.text_input("Cédula / ID")
-            tipo_mov = c3.selectbox("Tipo", ["Aporte","Retiro"])
-            monto    = c4.number_input("Monto (USD)", min_value=0.0, step=0.01, format="%.2f")
-            fecha_a  = st.date_input("Fecha", value=date.today())
-            if st.form_submit_button("💾 GUARDAR", use_container_width=True):
-                if not socio.strip():
-                    st.error("❌ Nombre obligatorio")
-                else:
-                    ok, msg = fs_post("aportes", {
-                        "Fondo": fondo, "Socio": socio.strip(), "Cedula": cedula.strip(),
-                        "Fecha": str(fecha_a), "Tipo": tipo_mov,
-                        "Monto": float(monto), "Usuario": usuario,
-                    })
-                    if ok: st.success("✓ Guardado"); st.cache_data.clear(); st.rerun()
-                    else:  st.error(f"❌ {msg}")
+        # Resumen de cash actual
+        cap1, cap2, cap3 = st.columns(3)
+        with cap1:
+            st.markdown(card("Depósitos acumulados",
+                money(cash_aportes, factor)+sfx, color="#2ECC87"), unsafe_allow_html=True)
+        with cap2:
+            st.markdown(card("Retiros acumulados",
+                money(cash_retiros, factor)+sfx, color="#E85555"), unsafe_allow_html=True)
+        with cap3:
+            cn_color = "#2ECC87" if cash_neto >= 0 else "#E85555"
+            st.markdown(card("Cash neto disponible",
+                money(cash_neto, factor)+sfx,
+                "Depósitos - Retiros", color=cn_color), unsafe_allow_html=True)
 
-        if not df_ap.empty and "Socio" in df_ap.columns:
-            st.markdown("---"); sec("Historial de movimientos")
-            dfh = df_ap[["Fecha","Socio","Cedula","Tipo","Monto"]].sort_values("Fecha",ascending=False).copy()
-            dfh["Monto"] = dfh["Monto"] * factor
+        st.markdown("""<div style="background:#162236;border:1px solid #1E3354;
+            border-left:3px solid #C8A84B;border-radius:0 8px 8px 0;
+            padding:10px 14px;margin:14px 0;font:400 11px/1.7 IBM Plex Mono,mono;color:#B0C4DC">
+          <strong>Depósito:</strong> ingresaste dinero a la cuenta (aún no invertido en activos).<br>
+          <strong>Retiro:</strong> sacaste dinero de la cuenta → el portafolio baja en ese monto.<br>
+          Las compras de activos ya quedan registradas automáticamente al registrar una inversión.
+        </div>""", unsafe_allow_html=True)
+
+        sec("Registrar movimiento de dinero")
+        with st.form("form_cap", clear_on_submit=True):
+            cc1,cc2,cc3 = st.columns(3)
+            tipo_mov = cc1.selectbox("Tipo de movimiento",
+                ["Depósito","Retiro"],
+                help="Deposito: ingresaste dinero. Retiro: sacaste dinero de la cuenta.")
+            monto_cap = cc2.number_input("Monto (USD)", min_value=0.01, step=0.01, format="%.2f")
+            fecha_cap = cc3.date_input("Fecha", value=date.today())
+
+            cc4, cc5 = st.columns(2)
+            concepto  = cc4.text_input("Concepto / descripción",
+                placeholder="Ej: Transferencia inicial, retiro mensual…")
+            broker_cap= cc5.text_input("Broker / Banco", placeholder="Schwab, Nubank, Bancolombia…")
+
+            # Si es admin, puede registrar para un socio específico
+            if rol == "admin":
+                cc6,cc7 = st.columns(2)
+                socio_cap = cc6.text_input("Nombre del socio", placeholder="Nombre o razón social")
+                cedula_cap= cc7.text_input("Cédula / ID")
+            else:
+                socio_cap  = usuario.split("@")[0]
+                cedula_cap = ""
+
+            if st.form_submit_button("💾 REGISTRAR MOVIMIENTO", use_container_width=True):
+                if monto_cap <= 0:
+                    st.error("❌ El monto debe ser mayor a 0")
+                else:
+                    # Normalizamos: Depósito → Aporte, Retiro → Retiro
+                    tipo_fs = "Aporte" if tipo_mov == "Depósito" else "Retiro"
+                    ok, msg = fs_post("aportes", {
+                        "Fondo":    fondo,
+                        "Socio":    socio_cap,
+                        "Cedula":   cedula_cap,
+                        "Fecha":    str(fecha_cap),
+                        "Tipo":     tipo_fs,
+                        "Monto":    float(monto_cap),
+                        "Concepto": concepto.strip(),
+                        "Broker":   broker_cap.strip(),
+                        "Usuario":  usuario,
+                    })
+                    if ok:
+                        signo = "+" if tipo_fs=="Aporte" else "-"
+                        st.success(f"✓ {tipo_mov} de {signo}{money(monto_cap,factor)}{sfx} registrado")
+                        st.cache_data.clear(); st.rerun()
+                    else:
+                        st.error(f"❌ Error Firestore: {msg}")
+
+        # Historial de movimientos
+        if not df_ap.empty:
+            st.markdown("---")
+            sec("Historial de movimientos de capital")
+            # Filtrar por usuario si no es admin
+            dfh = df_ap.copy()
+            if rol != "admin" and "Usuario" in dfh.columns:
+                dfh = dfh[dfh["Usuario"] == usuario]
+            cols_h = [c for c in ["Fecha","Socio","Tipo","Monto","Concepto","Broker"] if c in dfh.columns]
+            dfh = dfh[cols_h].sort_values("Fecha", ascending=False).copy()
+            if "Monto" in dfh.columns:
+                dfh["Monto"] = dfh["Monto"] * factor
+
             def ct(v):
                 if v=="Aporte":  return "color:#2ECC87;font-weight:600"
                 if v=="Retiro":  return "color:#E85555;font-weight:600"
                 return ""
-            st.dataframe(dfh.style.map(ct,subset=["Tipo"]).format({"Monto":"${:,.2f}"}),
-                         use_container_width=True, hide_index=True)
+            styled_h = dfh.style.format({"Monto":"${:,.2f}"})
+            if "Tipo" in dfh.columns:
+                styled_h = styled_h.map(ct, subset=["Tipo"])
+            st.dataframe(styled_h, use_container_width=True, hide_index=True)
+
+            # Resumen por tipo
+            if "Tipo" in dfh.columns and len(dfh) > 0:
+                total_dep = df_ap[df_ap["Tipo"]=="Aporte"]["Monto"].sum() * factor
+                total_ret = df_ap[df_ap["Tipo"]=="Retiro"]["Monto"].sum() * factor
+                st.markdown(f"""<div style="display:flex;gap:20px;margin-top:10px;flex-wrap:wrap">
+                  <div style="font:400 10px IBM Plex Mono,mono;color:#2ECC87">
+                    ▲ Total depósitos: <strong>{money(total_dep)}{sfx}</strong></div>
+                  <div style="font:400 10px IBM Plex Mono,mono;color:#E85555">
+                    ▼ Total retiros: <strong>{money(total_ret)}{sfx}</strong></div>
+                  <div style="font:400 10px IBM Plex Mono,mono;color:#8BA5C8">
+                    = Cash neto: <strong style="color:{"#2ECC87" if total_dep-total_ret>=0 else "#E85555"}">
+                    {money(total_dep-total_ret)}{sfx}</strong></div>
+                </div>""", unsafe_allow_html=True)
 
 # ══════════════════════════════════════════════════════
 # USUARIOS (admin)
