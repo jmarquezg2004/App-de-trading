@@ -384,7 +384,7 @@ def get_prices(df):
 # Estado: "Abierta" | "Cerrada"
 
 @st.cache_data(ttl=60, show_spinner=False)
-def load_inv(token=""):
+def load_inv():
     """Lee colección 'inversiones' (nueva) + 'operaciones' (legacy) y unifica formato."""
 
     COLS = ["_id","Fondo","Usuario","Fecha_Compra","Activo","Categoria",
@@ -401,14 +401,14 @@ def load_inv(token=""):
         return df[COLS]
 
     # ── Colección nueva: inversiones ──────────────────────
-    df_new = fs_get("inversiones", token=token)
+    df_new = fs_get("inversiones")
     if not df_new.empty:
         df_new = normalizar(df_new)
     else:
         df_new = pd.DataFrame(columns=COLS)
 
     # ── Colección legacy: operaciones → convertir al formato nuevo ──
-    df_ops = fs_get("operaciones", token=token)
+    df_ops = fs_get("operaciones")
     rows_legacy = []
     if not df_ops.empty:
         for _, r in df_ops.iterrows():
@@ -495,16 +495,16 @@ def load_inv(token=""):
     return combined if not combined.empty else pd.DataFrame(columns=COLS)
 
 @st.cache_data(ttl=60, show_spinner=False)
-def load_aportes(token=""):
-    df = fs_get("aportes", token=token)
+def load_aportes():
+    df = fs_get("aportes")
     if df.empty:
         return pd.DataFrame(columns=["_id","Fondo","Socio","Fecha","Tipo","Monto","Usuario"])
     if "Monto" in df.columns: df["Monto"] = pd.to_numeric(df["Monto"], errors="coerce").fillna(0.0)
     return df
 
 @st.cache_data(ttl=60, show_spinner=False)
-def load_usuarios(token=""):
-    df = fs_get("usuarios", token=token)
+def load_usuarios():
+    df = fs_get("usuarios")
     if df.empty:
         return pd.DataFrame(columns=["_id","Email","Nombre","Modo","Fondo","Activo"])
     return df
@@ -645,8 +645,10 @@ if not st.session_state.logged_in:
                 st.warning("Completa los dos campos")
 
         # ── Recuperar contraseña ──────────────────────────────
-        st.markdown('<div style="text-align:center;margin-top:6px">', unsafe_allow_html=True)
-        if st.button("¿Olvidaste tu contraseña?", key="btn_reset",
+        st.markdown("""<div style="text-align:center;margin-top:10px">
+          <span style="font:400 12px IBM Plex Mono,mono;color:#8BA5C8">
+            ¿Olvidaste tu contraseña? →</span></div>""", unsafe_allow_html=True)
+        if st.button("Enviar correo de recuperación", key="btn_reset",
                      help="Te enviaremos un email para resetear tu contraseña"):
             if email.strip():
                 with st.spinner("Enviando correo de recuperación…"):
@@ -676,10 +678,9 @@ usuario= st.session_state.usuario
 modo   = st.session_state.get("modo", MODO_IND)
 fa     = st.session_state.get("fondo_asignado")
 
-_tok        = st.session_state.get("auth_token", "")
-df_inv_all  = load_inv(token=_tok)
-df_ap_all   = load_aportes(token=_tok)
-df_usr_all  = load_usuarios(token=_tok)
+df_inv_all  = load_inv()
+df_ap_all   = load_aportes()
+df_usr_all  = load_usuarios()
 
 fondos_set  = (set(df_ap_all["Fondo"].dropna()) | set(df_inv_all["Fondo"].dropna())) - {""}
 fondos_list = sorted(fondos_set) or ["Arkez Invest"]
@@ -706,7 +707,7 @@ with st.sidebar:
     st.markdown(f"""<div style="background:#152034;border:1px solid #1E3354;border-radius:8px;
         padding:10px 12px;margin-bottom:10px">
       <div style="font:400 9px IBM Plex Mono,mono;color:#8BA5C8;letter-spacing:1px;margin-bottom:3px">USUARIO</div>
-      <div style="font:400 11px/1.4 IBM Plex Mono,mono;color:#ffffff;word-break:break-all">{usuario}</div>
+      <div style="font:400 11px/1.4 IBM Plex Mono,mono;color:var(--text);word-break:break-all">{usuario}</div>
       <span style="display:inline-block;margin-top:4px;background:rgba(200,168,75,.12);color:{rc};
                    border:1px solid {rc};padding:1px 9px;border-radius:20px;
                    font:600 9px/1.8 IBM Plex Mono,mono">
@@ -723,16 +724,16 @@ with st.sidebar:
             fondo = fa
         else:
             fondo = f"personal_{usuario.split('@')[0]}"
-        st.markdown(f"""<div style="background:#152034;border:1px solid #1E3354;border-radius:6px;
+        st.markdown(f"""<div style="background:var(--surface);border:1px solid var(--border);border-radius:6px;
             padding:8px 12px;margin-bottom:8px">
-          <div style="font:400 9px IBM Plex Mono,mono;color:#8BA5C8">FONDO / PORTAFOLIO</div>
+          <div style="font:400 9px IBM Plex Mono,mono;color:var(--muted)">FONDO / PORTAFOLIO</div>
           <div style="font:600 12px IBM Plex Mono,mono;color:#C8A84B">{fondo}</div>
         </div>""", unsafe_allow_html=True)
 
     trm = get_trm()
-    st.markdown(f"""<div style="background:#152034;border:1px solid #1E3354;border-radius:8px;
+    st.markdown(f"""<div style="background:var(--surface);border:1px solid var(--border);border-radius:8px;
         padding:9px 12px;margin:8px 0">
-      <div style="font:400 9px IBM Plex Mono,mono;color:#8BA5C8;letter-spacing:1px">TRM USD/COP</div>
+      <div style="font:400 9px IBM Plex Mono,mono;color:var(--muted);letter-spacing:1px">TRM USD/COP</div>
       <div style="font:600 16px/1.5 IBM Plex Mono,mono;color:#F0C040">${trm:,.2f}</div>
     </div>""", unsafe_allow_html=True)
 
