@@ -361,11 +361,15 @@ def get_stock(ticker):
     except: return None, 0
 
 def get_prices(df):
+    """Solo obtiene precios de posiciones ABIERTAS — cerradas/archivadas no necesitan precio en vivo."""
     out = {}
     if df.empty: return out
-    criptos = [x.strip().upper() for x in df[df["Categoria"]=="Cripto"]["Ticker_API"].dropna() if x.strip()]
+    # Filtrar solo posiciones abiertas
+    df_ab = df[df["Estado"] == "Abierta"] if "Estado" in df.columns else df
+    if df_ab.empty: return out
+    criptos = [x.strip().upper() for x in df_ab[df_ab["Categoria"]=="Cripto"]["Ticker_API"].dropna() if x.strip()]
     if criptos: out.update(get_cmc(tuple(set(criptos))))
-    stocks = [x.strip().upper() for x in df[df["Categoria"].isin(["Acción","ETF","Fondo"])]["Ticker_API"].dropna() if x.strip()]
+    stocks = [x.strip().upper() for x in df_ab[df_ab["Categoria"].isin(["Acción","ETF","Fondo"])]["Ticker_API"].dropna() if x.strip()]
     for t in set(stocks):
         px, chg = get_stock(t)
         if px: out[t] = {"price": px, "chg24": chg}
@@ -379,8 +383,8 @@ def get_prices(df):
 # Fecha_Venta (vacío si abierta), Precio_Venta (vacío si abierta)
 # Estado: "Abierta" | "Cerrada"
 
-@st.cache_data(ttl=60)
-def load_inv():
+@st.cache_data(ttl=60, show_spinner=False)
+def load_inv(token=""):
     """Lee colección 'inversiones' (nueva) + 'operaciones' (legacy) y unifica formato."""
 
     COLS = ["_id","Fondo","Usuario","Fecha_Compra","Activo","Categoria",
@@ -397,14 +401,14 @@ def load_inv():
         return df[COLS]
 
     # ── Colección nueva: inversiones ──────────────────────
-    df_new = fs_get("inversiones")
+    df_new = fs_get("inversiones", token=token)
     if not df_new.empty:
         df_new = normalizar(df_new)
     else:
         df_new = pd.DataFrame(columns=COLS)
 
     # ── Colección legacy: operaciones → convertir al formato nuevo ──
-    df_ops = fs_get("operaciones")
+    df_ops = fs_get("operaciones", token=token)
     rows_legacy = []
     if not df_ops.empty:
         for _, r in df_ops.iterrows():
@@ -490,17 +494,17 @@ def load_inv():
     combined = pd.concat([df_new, df_leg], ignore_index=True)
     return combined if not combined.empty else pd.DataFrame(columns=COLS)
 
-@st.cache_data(ttl=60)
-def load_aportes():
-    df = fs_get("aportes")
+@st.cache_data(ttl=60, show_spinner=False)
+def load_aportes(token=""):
+    df = fs_get("aportes", token=token)
     if df.empty:
         return pd.DataFrame(columns=["_id","Fondo","Socio","Fecha","Tipo","Monto","Usuario"])
     if "Monto" in df.columns: df["Monto"] = pd.to_numeric(df["Monto"], errors="coerce").fillna(0.0)
     return df
 
-@st.cache_data(ttl=60)
-def load_usuarios():
-    df = fs_get("usuarios")
+@st.cache_data(ttl=60, show_spinner=False)
+def load_usuarios(token=""):
+    df = fs_get("usuarios", token=token)
     if df.empty:
         return pd.DataFrame(columns=["_id","Email","Nombre","Modo","Fondo","Activo"])
     return df
@@ -672,9 +676,10 @@ usuario= st.session_state.usuario
 modo   = st.session_state.get("modo", MODO_IND)
 fa     = st.session_state.get("fondo_asignado")
 
-df_inv_all  = load_inv()
-df_ap_all   = load_aportes()
-df_usr_all  = load_usuarios()
+_tok        = st.session_state.get("auth_token", "")
+df_inv_all  = load_inv(token=_tok)
+df_ap_all   = load_aportes(token=_tok)
+df_usr_all  = load_usuarios(token=_tok)
 
 fondos_set  = (set(df_ap_all["Fondo"].dropna()) | set(df_inv_all["Fondo"].dropna())) - {""}
 fondos_list = sorted(fondos_set) or ["Arkez Invest"]
@@ -884,12 +889,22 @@ else:
 
 # Aplicar filtro de periodo a las posiciones
 def en_periodo(p):
+    """
+    Lógica correcta de período:
+    - "Todo el historial": incluye todo
+    - Para filtros específicos:
+      * Posiciones ABIERTAS: siempre se incluyen (siguen vigentes hoy)
+      * Posiciones CERRADAS: se incluyen si la fecha de VENTA cae dentro del período
+      * Posiciones ARCHIVADAS: se excluyen siempre del portafolio activo
+    """
     if f_ini is None: return True
+    estado = p.get("Estado", "Abierta")
+    if estado == "Archivada": return False
+    if estado == "Abierta": return True  # posición abierta siempre es "actual"
+    # Cerrada: incluir si la fecha de venta está en el período seleccionado
     try:
-        fc = pd.to_datetime(p["F_Compra"])
         fv = pd.to_datetime(p["F_Venta"]) if p["F_Venta"] else hoy
-        # Incluir si hay superposición con el rango
-        return fc <= f_fin and fv >= f_ini
+        return f_ini <= fv <= f_fin
     except: return True
 
 pos_periodo   = [p for p in posiciones if en_periodo(p) and p["Estado"] != "Archivada"]
@@ -921,6 +936,57 @@ with k5:
     wr = ganadoras_per/len(pos_cer_per)*100 if pos_cer_per else 0
     st.markdown(card("Win rate", f"{wr:.1f}%",
         f"{ganadoras_per}/{len(pos_cer_per)} cerradas en verde", color="#9B8EC4"), unsafe_allow_html=True)
+
+# ── Indicadores de análisis (fila secundaria) ─────────────
+ops_cerradas_calc = [p for p in posiciones if p["Estado"]=="Cerrada"]
+if posiciones and ops_cerradas_calc:
+    pnls = [p["GP_usd"] for p in ops_cerradas_calc]
+    gans = [x for x in pnls if x > 0]
+    pers = [x for x in pnls if x < 0]
+    avg_g = sum(gans)/len(gans) if gans else 0
+    avg_p = abs(sum(pers)/len(pers)) if pers else 0
+    # R/R Ratio: ganancia promedio / pérdida promedio
+    rr = avg_g / avg_p if avg_p > 0 else 0
+    # Esperanza matemática: WR*AvgGan - (1-WR)*AvgPer
+    wr_dec = len(gans)/len(pnls) if pnls else 0
+    esperanza = wr_dec * avg_g - (1 - wr_dec) * avg_p
+    # Profit Factor: suma ganancias / suma pérdidas
+    pf = sum(gans)/abs(sum(pers)) if pers else 0
+
+    ind1, ind2, ind3, ind_sep = st.columns([1,1,1,2])
+    with ind1:
+        rr_color = "#2ECC87" if rr >= 1 else "#E85555"
+        st.markdown(f"""<div style="background:var(--surface);border:1px solid var(--border);
+            border-radius:8px;padding:10px 14px;border-left:3px solid {rr_color}">
+          <div style="font:400 9px IBM Plex Mono,mono;color:var(--muted);letter-spacing:1px">R/R RATIO</div>
+          <div style="font:600 18px IBM Plex Mono,mono;color:{rr_color}">{rr:.2f}</div>
+          <div style="font:400 9px IBM Plex Mono,mono;color:var(--muted)">
+            {'✓ Favorable' if rr>=1 else '✗ Desfavorable'} (meta: >1.0)</div>
+        </div>""", unsafe_allow_html=True)
+    with ind2:
+        esp_color = "#2ECC87" if esperanza > 0 else "#E85555"
+        st.markdown(f"""<div style="background:var(--surface);border:1px solid var(--border);
+            border-radius:8px;padding:10px 14px;border-left:3px solid {esp_color}">
+          <div style="font:400 9px IBM Plex Mono,mono;color:var(--muted);letter-spacing:1px">ESPERANZA MATEMÁTICA</div>
+          <div style="font:600 18px IBM Plex Mono,mono;color:{esp_color}">
+            {'+'if esperanza>=0 else ''}{money(esperanza,factor)}</div>
+          <div style="font:400 9px IBM Plex Mono,mono;color:var(--muted)">
+            Por operación cerrada</div>
+        </div>""", unsafe_allow_html=True)
+    with ind3:
+        pf_color = "#2ECC87" if pf >= 1 else "#E85555"
+        st.markdown(f"""<div style="background:var(--surface);border:1px solid var(--border);
+            border-radius:8px;padding:10px 14px;border-left:3px solid {pf_color}">
+          <div style="font:400 9px IBM Plex Mono,mono;color:var(--muted);letter-spacing:1px">PROFIT FACTOR</div>
+          <div style="font:600 18px IBM Plex Mono,mono;color:{pf_color}">{pf:.2f}x</div>
+          <div style="font:400 9px IBM Plex Mono,mono;color:var(--muted)">
+            {'✓ Sistema rentable' if pf>=1 else '✗ Sistema no rentable'} (meta: >1.0)</div>
+        </div>""", unsafe_allow_html=True)
+    with ind_sep:
+        st.markdown(f"""<div style="padding:10px 14px">
+          <div style="font:400 9px IBM Plex Mono,mono;color:var(--muted);margin-bottom:4px">
+            Basado en {len(pnls)} ops cerradas · Avg gan: +{money(avg_g,factor)} · Avg per: -{money(avg_p,factor)}</div>
+        </div>""", unsafe_allow_html=True)
 
 st.markdown("<br>", unsafe_allow_html=True)
 
@@ -1245,10 +1311,22 @@ if puede_registrar:
             if abiertas_lista:
                 st.markdown("---")
                 sec("Registrar venta de activo")
-                lbs = [f"{p['F_Compra']} — {p['Activo']} ({p['Cantidad']:,.4f} unidades)" for p in abiertas_lista]
+                # Buscador por nombre de activo
+                buscar_activo = st.text_input("🔍 Buscar activo",
+                    placeholder="Escribe nombre para filtrar…",
+                    key="buscar_venta")
+                abiertas_filtradas = [p for p in abiertas_lista
+                    if buscar_activo.strip().lower() in p["Activo"].lower()]                     if buscar_activo.strip() else abiertas_lista
+
+                if not abiertas_filtradas:
+                    st.warning(f"No se encontró '{buscar_activo}' en posiciones abiertas.")
+                    abiertas_filtradas = abiertas_lista  # fallback a todas
+
+                lbs = [f"{p['F_Compra']} — {p['Activo']} ({p['Cantidad']:,.4f} uds · ${p['Px_Compra']:,.4f})"
+                       for p in abiertas_filtradas]
                 sel = st.selectbox("Selecciona la posición a vender", range(len(lbs)),
                                    format_func=lambda i: lbs[i])
-                pos_sel = abiertas_lista[sel]
+                pos_sel = abiertas_filtradas[sel]
 
                 cv1,cv2 = st.columns(2)
                 fecha_v  = cv1.date_input("📅 Fecha de venta", value=date.today())
