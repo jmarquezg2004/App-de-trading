@@ -4,14 +4,14 @@ import plotly.graph_objects as go
 from datetime import datetime, date
 import requests
 import time
-
+ 
 st.set_page_config(page_title="Arkez — Plataforma", page_icon="⬡", layout="wide",
                    initial_sidebar_state="expanded")
-
+ 
 st.markdown("""
 <style>
 @import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@300;400;500;600&display=swap');
-
+ 
 /* Variables de tema — oscuro por defecto */
 :root {
     --bg:         #111827;
@@ -34,17 +34,17 @@ body.tema-claro {
     --muted:      #4A6080;
     --label:      #3A5070;
 }
-
+ 
 html, body { font-family: 'IBM Plex Sans', sans-serif; }
 .stApp { background: var(--bg); color: var(--text); }
 h1 { font-family:'IBM Plex Mono',monospace!important; color:#C8A84B!important; letter-spacing:2px; }
 h2 { font-family:'IBM Plex Mono',monospace!important; font-size:11px!important; letter-spacing:1.5px; text-transform:uppercase; color:var(--muted)!important; }
 h3 { font-family:'IBM Plex Mono',monospace!important; font-size:13px!important; color:#C8A84B!important; }
 hr { border-color:var(--border)!important; }
-
+ 
 section[data-testid="stSidebar"] { background:var(--sidebar-bg)!important; border-right:1px solid var(--border); }
 section[data-testid="stSidebar"] label { color:var(--muted)!important; font-size:12px!important; }
-
+ 
 /* TODOS los inputs */
 input, textarea {
     background:var(--surface)!important; color:var(--text)!important;
@@ -60,7 +60,7 @@ input:focus, textarea:focus { border-color:#C8A84B!important; }
 input:disabled {
     color:#C8A84B!important; -webkit-text-fill-color:#C8A84B!important; opacity:1!important;
 }
-
+ 
 /* Selectbox */
 [data-testid="stSelectbox"]>div>div {
     background:var(--surface)!important; border:1px solid var(--border)!important;
@@ -68,7 +68,7 @@ input:disabled {
 }
 [data-testid="stSelectbox"] span,
 [data-testid="stSelectbox"] p { color:#ffffff!important; font-size:13px!important; }
-
+ 
 /* Dropdown abierto */
 [data-baseweb="popover"], [data-baseweb="popover"] *,
 [data-baseweb="menu"], [data-baseweb="menu"] *,
@@ -80,19 +80,19 @@ input:disabled {
 [role="option"]:hover { background:#243b55!important; color:#C8A84B!important; }
 [aria-selected="true"] { background:#1e3a5a!important; color:#C8A84B!important; }
 [data-baseweb="select"] svg { fill:#8BA5C8!important; }
-
+ 
 /* Labels */
 [data-testid="stTextInput"] label, [data-testid="stNumberInput"] label,
 [data-testid="stSelectbox"] label, [data-testid="stDateInput"] label,
 [data-testid="stTextArea"] label, [data-testid="stRadio"]>label {
     color:#B0C4DC!important; font-size:13px!important; font-weight:500!important;
 }
-
+ 
 /* Number input buttons */
 [data-testid="stNumberInput"] button {
     background:#1a3050!important; color:#ffffff!important; border-color:#2a4060!important;
 }
-
+ 
 /* Botones */
 .stButton>button {
     background:linear-gradient(135deg,#C8A84B,#A07830)!important;
@@ -101,7 +101,7 @@ input:disabled {
     letter-spacing:1px!important; text-transform:uppercase!important; font-size:12px!important;
 }
 .stButton>button:hover { filter:brightness(1.1)!important; }
-
+ 
 /* Tabs */
 [data-testid="stTabs"] button {
     font-family:'IBM Plex Mono',monospace!important; font-size:11px!important;
@@ -110,7 +110,7 @@ input:disabled {
 [data-testid="stTabs"] button[aria-selected="true"] {
     color:#C8A84B!important; border-bottom:2px solid #C8A84B!important;
 }
-
+ 
 /* Métricas */
 [data-testid="metric-container"] {
     background:var(--surface); border:1px solid var(--border); border-radius:10px;
@@ -128,29 +128,29 @@ input:disabled {
     font-family:'IBM Plex Mono',monospace!important; font-size:0.68rem!important;
     letter-spacing:1.2px; text-transform:uppercase; color:#8BA5C8!important;
 }
-
+ 
 /* DataFrames */
 [data-testid="stDataFrame"] { border:1px solid var(--border); border-radius:8px; overflow:hidden; }
-
+ 
 /* Alerts */
 [data-testid="stAlert"] {
     border-radius:8px!important; border-left-width:3px!important;
     background:var(--surface)!important; font-family:'IBM Plex Mono',monospace!important; color:#ffffff!important;
 }
-
+ 
 /* Form */
 [data-testid="stForm"] {
     background:var(--bg)!important; border:1px solid var(--border)!important;
     border-radius:10px!important; padding:20px!important;
 }
-
+ 
 /* Radio */
 [data-testid="stRadio"] label span,
 [data-testid="stRadio"] label p,
 [data-testid="stRadio"] p { color:#ffffff!important; font-weight:600!important; }
 </style>
 """, unsafe_allow_html=True)
-
+ 
 # ── Tema claro — sobreescribe variables oscuras ──────────
 _tc = st.session_state.get("tema_sel", "🌙 Oscuro") == "☀️ Claro"
 if _tc:
@@ -200,8 +200,8 @@ if _tc:
     h3 { color:#A07830 !important; }
     .stButton>button { color:#0D1929 !important; }
     </style>""", unsafe_allow_html=True)
-
-
+ 
+ 
 # ══════════════════════════════════════════════════════
 # CONSTANTES
 # ══════════════════════════════════════════════════════
@@ -209,11 +209,33 @@ FIREBASE_KEY = "AIzaSyC52gIJJRTE1B4BqeUwDmaX2fWKS3sSw10"
 FS_URL       = "https://firestore.googleapis.com/v1/projects/plataforma-de-inversiones/databases/(default)/documents"
 ADMIN_EMAIL  = "jmarquezg2004@gmail.com"
 CMC_KEY      = st.secrets.get("CMC_KEY", "d67913f039804c6b900905ebad7c1aaf")
-
-CATEGORIAS = ["Acción", "ETF", "Cripto", "CDT", "Fondo", "Cuenta Remunerada", "Otro"]
+ 
+CATEGORIAS = [
+    # ── Mercados digitales ──
+    "Acción", "ETF", "Cripto", "CDT", "Fondo", "Cuenta Remunerada",
+    # ── Activos reales / alternativos ──
+    "Inmueble",         # apartamentos, casas, lotes, fincas
+    "Negocio",          # empresa propia o participación
+    "Ganadería",        # animales de cría, criaderos
+    "Vehículo",         # vehículos en alquiler
+    "Dividendo",        # dividendos, herencias, fideicomisos
+    "Seguro",           # seguros en dólares, pólizas de inversión
+    "Arriendo",         # ingresos por arrendamiento
+    "Otro",
+]
+# Categorías sin precio de mercado (el usuario actualiza el valor manualmente)
+CATS_MANUALES = {"Inmueble","Negocio","Ganadería","Vehículo","Dividendo","Seguro","Arriendo","Otro"}
+# Colores por categoría
+CAT_CLR_MAP = {
+    "Acción":"#C8A84B","ETF":"#2ECC87","Cripto":"#E87844",
+    "CDT":"#6BA3BE","Fondo":"#9B8EC4","Cuenta Remunerada":"#F0C040",
+    "Inmueble":"#E85555","Negocio":"#FF9F43","Ganadería":"#A29BFE",
+    "Vehículo":"#55EFC4","Dividendo":"#FFEAA7","Seguro":"#74B9FF",
+    "Arriendo":"#FD79A8","Otro":"#8BA5C8",
+}
 MODO_IND   = "Portafolio Individual"
 MODO_OBS   = "Observador de Fondo"
-
+ 
 # ══════════════════════════════════════════════════════
 # FIREBASE AUTH
 # ══════════════════════════════════════════════════════
@@ -225,7 +247,7 @@ def firebase_login(email, pwd):
         if r.status_code == 200: return True, r.json()
         return False, r.json().get("error", {}).get("message", "Error")
     except Exception as e: return False, str(e)
-
+ 
 def firebase_crear(email, pwd):
     try:
         r = requests.post(
@@ -234,7 +256,7 @@ def firebase_crear(email, pwd):
         if r.status_code == 200: return True, "OK"
         return False, r.json().get("error", {}).get("message", "Error")
     except Exception as e: return False, str(e)
-
+ 
 # ══════════════════════════════════════════════════════
 # FIRESTORE
 # ══════════════════════════════════════════════════════
@@ -243,7 +265,7 @@ def _f(v):
     if isinstance(v, int):   return {"integerValue": str(v)}
     if isinstance(v, float): return {"doubleValue": v}
     return {"stringValue": str(v)}
-
+ 
 def fs_get(col):
     try:
         r = requests.get(f"{FS_URL}/{col}", timeout=10)
@@ -255,7 +277,7 @@ def fs_get(col):
             return pd.DataFrame(rows) if rows else pd.DataFrame()
     except Exception: pass
     return pd.DataFrame()
-
+ 
 def fs_post(col, datos):
     try:
         r = requests.post(f"{FS_URL}/{col}",
@@ -263,7 +285,7 @@ def fs_post(col, datos):
         if r.status_code in (200, 201): return True, ""
         return False, f"Error {r.status_code}: {r.text[:300]}"
     except Exception as e: return False, str(e)
-
+ 
 def fs_patch(col, doc_id, datos):
     mask = "&".join(f"updateMask.fieldPaths={k}" for k in datos)
     try:
@@ -271,13 +293,13 @@ def fs_patch(col, doc_id, datos):
                        json={"fields": {k: _f(v) for k, v in datos.items()}}, timeout=10)
         return True
     except Exception: return False
-
+ 
 def fs_delete(col, doc_id):
     try:
         requests.delete(f"{FS_URL}/{col}/{doc_id}", timeout=10)
         return True
     except Exception: return False
-
+ 
 # ══════════════════════════════════════════════════════
 # PRECIOS
 # ══════════════════════════════════════════════════════
@@ -296,7 +318,7 @@ def get_trm():
         if px and px > 3000: return float(px)
     except: pass
     return 4200.0
-
+ 
 @st.cache_data(ttl=300)
 def get_cmc(syms):
     if not syms: return {}
@@ -313,7 +335,7 @@ def get_cmc(syms):
             out[sym.upper()] = {"price": q.get("price", 0), "chg24": q.get("percent_change_24h", 0)}
         return out
     except: return {}
-
+ 
 @st.cache_data(ttl=300)
 def get_stock(ticker):
     try:
@@ -324,7 +346,7 @@ def get_stock(ticker):
         chg   = ((price - prev) / prev * 100) if price and prev else 0
         return float(price) if price else None, float(chg)
     except: return None, 0
-
+ 
 def get_prices(df):
     out = {}
     if df.empty: return out
@@ -335,7 +357,7 @@ def get_prices(df):
         px, chg = get_stock(t)
         if px: out[t] = {"price": px, "chg24": chg}
     return out
-
+ 
 # ══════════════════════════════════════════════════════
 # CARGA DE DATOS
 # ══════════════════════════════════════════════════════
@@ -343,15 +365,15 @@ def get_prices(df):
 # Fecha_Compra, Activo, Categoria, Cantidad, Precio_Compra, Broker, Ticker_API
 # Fecha_Venta (vacío si abierta), Precio_Venta (vacío si abierta)
 # Estado: "Abierta" | "Cerrada"
-
+ 
 @st.cache_data(ttl=60)
 def load_inv():
     """Lee colección 'inversiones' (nueva) + 'operaciones' (legacy) y unifica formato."""
-
+ 
     COLS = ["_id","Fondo","Usuario","Fecha_Compra","Activo","Categoria",
             "Cantidad","Precio_Compra","Broker","Ticker_API",
             "Fecha_Venta","Precio_Venta","Estado","Notas"]
-
+ 
     def normalizar(df):
         num = ["Cantidad","Precio_Compra","Precio_Venta"]
         for c in num:
@@ -360,14 +382,14 @@ def load_inv():
         for c in COLS:
             if c not in df.columns: df[c] = ""
         return df[COLS]
-
+ 
     # ── Colección nueva: inversiones ──────────────────────
     df_new = fs_get("inversiones")
     if not df_new.empty:
         df_new = normalizar(df_new)
     else:
         df_new = pd.DataFrame(columns=COLS)
-
+ 
     # ── Colección legacy: operaciones → convertir al formato nuevo ──
     df_ops = fs_get("operaciones")
     rows_legacy = []
@@ -394,17 +416,17 @@ def load_inv():
             else:
                 estado = "Abierta"
                 fv, pv = "", 0.0
-
+ 
             # Cantidad: usar Cantidad si existe, sino calcular desde Valor_Pos / Precio_Entrada
             cant = float(r.get("Cantidad",0) or 0)
             pe   = float(r.get("Precio_Entrada",0) or 0)
             vp   = float(r.get("Valor_Pos",0) or 0)
             if cant == 0 and pe > 0 and vp > 0:
                 cant = round(vp / pe, 8)
-
+ 
             # Categoria: mapear si viene de campo "Categoria" o "Moneda"
             cat = str(r.get("Categoria","") or r.get("Moneda","") or "Otro")
-
+ 
             rows_legacy.append({
                 "_id":           str(r.get("_id","")),
                 "Fondo":         str(r.get("Fondo","")),
@@ -421,7 +443,7 @@ def load_inv():
                 "Estado":        estado,
                 "Notas":         str(r.get("Notas","")),
             })
-
+ 
     if rows_legacy:
         df_leg = pd.DataFrame(rows_legacy)
         df_leg["Cantidad"]      = pd.to_numeric(df_leg["Cantidad"],      errors="coerce").fillna(0.0)
@@ -429,11 +451,11 @@ def load_inv():
         df_leg["Precio_Venta"]  = pd.to_numeric(df_leg["Precio_Venta"],  errors="coerce").fillna(0.0)
     else:
         df_leg = pd.DataFrame(columns=COLS)
-
+ 
     # Unir ambas — los _id de operaciones tienen prefijo para no colisionar
     if not df_leg.empty:
         df_leg["_id"] = "ops_" + df_leg["_id"].astype(str)
-
+ 
     # Deduplicar: si ya existe en inversiones (df_new) con mismo Activo+Fecha_Compra+Usuario,
     # no incluir la versión legacy para evitar duplicados tras migración
     if not df_new.empty and not df_leg.empty:
@@ -451,10 +473,10 @@ def load_inv():
             axis=1
         )
         df_leg = df_leg[~mask_dup]
-
+ 
     combined = pd.concat([df_new, df_leg], ignore_index=True)
     return combined if not combined.empty else pd.DataFrame(columns=COLS)
-
+ 
 @st.cache_data(ttl=60)
 def load_aportes():
     df = fs_get("aportes")
@@ -462,14 +484,14 @@ def load_aportes():
         return pd.DataFrame(columns=["_id","Fondo","Socio","Fecha","Tipo","Monto","Usuario"])
     if "Monto" in df.columns: df["Monto"] = pd.to_numeric(df["Monto"], errors="coerce").fillna(0.0)
     return df
-
+ 
 @st.cache_data(ttl=60)
 def load_usuarios():
     df = fs_get("usuarios")
     if df.empty:
         return pd.DataFrame(columns=["_id","Email","Nombre","Modo","Fondo","Activo"])
     return df
-
+ 
 # ══════════════════════════════════════════════════════
 # CÁLCULOS P&L
 # ══════════════════════════════════════════════════════
@@ -482,9 +504,9 @@ def calcular_posicion(row, prices):
     pv      = float(row.get("Precio_Venta", 0) or 0)
     estado  = str(row.get("Estado", "Abierta"))
     tea_val = 0.0  # para CDT/Remunerada
-
+ 
     costo_total = cant * pc
-
+ 
     if estado == "Cerrada" and pv > 0:
         valor_actual  = cant * pv
         gp_usd        = valor_actual - costo_total
@@ -492,7 +514,7 @@ def calcular_posicion(row, prices):
         px_actual     = pv
         chg24         = 0
         return costo_total, valor_actual, gp_usd, gp_pct, px_actual, chg24
-
+ 
     # Posición abierta
     if cat in ["CDT", "Cuenta Remunerada"]:
         # TEA almacenada como porcentaje anual en Notas o en Precio_Compra
@@ -506,7 +528,7 @@ def calcular_posicion(row, prices):
             return costo_total, valor_actual, gp_usd, gp_pct, tea_val, 0
         except:
             return costo_total, costo_total, 0, 0, tea_val, 0
-
+ 
     if ticker and ticker in prices and prices[ticker].get("price", 0) > 0:
         px  = prices[ticker]["price"]
         chg = prices[ticker].get("chg24", 0)
@@ -514,9 +536,9 @@ def calcular_posicion(row, prices):
         gp_usd = valor_actual - costo_total
         gp_pct = gp_usd / costo_total * 100 if costo_total else 0
         return costo_total, valor_actual, gp_usd, gp_pct, px, chg
-
+ 
     return costo_total, costo_total, 0, 0, pc, 0
-
+ 
 # ══════════════════════════════════════════════════════
 # HELPERS UI
 # ══════════════════════════════════════════════════════
@@ -527,38 +549,51 @@ PT = dict(
     xaxis=dict(gridcolor="#1e3350", linecolor="#2a4060", tickfont=dict(color="#8BA5C8")),
     yaxis=dict(gridcolor="#1e3350", linecolor="#2a4060", tickfont=dict(color="#8BA5C8")),
 )
-CAT_CLR = {"Acción":"#C8A84B","ETF":"#2ECC87","Cripto":"#E87844",
-           "CDT":"#6BA3BE","Fondo":"#9B8EC4","Cuenta Remunerada":"#F0C040","Otro":"#8BA5C8"}
-
+# CAT_CLR migrado a CAT_CLR_MAP en CATEGORIAS
+ 
 def money(v, f=1):
     v2 = v * f
     if abs(v2) >= 1e6: return f"${v2/1e6:.2f}M"
     return f"${v2:,.2f}"
-
+ 
 def card(label, val, sub=None, color="#C8A84B"):
     s = f'<div style="font:500 11px/1.4 IBM Plex Mono,mono;color:{color};margin-top:3px">{sub}</div>' if sub else ""
-    return f"""<div style="background:#162236;border:1px solid #1E3354;border-radius:10px;
+    return f"""<div style="background:var(--surface);border:1px solid var(--border);border-radius:10px;
         padding:16px 18px;position:relative;overflow:hidden;height:100%">
       <div style="position:absolute;top:0;left:0;right:0;height:2px;background:{color}"></div>
-      <div style="font:400 9px/1 IBM Plex Mono,mono;color:#8BA5C8;letter-spacing:1.5px;
+      <div style="font:400 9px/1 IBM Plex Mono,mono;color:var(--muted);letter-spacing:1.5px;
                   text-transform:uppercase;margin-bottom:8px">{label}</div>
-      <div style="font:600 22px/1 IBM Plex Mono,mono;color:#ffffff">{val}</div>{s}</div>"""
-
+      <div style="font:600 22px/1 IBM Plex Mono,mono;color:var(--text)">{val}</div>{s}</div>"""
+ 
 def sec(t):
     st.markdown(f'<h2 style="margin:18px 0 10px">{t}</h2>', unsafe_allow_html=True)
-
+ 
 # ══════════════════════════════════════════════════════
 # LOGIN
 # ══════════════════════════════════════════════════════
 if "logged_in" not in st.session_state:
     st.session_state.logged_in = False
-
+ 
 if not st.session_state.logged_in:
     st.markdown("""<div style="text-align:center;padding:50px 0 24px">
-      <div style="display:inline-block;width:52px;height:52px;margin-bottom:14px;
-                  background:linear-gradient(135deg,#C8A84B,#A07830);
-                  clip-path:polygon(50% 0%,100% 25%,100% 75%,50% 100%,0% 75%,0% 25%)"></div>
-      <div style="font:600 28px/1 IBM Plex Mono,mono;color:#C8A84B;letter-spacing:3px">ARKEZ</div>
+      <div style="display:inline-block;margin-bottom:10px">
+        <svg width="54" height="54" viewBox="0 0 54 54" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="gold" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#D4A843"/>
+      <stop offset="100%" style="stop-color:#8B6914"/>
+    </linearGradient>
+  </defs>
+  <!-- Hexágono de fondo -->
+  <polygon points="27,2 52,15 52,39 27,52 2,39 2,15"
+           fill="url(#gold)" stroke="#A07830" stroke-width="1"/>
+  <!-- Letra A -->
+  <text x="27" y="38" text-anchor="middle"
+        font-family="IBM Plex Sans,Arial,sans-serif"
+        font-size="28" font-weight="700" fill="#0D1929">A</text>
+</svg>
+      </div><br>
+      <div style="font:600 28px/1 IBM Plex Mono,mono;color:#C8A84B;letter-spacing:4px;margin-top:4px">ARKEZ</div>
       <div style="font:400 11px/1.5 IBM Plex Mono,mono;color:#8BA5C8;letter-spacing:2px;margin-top:6px">
         PLATAFORMA · ACCESO PRIVADO</div></div>""", unsafe_allow_html=True)
     _, col, _ = st.columns([1,1.2,1])
@@ -588,7 +623,7 @@ if not st.session_state.logged_in:
             else:
                 st.warning("Completa los dos campos")
     st.stop()
-
+ 
 # ══════════════════════════════════════════════════════
 # SESIÓN Y DATOS
 # ══════════════════════════════════════════════════════
@@ -596,26 +631,32 @@ rol    = st.session_state.rol
 usuario= st.session_state.usuario
 modo   = st.session_state.get("modo", MODO_IND)
 fa     = st.session_state.get("fondo_asignado")
-
+ 
 df_inv_all  = load_inv()
 df_ap_all   = load_aportes()
 df_usr_all  = load_usuarios()
-
+ 
 fondos_set  = (set(df_ap_all["Fondo"].dropna()) | set(df_inv_all["Fondo"].dropna())) - {""}
 fondos_list = sorted(fondos_set) or ["Arkez Invest"]
 if "Arkez Invest" not in fondos_list: fondos_list.insert(0, "Arkez Invest")
-
+ 
 # ══════════════════════════════════════════════════════
 # SIDEBAR
 # ══════════════════════════════════════════════════════
 with st.sidebar:
-    st.markdown("""<div style="text-align:center;padding:14px 0 10px">
-      <div style="display:inline-block;width:34px;height:34px;margin-bottom:7px;
-                  background:linear-gradient(135deg,#C8A84B,#A07830);
-                  clip-path:polygon(50% 0%,100% 25%,100% 75%,50% 100%,0% 75%,0% 25%)"></div>
-      <div style="font:600 14px/1 IBM Plex Mono,mono;color:#C8A84B;letter-spacing:3px">ARKEZ</div>
+    st.markdown("""<div style="text-align:center;padding:14px 0 8px">
+      <div style="display:inline-block;margin-bottom:6px"><svg width="36" height="36" viewBox="0 0 54 54" xmlns="http://www.w3.org/2000/svg">
+  <defs><linearGradient id="g2" x1="0%" y1="0%" x2="100%" y2="100%">
+    <stop offset="0%" style="stop-color:#D4A843"/>
+    <stop offset="100%" style="stop-color:#8B6914"/>
+  </linearGradient></defs>
+  <polygon points="27,2 52,15 52,39 27,52 2,39 2,15" fill="url(#g2)" stroke="#A07830" stroke-width="1"/>
+  <text x="27" y="38" text-anchor="middle" font-family="IBM Plex Sans,Arial,sans-serif"
+        font-size="28" font-weight="700" fill="#0D1929">A</text>
+</svg></div><br>
+      <div style="font:600 13px/1 IBM Plex Mono,mono;color:#C8A84B;letter-spacing:3px">ARKEZ</div>
     </div>""", unsafe_allow_html=True)
-
+ 
     rc = "#C8A84B" if rol=="admin" else "#2ECC87"
     st.markdown(f"""<div style="background:#152034;border:1px solid #1E3354;border-radius:8px;
         padding:10px 12px;margin-bottom:10px">
@@ -626,7 +667,7 @@ with st.sidebar:
                    font:600 9px/1.8 IBM Plex Mono,mono">
         {'⬡ ADMIN' if rol=='admin' else '● '+modo.split()[0].upper()}</span></div>""",
         unsafe_allow_html=True)
-
+ 
     if rol == "admin":
         idx = fondos_list.index(st.session_state.get("fondo_sel","Arkez Invest")) \
               if st.session_state.get("fondo_sel") in fondos_list else 0
@@ -642,28 +683,28 @@ with st.sidebar:
           <div style="font:400 9px IBM Plex Mono,mono;color:#8BA5C8">FONDO / PORTAFOLIO</div>
           <div style="font:600 12px IBM Plex Mono,mono;color:#C8A84B">{fondo}</div>
         </div>""", unsafe_allow_html=True)
-
+ 
     trm = get_trm()
     st.markdown(f"""<div style="background:#152034;border:1px solid #1E3354;border-radius:8px;
         padding:9px 12px;margin:8px 0">
       <div style="font:400 9px IBM Plex Mono,mono;color:#8BA5C8;letter-spacing:1px">TRM USD/COP</div>
       <div style="font:600 16px/1.5 IBM Plex Mono,mono;color:#F0C040">${trm:,.2f}</div>
     </div>""", unsafe_allow_html=True)
-
+ 
     moneda = st.radio("Moneda", ["USD","COP"], horizontal=True)
     factor = trm if moneda=="COP" else 1.0
     sfx    = " COP" if moneda=="COP" else " USD"
-
+ 
     st.markdown("---")
     tema = st.radio("🎨 Tema", ["🌙 Oscuro","☀️ Claro"], horizontal=True,
                     key="tema_sel")
     tema_claro = tema == "☀️ Claro"
-
+ 
     st.markdown("---")
     if st.button("🚪 Cerrar sesión", use_container_width=True):
         for k in list(st.session_state.keys()): del st.session_state[k]
         st.rerun()
-
+ 
 # ══════════════════════════════════════════════════════
 # FILTRAR DATOS
 # ══════════════════════════════════════════════════════
@@ -676,17 +717,17 @@ def inv_visibles(df):
     if "Usuario" in df.columns: mask = mask | (df["Usuario"]==usuario)
     if "Fondo" in df.columns:   mask = mask | (df["Fondo"]==fondo)
     return df[mask]
-
+ 
 df_inv = inv_visibles(df_inv_all).copy()
 df_ap  = df_ap_all[df_ap_all["Fondo"]==fondo].copy() if not df_ap_all.empty else pd.DataFrame()
 prices = get_prices(df_inv)
-
+ 
 # Calcular todas las posiciones
 posiciones = []
 total_invertido = 0
 total_actual    = 0
 total_gp        = 0
-
+ 
 for _, row in df_inv.iterrows():
     inv, act, gp, gp_pct, px, chg = calcular_posicion(row, prices)
     total_invertido += inv
@@ -710,7 +751,7 @@ for _, row in df_inv.iterrows():
         "_id":        row.get("_id",""),
         "Usuario":    row.get("Usuario","—"),
     })
-
+ 
 # Cash neto: depósitos extra + retiros (no son compras de activos)
 # Aporte = entró dinero al fondo/portafolio
 # Retiro = salió dinero → reduce el valor real del portafolio
@@ -720,16 +761,16 @@ if not df_ap.empty and "Tipo" in df_ap.columns:
     cash_aportes = df_ap[df_ap["Tipo"]=="Aporte"]["Monto"].sum()
     cash_retiros = df_ap[df_ap["Tipo"]=="Retiro"]["Monto"].sum()
 cash_neto = cash_aportes - cash_retiros  # positivo = hay cash disponible, negativo = retiraron más
-
+ 
 # Portafolio real = valor de posiciones abiertas + cash neto (retiros ya restan)
 # Si hay retiros, el valor total baja aunque las posiciones estén bien
 total_actual_real = total_actual + max(cash_neto, 0)  # solo suma cash si es positivo
 total_gp_real     = total_gp + cash_neto if cash_neto < 0 else total_gp
 rend_pct = total_gp / total_invertido * 100 if total_invertido > 0 else 0
-
+ 
 pos_abiertas = [p for p in posiciones if p["Estado"]=="Abierta"]
 pos_cerradas = [p for p in posiciones if p["Estado"]=="Cerrada"]
-
+ 
 # ══════════════════════════════════════════════════════
 # HEADER + KPIs
 # ══════════════════════════════════════════════════════
@@ -738,7 +779,7 @@ if rol != "admin":
     badge = ' <span style="font:600 9px IBM Plex Mono,mono;background:rgba(46,204,135,.12);color:#2ECC87;border:1px solid #2ECC87;padding:1px 7px;border-radius:20px">PORTAFOLIO PERSONAL</span>' \
             if modo == MODO_IND else \
             ' <span style="font:600 9px IBM Plex Mono,mono;background:rgba(155,142,196,.12);color:#9B8EC4;border:1px solid #9B8EC4;padding:1px 7px;border-radius:20px">SOLO LECTURA</span>'
-
+ 
 st.markdown(f"""<div style="display:flex;align-items:center;gap:14px;flex-wrap:wrap;margin-bottom:4px">
   <div style="width:36px;height:36px;flex-shrink:0;background:linear-gradient(135deg,#C8A84B,#A07830);
               clip-path:polygon(50% 0%,100% 25%,100% 75%,50% 100%,0% 75%,0% 25%)"></div>
@@ -751,7 +792,7 @@ st.markdown(f"""<div style="display:flex;align-items:center;gap:14px;flex-wrap:w
   <div style="margin-left:auto;font:400 10px IBM Plex Mono,mono;color:#8BA5C8">
     {datetime.now().strftime('%d/%m/%Y %H:%M')}</div></div>
 <hr style="margin:12px 0 18px">""", unsafe_allow_html=True)
-
+ 
 # ── FILTRO DE PERIODO ──────────────────────────────────
 col_per1, col_per2, col_per3 = st.columns([2,2,4])
 with col_per1:
@@ -766,7 +807,7 @@ with col_per2:
     else:
         fecha_desde = None
         fecha_hasta = None
-
+ 
 # Calcular rango de fechas según periodo
 hoy = pd.Timestamp.now().normalize()
 if   periodo == "Este mes":        f_ini = hoy.replace(day=1);              f_fin = hoy
@@ -777,7 +818,7 @@ elif periodo == "Personalizado" and fecha_desde and fecha_hasta:
     f_ini = pd.Timestamp(fecha_desde); f_fin = pd.Timestamp(fecha_hasta)
 else:
     f_ini = None; f_fin = None  # Todo el historial
-
+ 
 # Aplicar filtro de periodo a las posiciones
 def en_periodo(p):
     if f_ini is None: return True
@@ -787,7 +828,7 @@ def en_periodo(p):
         # Incluir si hay superposición con el rango
         return fc <= f_fin and fv >= f_ini
     except: return True
-
+ 
 pos_periodo   = [p for p in posiciones if en_periodo(p) and p["Estado"] != "Archivada"]
 pos_ab_per    = [p for p in pos_periodo if p["Estado"] == "Abierta"]
 pos_cer_per   = [p for p in pos_periodo if p["Estado"] == "Cerrada"]
@@ -795,14 +836,14 @@ inv_per       = sum(p["Invertido"]  for p in pos_periodo)
 act_per       = sum(p["Val_Actual"] for p in pos_periodo)
 gp_per        = sum(p["GP_usd"]     for p in pos_periodo)
 rend_per      = gp_per / inv_per * 100 if inv_per > 0 else 0
-
+ 
 # Badge de periodo
 per_badge = f'<span style="font:400 10px IBM Plex Mono,mono;color:#8BA5C8;margin-left:8px">Período: {periodo}</span>'
 if f_ini:
     per_badge = f'<span style="font:400 10px IBM Plex Mono,mono;color:#8BA5C8;margin-left:8px">{f_ini.strftime("%d/%m/%Y")} → {f_fin.strftime("%d/%m/%Y")}</span>'
-
+ 
 st.markdown(f'<div style="margin:4px 0 12px">{per_badge}</div>', unsafe_allow_html=True)
-
+ 
 gc = "#2ECC87" if gp_per >= 0 else "#E85555"
 k1,k2,k3,k4,k5 = st.columns(5)
 with k1: st.markdown(card("Portafolio actual",   money(act_per,factor)+sfx), unsafe_allow_html=True)
@@ -817,14 +858,14 @@ with k5:
     wr = ganadoras_per/len(pos_cer_per)*100 if pos_cer_per else 0
     st.markdown(card("Win rate", f"{wr:.1f}%",
         f"{ganadoras_per}/{len(pos_cer_per)} cerradas en verde", color="#9B8EC4"), unsafe_allow_html=True)
-
+ 
 st.markdown("<br>", unsafe_allow_html=True)
-
+ 
 # ══════════════════════════════════════════════════════
 # TABS
 # ══════════════════════════════════════════════════════
 puede_registrar = (rol=="admin") or (modo==MODO_IND)
-
+ 
 if rol == "admin":
     tabs = st.tabs(["⬡ Dashboard","◈ Portafolio","📌 Registrar","💵 Capital","👥 Usuarios","⚙ Admin"])
     t_dash,t_port,t_reg,t_cap,t_usr,t_adm = tabs
@@ -834,13 +875,13 @@ elif puede_registrar:
 else:
     tabs = st.tabs(["⬡ Dashboard","◈ Portafolio"])
     t_dash,t_port = tabs
-
+ 
 # ══════════════════════════════════════════════════════
 # DASHBOARD
 # ══════════════════════════════════════════════════════
 with t_dash:
     cl, cr = st.columns([3,2])
-
+ 
     with cl:
         sec("Evolución del portafolio")
         if pos_periodo:
@@ -856,7 +897,7 @@ with t_dash:
                     # Punto de salida: valor actual (precio de hoy o de venta)
                     eventos.append({"fecha": fv, "invertido": p["Invertido"], "actual": p["Val_Actual"]})
                 except: pass
-
+ 
             if eventos:
                 df_ev = pd.DataFrame(eventos).sort_values("fecha")
                 # Agrupar por fecha sumando todas las posiciones activas en ese momento
@@ -866,7 +907,7 @@ with t_dash:
                 ).reset_index()
                 df_val["invertido"] *= factor
                 df_val["actual"]    *= factor
-
+ 
                 fig = go.Figure()
                 # Área de valor actual (portafolio)
                 fig.add_trace(go.Scatter(
@@ -904,43 +945,53 @@ with t_dash:
                                 font=dict(color="#8BA5C8",size=10),
                                 orientation="h", y=-0.15))
                 st.plotly_chart(fig, use_container_width=True, config={"displayModeBar":False})
-
+ 
             # Mini resumen textual bajo la gráfica
             gp_color = "#2ECC87" if gp_per>=0 else "#E85555"
             st.markdown(f"""<div style="display:flex;gap:24px;flex-wrap:wrap;padding:8px 4px">
               <div><div style="font:400 9px IBM Plex Mono,mono;color:#8BA5C8;letter-spacing:1px">INVERTIDO</div>
-                <div style="font:600 14px IBM Plex Mono,mono;color:#ffffff">{money(inv_per,factor)}{sfx}</div></div>
+                <div style="font:600 14px IBM Plex Mono,mono;color:var(--text)">{money(inv_per,factor)}{sfx}</div></div>
               <div><div style="font:400 9px IBM Plex Mono,mono;color:#8BA5C8;letter-spacing:1px">VALOR HOY</div>
-                <div style="font:600 14px IBM Plex Mono,mono;color:#ffffff">{money(act_per,factor)}{sfx}</div></div>
+                <div style="font:600 14px IBM Plex Mono,mono;color:var(--text)">{money(act_per,factor)}{sfx}</div></div>
               <div><div style="font:400 9px IBM Plex Mono,mono;color:#8BA5C8;letter-spacing:1px">GANANCIA TOTAL</div>
                 <div style="font:600 14px IBM Plex Mono,mono;color:{gp_color}">
                   {'+'if gp_per>=0 else ''}{money(gp_per,factor)}{sfx} ({'+' if rend_per>=0 else ''}{rend_per:.2f}%)</div></div>
             </div>""", unsafe_allow_html=True)
         else:
             st.info("Registra tu primera inversión para ver la gráfica.")
-
+ 
     with cr:
-        sec("Distribución por activo")
-        # Solo posiciones abiertas — muestra % real de cada ticker en el portafolio activo
         pos_ab_activas = [p for p in posiciones if p["Estado"]=="Abierta"]
+        vista_donut = st.radio("Ver distribución por",
+                               ["📊 Activo/Ticker","🏷 Categoría"],
+                               horizontal=True, key="donut_vista",
+                               label_visibility="collapsed")
         if pos_ab_activas:
-            total_ab = sum(p["Val_Actual"] for p in pos_ab_activas)
-            tickers_d = [p["Activo"] for p in pos_ab_activas]
-            valores_d  = [p["Val_Actual"]*factor for p in pos_ab_activas]
-            # Colores distintos por posición
-            PALETTE = ["#C8A84B","#2ECC87","#6BA3BE","#9B8EC4","#E87844","#E85555","#F0C040","#8BA5C8"]
-            colors_d = [PALETTE[i % len(PALETTE)] for i in range(len(tickers_d))]
+            PALETTE = ["#C8A84B","#2ECC87","#6BA3BE","#9B8EC4","#E87844","#E85555","#F0C040","#8BA5C8","#FF9F43","#A29BFE"]
+            if vista_donut == "📊 Activo/Ticker":
+                labels_d = [p["Activo"] for p in pos_ab_activas]
+                values_d = [p["Val_Actual"]*factor for p in pos_ab_activas]
+                colors_d = [PALETTE[i%len(PALETTE)] for i in range(len(labels_d))]
+                titulo_d = "% por activo (posiciones abiertas)"
+            else:
+                dist_cat = {}
+                for p in pos_ab_activas:
+                    c = p["Categoria"]
+                    dist_cat[c] = dist_cat.get(c,0) + p["Val_Actual"]*factor
+                labels_d = list(dist_cat.keys())
+                values_d = list(dist_cat.values())
+                colors_d = [CAT_CLR_MAP.get(c, "#8BA5C8") for c in labels_d]
+                titulo_d = "% por categoría (posiciones abiertas)"
+ 
             fig2 = go.Figure(go.Pie(
-                labels=tickers_d,
-                values=valores_d,
-                hole=.58,
+                labels=labels_d, values=values_d, hole=.55,
                 marker=dict(colors=colors_d, line=dict(color="#111827",width=2)),
                 textinfo="percent+label",
                 textfont=dict(color="#ffffff", size=11),
-                hovertemplate="<b>%{label}</b><br>Valor: %{value:$,.2f}"+sfx+"<br>Del portafolio: %{percent}<extra></extra>",
+                hovertemplate="<b>%{label}</b><br>%{value:$,.2f}"+sfx+"<br>%{percent}<extra></extra>",
             ))
             fig2.update_layout(**PT,
-                title=dict(text="% por activo (posiciones abiertas)",font=dict(size=11,color="#8BA5C8"),x=.5),
+                title=dict(text=titulo_d, font=dict(size=11,color="#8BA5C8"),x=.5),
                 showlegend=True,
                 legend=dict(font=dict(color="#ffffff",size=10),bgcolor="rgba(0,0,0,0)"))
             st.plotly_chart(fig2, use_container_width=True, config={"displayModeBar":False})
@@ -948,7 +999,7 @@ with t_dash:
             st.info("Todas las posiciones están cerradas.")
         else:
             st.info("Sin posiciones registradas.")
-
+ 
     # Precios en tiempo real
     if prices:
         sec("Precios en tiempo real")
@@ -966,12 +1017,12 @@ with t_dash:
                 st.markdown(f"""<div style="background:#162236;border:1px solid #1E3354;
                     border-radius:8px;padding:12px;text-align:center;margin-bottom:8px">
                   <div style="font:600 11px/1.5 IBM Plex Mono,mono;color:#C8A84B">{tk}</div>
-                  <div style="font:600 15px/1.4 IBM Plex Mono,mono;color:#ffffff">{pxs}</div>
+                  <div style="font:600 15px/1.4 IBM Plex Mono,mono;color:var(--text)">{pxs}</div>
                   <div style="font:400 10px/1.3 IBM Plex Mono,mono;color:{clr}">
                     {'▲' if chg>=0 else '▼'} {abs(chg):.2f}% hoy</div>
                   {pnl_html}</div>""",
                     unsafe_allow_html=True)
-
+ 
 # ══════════════════════════════════════════════════════
 # PORTAFOLIO — posiciones con P&L en vivo
 # ══════════════════════════════════════════════════════
@@ -985,7 +1036,7 @@ with t_port:
             px_str = f"${p['Px_Actual']:,.4f}" if p["Px_Actual"]<10 else f"${p['Px_Actual']:,.2f}"
             chg_str = f"{'▲' if p['Chg24']>=0 else '▼'} {abs(p['Chg24']):.2f}%" if p["Chg24"]!=0 else "—"
             chg_clr = "#2ECC87" if p["Chg24"]>=0 else "#E85555"
-
+ 
             st.markdown(f"""<div style="background:#162236;border:1px solid #1E3354;
                 border-radius:10px;padding:14px 18px;margin-bottom:10px;
                 display:flex;align-items:center;gap:16px;flex-wrap:wrap">
@@ -997,24 +1048,24 @@ with t_port:
               </div>
               <div style="text-align:center;min-width:80px">
                 <div style="font:400 9px IBM Plex Mono,mono;color:#8BA5C8;letter-spacing:1px">CANTIDAD</div>
-                <div style="font:500 13px IBM Plex Mono,mono;color:#ffffff">{p['Cantidad']:,.4f}</div>
+                <div style="font:500 13px IBM Plex Mono,mono;color:var(--text)">{p['Cantidad']:,.4f}</div>
               </div>
               <div style="text-align:center;min-width:90px">
                 <div style="font:400 9px IBM Plex Mono,mono;color:#8BA5C8;letter-spacing:1px">PX COMPRA</div>
-                <div style="font:500 13px IBM Plex Mono,mono;color:#ffffff">${p['Px_Compra']:,.4f}</div>
+                <div style="font:500 13px IBM Plex Mono,mono;color:var(--text)">${p['Px_Compra']:,.4f}</div>
               </div>
               <div style="text-align:center;min-width:90px">
                 <div style="font:400 9px IBM Plex Mono,mono;color:#8BA5C8;letter-spacing:1px">PX ACTUAL</div>
-                <div style="font:500 13px IBM Plex Mono,mono;color:#ffffff">{px_str}</div>
+                <div style="font:500 13px IBM Plex Mono,mono;color:var(--text)">{px_str}</div>
                 <div style="font:400 9px IBM Plex Mono,mono;color:{chg_clr}">{chg_str} 24h</div>
               </div>
               <div style="text-align:center;min-width:100px">
                 <div style="font:400 9px IBM Plex Mono,mono;color:#8BA5C8;letter-spacing:1px">INVERTIDO</div>
-                <div style="font:500 13px IBM Plex Mono,mono;color:#ffffff">{money(p['Invertido'],factor)}{sfx}</div>
+                <div style="font:500 13px IBM Plex Mono,mono;color:var(--text)">{money(p['Invertido'],factor)}{sfx}</div>
               </div>
               <div style="text-align:center;min-width:100px">
                 <div style="font:400 9px IBM Plex Mono,mono;color:#8BA5C8;letter-spacing:1px">VALOR HOY</div>
-                <div style="font:600 14px IBM Plex Mono,mono;color:#ffffff">{money(p['Val_Actual'],factor)}{sfx}</div>
+                <div style="font:600 14px IBM Plex Mono,mono;color:var(--text)">{money(p['Val_Actual'],factor)}{sfx}</div>
               </div>
               <div style="text-align:center;min-width:90px">
                 <div style="font:400 9px IBM Plex Mono,mono;color:#8BA5C8;letter-spacing:1px">P&L</div>
@@ -1022,7 +1073,7 @@ with t_port:
                 <div style="font:600 13px IBM Plex Mono,mono;color:{gc2}">{sg}{p['GP_pct']:.2f}%</div>
               </div>
             </div>""", unsafe_allow_html=True)
-
+ 
     if pos_cer_per:
         sec("Posiciones cerradas")
         for p in pos_cer_per:
@@ -1059,10 +1110,10 @@ with t_port:
                 <div style="font:500 10px IBM Plex Mono,mono;color:{gc3}">{sg3}{p['GP_pct']:.2f}%</div>
               </div>
             </div>""", unsafe_allow_html=True)
-
+ 
     if not posiciones:
         st.info("Aún no tienes inversiones registradas.")
-
+ 
 # ══════════════════════════════════════════════════════
 # REGISTRAR INVERSIÓN
 # ══════════════════════════════════════════════════════
@@ -1073,31 +1124,31 @@ if puede_registrar:
                     f'Usuario: <strong style="color:#C8A84B">{usuario}</strong> · '
                     f'Fondo: <strong style="color:#C8A84B">{fondo}</strong></div>',
                     unsafe_allow_html=True)
-
+ 
         with st.form("form_compra", clear_on_submit=True):
             c1,c2,c3 = st.columns(3)
             fecha_c   = c1.date_input("📅 Fecha de compra", value=date.today())
             activo    = c2.text_input("Nombre del activo", placeholder="Apple, Bitcoin, VTI…")
             categoria = c3.selectbox("Categoría", CATEGORIAS)
-
+ 
             c4,c5,c6 = st.columns(3)
             precio_c  = c4.number_input("Precio de compra (USD)", min_value=0.0, step=0.0001, format="%.4f",
                                          help="Para CDT/Remunerada: ingresa la TEA decimal (ej: 0.1285 = 12.85%)")
             valor_pos = c5.number_input("Capital invertido (USD)", min_value=0.0, step=0.01, format="%.2f")
             broker    = c6.text_input("Broker / Exchange", placeholder="Schwab, Binance…")
-
+ 
             c7,c8 = st.columns(2)
             ticker_api = c7.text_input("Ticker para precio en vivo",
                                         placeholder="AAPL · BTC · VTI · ETH",
                                         help="Símbolo exacto: acciones → AAPL, cripto → BTC")
             notas = c8.text_input("Notas (opcional)")
-
+ 
             # Cantidad calculada automáticamente
             qty = round(valor_pos / precio_c, 8) if precio_c > 0 and valor_pos > 0 else 0.0
             st.text_input("Cantidad / Unidades (calculada automáticamente)",
                           value=f"{qty:,.8f}  =  ${valor_pos:,.2f} ÷ ${precio_c:,.4f}",
                           disabled=True)
-
+ 
             if st.form_submit_button("💾 REGISTRAR COMPRA", use_container_width=True):
                 if not activo.strip():
                     st.error("❌ El nombre del activo es obligatorio")
@@ -1124,7 +1175,7 @@ if puede_registrar:
                         st.cache_data.clear(); time.sleep(0.5); st.rerun()
                     else:
                         st.error(f"❌ Error Firestore: {msg}")
-
+ 
         # ── REGISTRAR VENTA ──
         if posiciones:
             abiertas_lista = [p for p in posiciones if p["Estado"]=="Abierta" and p["Estado"]!="Archivada"]
@@ -1135,12 +1186,12 @@ if puede_registrar:
                 sel = st.selectbox("Selecciona la posición a vender", range(len(lbs)),
                                    format_func=lambda i: lbs[i])
                 pos_sel = abiertas_lista[sel]
-
+ 
                 cv1,cv2 = st.columns(2)
                 fecha_v  = cv1.date_input("📅 Fecha de venta", value=date.today())
                 precio_v = cv2.number_input("Precio de venta (USD)", min_value=0.0,
                                              step=0.0001, format="%.4f")
-
+ 
                 if precio_v > 0:
                     gp_venta = (precio_v - pos_sel["Px_Compra"]) * pos_sel["Cantidad"]
                     gp_pct_v = gp_venta / pos_sel["Invertido"] * 100 if pos_sel["Invertido"] else 0
@@ -1155,10 +1206,10 @@ if puede_registrar:
                         <div style="font:600 16px IBM Plex Mono,mono;color:{clr_v}">
                           {'+'if gp_pct_v>=0 else ''}{gp_pct_v:.2f}%</div></div>
                       <div><div style="font:400 9px IBM Plex Mono,mono;color:#8BA5C8">CAPITAL RECUPERADO</div>
-                        <div style="font:600 16px IBM Plex Mono,mono;color:#ffffff">
+                        <div style="font:600 16px IBM Plex Mono,mono;color:var(--text)">
                           {money(precio_v*pos_sel['Cantidad'],factor)}{sfx}</div></div>
                     </div>""", unsafe_allow_html=True)
-
+ 
                 if st.button("💰 CONFIRMAR VENTA", use_container_width=True):
                     if precio_v <= 0:
                         st.error("❌ Ingresa el precio de venta")
@@ -1202,7 +1253,7 @@ if puede_registrar:
                                 st.cache_data.clear(); time.sleep(0.5); st.rerun()
                             else:
                                 st.error("❌ Error actualizando")
-
+ 
             # ── EDITAR POSICIÓN CERRADA ──
             pos_cerradas_todas = [p for p in posiciones if p["Estado"]=="Cerrada"]
             if pos_cerradas_todas:
@@ -1242,13 +1293,13 @@ if puede_registrar:
                         ok = fs_patch("inversiones", _id_c, datos_edit)
                         if ok: st.success("✓ Posición actualizada"); st.cache_data.clear(); st.rerun()
                         else:  st.error("❌ Error actualizando")
-
+ 
             # Archivar posición (nunca se borra — se marca como Archivada)
             st.markdown("---")
             sec("Archivar posición")
             st.markdown('''<div style="font:400 11px IBM Plex Mono,mono;color:#8BA5C8;margin-bottom:8px">
-              Las posiciones archivadas se ocultan del portafolio activo pero quedan guardadas
-              en el historial completo. Nunca se eliminan datos.</div>''', unsafe_allow_html=True)
+              Archivar saca la posición del fondo — no cuenta como compra, venta ni retiro.
+              No afecta los totales. Queda guardada en el historial. Nunca se borra.</div>''', unsafe_allow_html=True)
             all_lbs = [f"{p['F_Compra']} — {p['Activo']} ({p['Estado']})" for p in posiciones
                        if p["Estado"] != "Archivada"]
             all_ids = [p["_id"] for p in posiciones if p["Estado"] != "Archivada"]
@@ -1259,7 +1310,7 @@ if puede_registrar:
                     fs_patch("inversiones", all_ids[arc_sel], {"Estado": "Archivada"})
                     st.success("✓ Archivada — sigue en el historial completo")
                     st.cache_data.clear(); st.rerun()
-
+ 
 # ══════════════════════════════════════════════════════
 # CAPITAL — disponible para admin y portafolio individual
 # Lógica: compra → capital invertido sube automáticamente
@@ -1281,7 +1332,7 @@ if rol == "admin" or puede_registrar:
             st.markdown(card("Cash neto disponible",
                 money(cash_neto, factor)+sfx,
                 "Depósitos - Retiros", color=cn_color), unsafe_allow_html=True)
-
+ 
         st.markdown("""<div style="background:#162236;border:1px solid #1E3354;
             border-left:3px solid #C8A84B;border-radius:0 8px 8px 0;
             padding:10px 14px;margin:14px 0;font:400 11px/1.7 IBM Plex Mono,mono;color:#B0C4DC">
@@ -1289,7 +1340,7 @@ if rol == "admin" or puede_registrar:
           <strong>Retiro:</strong> sacaste dinero de la cuenta → el portafolio baja en ese monto.<br>
           Las compras de activos ya quedan registradas automáticamente al registrar una inversión.
         </div>""", unsafe_allow_html=True)
-
+ 
         sec("Registrar movimiento de dinero")
         with st.form("form_cap", clear_on_submit=True):
             cc1,cc2,cc3 = st.columns(3)
@@ -1298,12 +1349,12 @@ if rol == "admin" or puede_registrar:
                 help="Deposito: ingresaste dinero. Retiro: sacaste dinero de la cuenta.")
             monto_cap = cc2.number_input("Monto (USD)", min_value=0.01, step=0.01, format="%.2f")
             fecha_cap = cc3.date_input("Fecha", value=date.today())
-
+ 
             cc4, cc5 = st.columns(2)
             concepto  = cc4.text_input("Concepto / descripción",
                 placeholder="Ej: Transferencia inicial, retiro mensual…")
             broker_cap= cc5.text_input("Broker / Banco", placeholder="Schwab, Nubank, Bancolombia…")
-
+ 
             # Si es admin, puede registrar para un socio específico
             if rol == "admin":
                 cc6,cc7 = st.columns(2)
@@ -1312,7 +1363,7 @@ if rol == "admin" or puede_registrar:
             else:
                 socio_cap  = usuario.split("@")[0]
                 cedula_cap = ""
-
+ 
             if st.form_submit_button("💾 REGISTRAR MOVIMIENTO", use_container_width=True):
                 if monto_cap <= 0:
                     st.error("❌ El monto debe ser mayor a 0")
@@ -1336,7 +1387,7 @@ if rol == "admin" or puede_registrar:
                         st.cache_data.clear(); st.rerun()
                     else:
                         st.error(f"❌ Error Firestore: {msg}")
-
+ 
         # Historial de movimientos
         if not df_ap.empty:
             st.markdown("---")
@@ -1349,7 +1400,7 @@ if rol == "admin" or puede_registrar:
             dfh = dfh[cols_h].sort_values("Fecha", ascending=False).copy()
             if "Monto" in dfh.columns:
                 dfh["Monto"] = dfh["Monto"] * factor
-
+ 
             def ct(v):
                 if v=="Aporte":  return "color:#2ECC87;font-weight:600"
                 if v=="Retiro":  return "color:#E85555;font-weight:600"
@@ -1358,7 +1409,7 @@ if rol == "admin" or puede_registrar:
             if "Tipo" in dfh.columns:
                 styled_h = styled_h.map(ct, subset=["Tipo"])
             st.dataframe(styled_h, use_container_width=True, hide_index=True)
-
+ 
             # Resumen por tipo
             if "Tipo" in dfh.columns and len(dfh) > 0:
                 total_dep = df_ap[df_ap["Tipo"]=="Aporte"]["Monto"].sum() * factor
@@ -1372,7 +1423,7 @@ if rol == "admin" or puede_registrar:
                     = Cash neto: <strong style="color:{"#2ECC87" if total_dep-total_ret>=0 else "#E85555"}">
                     {money(total_dep-total_ret)}{sfx}</strong></div>
                 </div>""", unsafe_allow_html=True)
-
+ 
 # ══════════════════════════════════════════════════════
 # USUARIOS (admin)
 # ══════════════════════════════════════════════════════
@@ -1385,7 +1436,7 @@ if rol == "admin":
           <strong>Portafolio Individual</strong> → el usuario entra y registra sus propias inversiones.<br>
           <strong>Observador de Fondo</strong> → solo lectura. Ve el fondo asignado sin poder editar.
         </div>""", unsafe_allow_html=True)
-
+ 
         with st.form("form_usr", clear_on_submit=True):
             cu1,cu2 = st.columns(2)
             u_email  = cu1.text_input("Email del usuario")
@@ -1396,7 +1447,7 @@ if rol == "admin":
             u_f_opts= ["(Sin fondo — portafolio personal)"] + fondos_list
             u_fsel  = cu5.selectbox("Fondo asignado (opcional)", u_f_opts)
             u_fondo = "" if u_fsel.startswith("(Sin") else u_fsel
-
+ 
             if st.form_submit_button("👤 CREAR USUARIO", use_container_width=True):
                 if not u_email.strip() or not u_nombre.strip() or not u_pwd.strip():
                     st.error("❌ Email, nombre y contraseña obligatorios")
@@ -1419,7 +1470,7 @@ if rol == "admin":
                         st.cache_data.clear()
                     else:
                         st.error(f"❌ Firebase: {msg_fb}")
-
+ 
         df_u2 = load_usuarios()
         if not df_u2.empty:
             st.markdown("---"); sec("Usuarios registrados")
@@ -1431,7 +1482,7 @@ if rol == "admin":
             if st.button("🗑 Eliminar acceso"):
                 fs_delete("usuarios", df_u2.iloc[sel_del]["_id"])
                 st.success("✓ Eliminado"); st.cache_data.clear(); st.rerun()
-
+ 
 # ══════════════════════════════════════════════════════
 # ADMINISTRACIÓN (admin)
 # ══════════════════════════════════════════════════════
@@ -1447,7 +1498,7 @@ if rol == "admin":
                 n_inv = len(inv_f)
                 rows_r.append({"Fondo":f,"# Inversiones":n_inv})
             st.dataframe(pd.DataFrame(rows_r), use_container_width=True, hide_index=True)
-
+ 
             sec("Crear nuevo fondo")
             nf = st.text_input("Nombre del fondo", key="nf_adm")
             if st.button("➕ CREAR FONDO"):
@@ -1457,7 +1508,7 @@ if rol == "admin":
                                        "Monto":0.0,"Usuario":usuario})
                     st.success(f"✓ Fondo '{nf}' creado")
                     st.cache_data.clear(); st.rerun()
-
+ 
         with ca2:
             sec("APIs activas")
             st.markdown(f"""<div style="background:#162236;border:1px solid #1E3354;
@@ -1471,7 +1522,7 @@ if rol == "admin":
                 unsafe_allow_html=True)
             if st.button("🔄 Limpiar caché"):
                 st.cache_data.clear(); st.success("✓ Caché limpiado")
-
+ 
         sec("Todas las inversiones")
         if not df_inv_all.empty:
             cols_a = [c for c in ["Fondo","Usuario","Fecha_Compra","Activo","Categoria",
