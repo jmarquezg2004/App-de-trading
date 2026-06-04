@@ -184,134 +184,138 @@ LOGO_SM   = '<img src="data:image/png;base64,' + LOGO_B64_SM + '" style="width:1
 
 
 
-# ── Tema claro — sobreescribe TODOS los colores ──────────────
+# ── Tema claro ──────────────────────────────────────────────
 _tc = st.session_state.get("tema_sel", "🌙 Oscuro") == "☀️ Claro"
 if _tc:
     st.markdown("""<style>
-    /* ── NUCLEAR: forzar texto oscuro en TODOS los elementos ── */
-    [data-testid="stVerticalBlock"] *:not(svg):not(path):not(script):not(style) {
-        color: #1A2640 !important;
-    }
-    /* Excepciones de color: mantener colores semánticos */
-    [data-testid="stVerticalBlock"] *[style*="color:#2ECC87"],
-    [data-testid="stVerticalBlock"] *[style*="color:#E85555"],
-    [data-testid="stVerticalBlock"] *[style*="color:#C8A84B"],
-    [data-testid="stVerticalBlock"] *[style*="color:#F0C040"] {
-        color: inherit !important;
-    }
-    /* Cards HTML con fondo oscuro hardcoded */
-    div[style*="background:#162236"],
-    div[style*="background: #162236"],
-    div[style*="background:#0F1A2B"],
-    div[style*="background:#152034"],
-    div[style*="background:#1a2d42"],
-    div[style*="background:#111827"] {
-        background: #FFFFFF !important;
-        border-color: #C4D4E8 !important;
-    }
-    /* Fondo y texto base */
-    .stApp { background:#F0F4F8 !important; color:#1A2640 !important; }
+    .stApp,
+    .stApp > div,
+    section[data-testid="stMain"],
+    section[data-testid="stMain"] > div { background: #F0F4F8 !important; }
 
-    /* Sidebar completo */
-    section[data-testid="stSidebar"] { background:#E2EAF4 !important; }
-    section[data-testid="stSidebar"],
-    section[data-testid="stSidebar"] div,
-    section[data-testid="stSidebar"] p,
-    section[data-testid="stSidebar"] span,
-    section[data-testid="stSidebar"] label,
-    section[data-testid="stSidebar"] .stMarkdown,
-    section[data-testid="stSidebar"] .stMarkdown * { color:#1A2640 !important; }
+    /* Sidebar */
+    section[data-testid="stSidebar"] { background: #E2EAF4 !important; }
 
-    /* Todos los textos en el área principal */
-    .stMarkdown p, .stMarkdown span, .stMarkdown div,
-    .stMarkdown h2, .stMarkdown h3,
-    p, label { color:#1A2640 !important; }
+    /* TODOS los textos — regla más amplia posible */
+    .stApp p, .stApp span, .stApp div, .stApp label,
+    .stApp h1, .stApp h2, .stApp h3, .stApp h4,
+    .stMarkdown, .stMarkdown *, .stText,
+    [data-testid="stMarkdownContainer"] *,
+    [data-testid="stVerticalBlock"] p,
+    [data-testid="stVerticalBlock"] span,
+    [data-testid="stVerticalBlock"] label { color: #1A2640 !important; }
+
+    /* Excepciones de color semántico — mantener verde/rojo/dorado */
+    [style*="color:#2ECC87"] { color: #2ECC87 !important; }
+    [style*="color:#E85555"] { color: #E85555 !important; }
+    [style*="color:#C8A84B"] { color: #C8A84B !important; }
+    [style*="color:#F0C040"] { color: #F0C040 !important; }
+    [style*="color:#8BA5C8"] { color: #4A6080 !important; }
 
     /* Inputs */
-    input, textarea {
-        background:#FFFFFF !important; color:#1A2640 !important;
-        -webkit-text-fill-color:#1A2640 !important;
-        border-color:#C4D4E8 !important;
+    input, textarea, input:focus, textarea:focus {
+        background: #FFFFFF !important; color: #1A2640 !important;
+        -webkit-text-fill-color: #1A2640 !important;
+        border-color: #C4D4E8 !important;
     }
     input::placeholder, textarea::placeholder {
-        color:#6A8090 !important; -webkit-text-fill-color:#6A8090 !important;
+        color: #6A8090 !important; -webkit-text-fill-color: #6A8090 !important;
     }
-    input:disabled {
-        color:#C8A84B !important; -webkit-text-fill-color:#C8A84B !important;
+    input:disabled, textarea:disabled {
+        color: #C8A84B !important; -webkit-text-fill-color: #C8A84B !important;
     }
 
-    /* Selectbox */
+    /* Selectbox y dropdowns */
     [data-testid="stSelectbox"] > div > div {
-        background:#FFFFFF !important; color:#1A2640 !important;
-        border-color:#C4D4E8 !important;
+        background: #FFFFFF !important; color: #1A2640 !important;
+        border-color: #C4D4E8 !important;
     }
     [data-testid="stSelectbox"] span,
-    [data-testid="stSelectbox"] p { color:#1A2640 !important; }
-    [data-baseweb="popover"], [data-baseweb="popover"] *,
-    [data-baseweb="menu"], [data-baseweb="menu"] *,
-    [role="listbox"], [role="listbox"] * {
-        background:#FFFFFF !important; color:#1A2640 !important;
+    [data-testid="stSelectbox"] p { color: #1A2640 !important; }
+    [data-baseweb="popover"],
+    [data-baseweb="popover"] *,
+    [data-baseweb="menu"],
+    [data-baseweb="menu"] *,
+    [role="listbox"],
+    [role="listbox"] * {
+        background: #FFFFFF !important; color: #1A2640 !important;
     }
-    [role="option"]:hover { background:#E2EAF4 !important; color:#C8A84B !important; }
-
-    /* Métricas */
-    [data-testid="metric-container"] {
-        background:#FFFFFF !important; border-color:#C4D4E8 !important;
-    }
-    [data-testid="stMetricValue"] { color:#1A2640 !important; }
-    [data-testid="stMetricLabel"] { color:#4A6080 !important; }
-
-    /* Formularios */
-    [data-testid="stForm"] { background:#EDF2F7 !important; border-color:#C4D4E8 !important; }
-    [data-testid="stDataFrame"] { border-color:#C4D4E8 !important; }
-    [data-testid="stAlert"] { background:#FFFFFF !important; color:#1A2640 !important; }
-
-    /* Tabs */
-    [data-testid="stTabs"] button { color:#4A6080 !important; background:transparent !important; }
-    [data-testid="stTabs"] button[aria-selected="true"] {
-        color:#C8A84B !important; border-bottom-color:#C8A84B !important;
-    }
-
-    /* Radio y checkbox */
-    [data-testid="stRadio"] label span,
-    [data-testid="stRadio"] label p { color:#1A2640 !important; font-weight:500 !important; }
+    [role="option"]:hover { background: #E2EAF4 !important; color: #C8A84B !important; }
 
     /* Number input */
     [data-testid="stNumberInput"] button {
-        background:#E2EAF4 !important; color:#1A2640 !important; border-color:#C4D4E8 !important;
+        background: #E2EAF4 !important; color: #1A2640 !important;
+        border-color: #C4D4E8 !important;
     }
+
+    /* Métricas */
+    [data-testid="metric-container"] {
+        background: #FFFFFF !important; border-color: #C4D4E8 !important;
+    }
+    [data-testid="stMetricValue"] { color: #1A2640 !important; }
+    [data-testid="stMetricLabel"] { color: #4A6080 !important; }
+    [data-testid="stMetricDelta"] > div { color: inherit !important; }
+
+    /* Formularios */
+    [data-testid="stForm"] {
+        background: #EDF2F7 !important; border-color: #C4D4E8 !important;
+    }
+
+    /* Dataframes */
+    [data-testid="stDataFrame"] { border-color: #C4D4E8 !important; }
+
+    /* Alerts */
+    [data-testid="stAlert"] {
+        background: #FFFFFF !important; color: #1A2640 !important;
+    }
+
+    /* Tabs */
+    [data-testid="stTabs"] button { color: #4A6080 !important; background: transparent !important; }
+    [data-testid="stTabs"] button[aria-selected="true"] {
+        color: #C8A84B !important; border-bottom-color: #C8A84B !important;
+    }
+
+    /* Radio */
+    [data-testid="stRadio"] label span,
+    [data-testid="stRadio"] label p { color: #1A2640 !important; }
 
     /* Separadores */
-    hr { border-color:#C4D4E8 !important; }
+    hr { border-color: #C4D4E8 !important; }
 
     /* Headings */
-    h1 { color:#C8A84B !important; }
-    h2 { color:#4A6080 !important; }
-    h3 { color:#A07830 !important; }
+    h1, .stApp h1 { color: #C8A84B !important; }
+    h2, .stApp h2 { color: #4A6080 !important; }
+    h3, .stApp h3 { color: #A07830 !important; }
 
     /* Botones */
-    .stButton > button { color:#0D1929 !important; }
-
-    /* Cards HTML inline — los div con background var(--surface) */
-    /* No se pueden sobreescribir variables CSS desde aquí,
-       pero forzamos el color de texto en todos los divs del main */
-    [data-testid="stVerticalBlock"] div[style*="background:#162236"],
-    [data-testid="stVerticalBlock"] div[style*="background: #162236"] {
-        background:#FFFFFF !important; color:#1A2640 !important;
-    }
+    .stButton > button { color: #0D1929 !important; }
 
     /* Expander */
-    [data-testid="stExpander"] { background:#FFFFFF !important; border-color:#C4D4E8 !important; }
-    [data-testid="stExpander"] summary { color:#1A2640 !important; }
+    [data-testid="stExpander"] { background: #FFFFFF !important; border-color: #C4D4E8 !important; }
+    [data-testid="stExpander"] summary,
+    [data-testid="stExpander"] summary p { color: #1A2640 !important; }
 
     /* Selectbox base */
-    [data-baseweb="select"] > div { background:#FFFFFF !important; border-color:#C4D4E8 !important; }
-    [data-baseweb="select"] svg { fill:#4A6080 !important; }
+    [data-baseweb="select"] > div { background: #FFFFFF !important; border-color: #C4D4E8 !important; }
+    [data-baseweb="select"] svg { fill: #4A6080 !important; }
 
-    /* Date input */
-    [data-testid="stDateInput"] input { color:#1A2640 !important; -webkit-text-fill-color:#1A2640 !important; }
+    /* Fondo oscuro en cards HTML inline */
+    div[style*="background:#162236"] { background: #FFFFFF !important; border-color: #C4D4E8 !important; }
+    div[style*="background: #162236"] { background: #FFFFFF !important; border-color: #C4D4E8 !important; }
+    div[style*="background:#0F1A2B"] { background: #EDF2F7 !important; }
+    div[style*="background:#152034"] { background: #E2EAF4 !important; }
+    div[style*="background:#1a2d42"] { background: #FFFFFF !important; }
+    div[style*="background:#111827"] { background: #F0F4F8 !important; }
+    div[style*="background:#0D1929"] { background: #E2EAF4 !important; }
+
+    /* Sidebar contenido */
+    section[data-testid="stSidebar"] div,
+    section[data-testid="stSidebar"] p,
+    section[data-testid="stSidebar"] span,
+    section[data-testid="stSidebar"] label { color: #1A2640 !important; }
 
     </style>""", unsafe_allow_html=True)
+
 
 
 # ══════════════════════════════════════════════════════
@@ -1499,7 +1503,7 @@ if puede_registrar:
                                                        min_value=0.0, step=0.0001, format="%.4f", key="ep_c")
                     nuevo_ticker   = ea3.text_input("Ticker", value=p_edit["Ticker"], key="et_c")
                     # Recalcular cantidad
-                    val_orig = p_edit["Val_ent"]
+                    val_orig = p_edit["Invertido"]
                     nueva_qty = round(val_orig / nuevo_precio_c, 8) if nuevo_precio_c > 0 else p_edit["Cantidad"]
                     ea4.text_input("Nueva cantidad (auto)", value=f"{nueva_qty:,.8f}", disabled=True)
                     if st.button("✏️ ACTUALIZAR COMPRA", key="btn_edit_ab"):
