@@ -184,76 +184,6 @@ LOGO_SM   = '<img src="data:image/png;base64,' + LOGO_B64_SM + '" style="width:1
 
 
 
-# ── Tema claro ──────────────────────────────────────────────
-_tc = st.session_state.get("tema_sel", "🌙 Oscuro") == "☀️ Claro"
-if _tc:
-    st.markdown("""<style>
-    /* Fondo general */
-    .stApp { background-color: #F0F4F8 !important; }
-    .main .block-container { background-color: #F0F4F8 !important; }
-
-    /* Sidebar */
-    [data-testid="stSidebar"] { background-color: #E2EAF4 !important; }
-    [data-testid="stSidebar"] * { color: #1A2640 !important; }
-
-    /* TEXTO — forzar oscuro en toda la app */
-    .stApp * { color: #1A2640 !important; }
-
-    /* Preservar colores semánticos */
-    [class*="success"] { color: #2ECC87 !important; }
-    [class*="error"] { color: #E85555 !important; }
-
-    /* Inputs */
-    input, textarea, select {
-        background-color: #FFFFFF !important;
-        color: #1A2640 !important;
-        -webkit-text-fill-color: #1A2640 !important;
-        border-color: #C4D4E8 !important;
-    }
-    input::placeholder, textarea::placeholder {
-        color: #7A90A8 !important;
-        -webkit-text-fill-color: #7A90A8 !important;
-    }
-    input:disabled, textarea:disabled {
-        color: #C8A84B !important;
-        -webkit-text-fill-color: #C8A84B !important;
-    }
-
-    /* Selectbox */
-    [data-testid="stSelectbox"] > div > div,
-    [data-baseweb="select"] > div {
-        background-color: #FFFFFF !important;
-        border-color: #C4D4E8 !important;
-    }
-    [data-baseweb="popover"],
-    [data-baseweb="menu"],
-    [role="listbox"] {
-        background-color: #FFFFFF !important;
-    }
-
-    /* Metrics */
-    [data-testid="metric-container"] { background-color: #FFFFFF !important; border-color: #C4D4E8 !important; }
-
-    /* Forms */
-    [data-testid="stForm"] { background-color: #EDF2F7 !important; border-color: #C4D4E8 !important; }
-
-    /* Tabs */
-    [data-testid="stTabs"] button[aria-selected="true"] { color: #C8A84B !important; border-bottom-color: #C8A84B !important; }
-
-    /* Botones */
-    .stButton > button { color: #0D1929 !important; }
-
-    /* HR */
-    hr { border-color: #C4D4E8 !important; }
-
-    /* Colores dorado/verde/rojo — preservar en HTML inline */
-    [style*="color:#C8A84B"] { color: #C8A84B !important; }
-    [style*="color:#2ECC87"] { color: #2ECC87 !important; }
-    [style*="color:#E85555"] { color: #E85555 !important; }
-    [style*="color:#F0C040"] { color: #F0C040 !important; }
-
-    </style>""", unsafe_allow_html=True)
-
 
 # ══════════════════════════════════════════════════════
 # FIREBASE AUTH
@@ -669,9 +599,6 @@ with st.sidebar:
     sfx    = " COP" if moneda=="COP" else " USD"
 
     st.markdown("---")
-    tema = st.radio("🎨 Tema", ["🌙 Oscuro","☀️ Claro"], horizontal=True,
-                    key="tema_sel")
-    tema_claro = tema == "☀️ Claro"
 
     st.markdown("---")
     if st.button("🚪 Cerrar sesión", use_container_width=True):
@@ -961,16 +888,20 @@ with t_dash:
     with cl:
         sec("Evolución del portafolio")
         if pos_periodo:
-            # Serie de puntos: fecha_compra con valor invertido, fecha_actual/venta con valor actual
-            # Para cada posición construimos dos puntos y luego interpolamos
             eventos = []
-            for p in pos_periodo:
+            hoy_ts = pd.Timestamp.now().normalize()
+            for p in posiciones:  # usar TODAS las posiciones para la curva completa
+                if p["Estado"] == "Archivada": continue
                 try:
                     fc = pd.to_datetime(p["F_Compra"])
-                    fv = pd.to_datetime(p["F_Venta"]) if p["F_Venta"] else pd.Timestamp.now().normalize()
-                    # Punto de entrada: el día de compra el valor era = invertido
+                    fv = pd.to_datetime(p["F_Venta"]) if p["F_Venta"] else hoy_ts
+                    # Recortar al período seleccionado
+                    if f_fin is not None:
+                        fv = min(fv, f_fin)
+                    if f_ini is not None:
+                        fc = max(fc, f_ini)
+                    if fc > fv: continue
                     eventos.append({"fecha": fc, "invertido": p["Invertido"], "actual": p["Invertido"]})
-                    # Punto de salida: valor actual (precio de hoy o de venta)
                     eventos.append({"fecha": fv, "invertido": p["Invertido"], "actual": p["Val_Actual"]})
                 except: pass
 
