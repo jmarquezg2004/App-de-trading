@@ -182,76 +182,6 @@ LOGO_IMG  = '<img src="data:image/png;base64,' + LOGO_B64    + '" style="width:1
 LOGO_SM   = '<img src="data:image/png;base64,' + LOGO_B64_SM + '" style="width:100px;height:auto;display:block;margin:0 auto">'
 
 
-# ══════════════════════════════════════════════════════
-# LOGIN
-# ══════════════════════════════════════════════════════
-if "logged_in" not in st.session_state:
-    st.session_state.logged_in = False
-
-if not st.session_state.logged_in:
-    st.markdown(
-        '<div style="text-align:center;padding:40px 0 20px">'
-        + LOGO_IMG +
-        '<br><div style="font:400 11px/1.5 IBM Plex Mono,mono;color:#8BA5C8;'
-        'letter-spacing:2px;margin-top:8px">PLATAFORMA · ACCESO PRIVADO</div></div>',
-        unsafe_allow_html=True
-    )
-    _, col, _ = st.columns([1,1.2,1])
-    with col:
-        email = st.text_input("Correo electrónico", placeholder="usuario@email.com")
-        pwd   = st.text_input("Contraseña", type="password")
-        if st.button("ENTRAR →", use_container_width=True):
-            if email and pwd:
-                with st.spinner("Verificando…"):
-                    ok, result = firebase_login(email, pwd)
-                if ok:
-                    em    = email.strip().lower()
-                    rol   = "admin" if em == ADMIN_EMAIL.lower() else "usuario"
-                    token = result.get("idToken", "")
-                    df_u  = load_usuarios()
-                    modo_u = MODO_IND; fondo_u = None
-                    if not df_u.empty and "Email" in df_u.columns:
-                        fila = df_u[df_u["Email"].str.lower() == em]
-                        if not fila.empty:
-                            modo_u  = fila.iloc[0].get("Modo", MODO_IND)
-                            fondo_u = fila.iloc[0].get("Fondo") or None
-                    st.session_state.update({
-                        "logged_in": True, "usuario": em, "rol": rol,
-                        "modo": modo_u, "fondo_asignado": fondo_u,
-                        "fondo_sel": "Arkez Invest",
-                        "auth_token": token,
-                    })
-                    st.rerun()
-                else:
-                    st.error(f"❌ {result}")
-            else:
-                st.warning("Completa los dos campos")
-
-        # ── Recuperar contraseña ──────────────────────────────────────────
-        st.markdown("""<div style="text-align:center;margin-top:10px">
-          <span style="font:400 12px IBM Plex Mono,mono;color:#8BA5C8">
-            ¿Olvidaste tu contraseña? →</span></div>""", unsafe_allow_html=True)
-        if st.button("Enviar correo de recuperación", key="btn_reset",
-                     help="Te enviaremos un email para resetear tu contraseña"):
-            if email.strip():
-                with st.spinner("Enviando correo de recuperación…"):
-                    try:
-                        r_reset = requests.post(
-                            f"https://identitytoolkit.googleapis.com/v1/accounts:sendOobCode?key={FIREBASE_KEY}",
-                            json={"requestType": "PASSWORD_RESET", "email": email.strip()},
-                            timeout=8
-                        )
-                        if r_reset.status_code == 200:
-                            st.success(f"✓ Correo enviado a {email.strip()} — revisa tu bandeja de entrada")
-                        else:
-                            err = r_reset.json().get("error", {}).get("message", "Error")
-                            st.error(f"❌ {err}")
-                    except Exception as e:
-                        st.error(f"❌ Error: {e}")
-            else:
-                st.warning("Primero escribe tu correo electrónico")
-    st.stop()
-
 
 
 # ── Tema claro — sobreescribe TODOS los colores ──────────────
@@ -362,6 +292,353 @@ if _tc:
 
     </style>""", unsafe_allow_html=True)
 
+
+# ══════════════════════════════════════════════════════
+# FIREBASE AUTH
+# ══════════════════════════════════════════════════════
+def firebase_login(email, pwd):
+    try:
+        r = requests.post(
+            f"https://identitytoolkit.googleapis.com/v1/accounts:signInWithPassword?key={FIREBASE_KEY}",
+            json={"email": email, "password": pwd, "returnSecureToken": True}, timeout=8)
+        if r.status_code == 200: return True, r.json()
+        return False, r.json().get("error", {}).get("message", "Error")
+    except Exception as e: return False, str(e)
+
+def firebase_crear(email, pwd):
+    try:
+        r = requests.post(
+            f"https://identitytoolkit.googleapis.com/v1/accounts:signUp?key={FIREBASE_KEY}",
+            json={"email": email, "password": pwd, "returnSecureToken": True}, timeout=8)
+        if r.status_code == 200: return True, "OK"
+        return False, r.json().get("error", {}).get("message", "Error")
+    except Exception as e: return False, str(e)
+
+# ══════════════════════════════════════════════════════
+# FIRESTORE CRUD
+# ══════════════════════════════════════════════════════
+def _f(v):
+    if isinstance(v, bool):  return {"booleanValue": v}
+    if isinstance(v, int):   return {"integerValue": str(v)}
+    if isinstance(v, float): return {"doubleValue": v}
+    return {"stringValue": str(v)}
+
+def _auth_header():
+    token = st.session_state.get("auth_token", "")
+    return {"Authorization": f"Bearer {token}"} if token else {}
+
+def fs_get(col):
+    try:
+        r = requests.get(f"{FS_URL}/{col}", timeout=10)
+        if r.status_code == 200:
+            docs = r.json().get("documents", [])
+            rows = [{"_id": d["name"].split("/")[-1],
+                     **{k: list(v.values())[0] for k,v in d.get("fields",{}).items()}}
+                    for d in docs]
+            return pd.DataFrame(rows) if rows else pd.DataFrame()
+    except Exception: pass
+    return pd.DataFrame()
+
+def fs_post(col, datos):
+    headers = _auth_header()
+    try:
+        r = requests.post(f"{FS_URL}/{col}", headers=headers,
+                          json={"fields": {k: _f(v) for k,v in datos.items()}}, timeout=10)
+        if r.status_code in (200,201): return True, ""
+        return False, f"Error {r.status_code}: {r.text[:300]}"
+    except Exception as e: return False, str(e)
+
+def fs_patch(col, doc_id, datos):
+    headers = _auth_header()
+    mask = "&".join(f"updateMask.fieldPaths={k}" for k in datos)
+    try:
+        requests.patch(f"{FS_URL}/{col}/{doc_id}?{mask}", headers=headers,
+                       json={"fields": {k: _f(v) for k,v in datos.items()}}, timeout=10)
+        return True
+    except Exception: return False
+
+def fs_delete(col, doc_id):
+    headers = _auth_header()
+    try:
+        requests.delete(f"{FS_URL}/{col}/{doc_id}", headers=headers, timeout=10)
+        return True
+    except Exception: return False
+
+# ══════════════════════════════════════════════════════
+# PRECIOS EN TIEMPO REAL
+# ══════════════════════════════════════════════════════
+@st.cache_data(ttl=3600)
+def get_trm():
+    for url in ["https://open.er-api.com/v6/latest/USD",
+                "https://api.frankfurter.app/latest?from=USD&to=COP"]:
+        try:
+            r = requests.get(url, timeout=6)
+            cop = r.json().get("rates",{}).get("COP") if r.status_code==200 else None
+            if cop and float(cop)>3000: return float(cop)
+        except: pass
+    try:
+        import yfinance as yf
+        px = yf.Ticker("USDCOP=X").fast_info.last_price
+        if px and px>3000: return float(px)
+    except: pass
+    return 4200.0
+
+@st.cache_data(ttl=300)
+def get_cmc(syms):
+    if not syms: return {}
+    try:
+        r = requests.get(
+            "https://pro-api.coinmarketcap.com/v2/cryptocurrency/quotes/latest",
+            params={"symbol":",".join(syms),"convert":"USD"},
+            headers={"X-CMC_PRO_API_KEY":CMC_KEY,"Accept":"application/json"}, timeout=10)
+        if r.status_code!=200: return {}
+        out={}
+        for sym,items in r.json().get("data",{}).items():
+            item = items[0] if isinstance(items,list) else items
+            q = item.get("quote",{}).get("USD",{})
+            out[sym.upper()]={"price":q.get("price",0),"chg24":q.get("percent_change_24h",0)}
+        return out
+    except: return {}
+
+@st.cache_data(ttl=300)
+def get_stock(ticker):
+    try:
+        import yfinance as yf
+        info  = yf.Ticker(ticker).fast_info
+        price = getattr(info,"last_price",None) or getattr(info,"previous_close",None)
+        prev  = getattr(info,"previous_close",price) or price
+        chg   = ((price-prev)/prev*100) if price and prev else 0
+        return float(price) if price else None, float(chg)
+    except: return None, 0
+
+def get_prices(df):
+    out={}
+    if df.empty: return out
+    df_ab = df[df["Estado"]=="Abierta"] if "Estado" in df.columns else df
+    if df_ab.empty: return out
+    criptos=[x.strip().upper() for x in df_ab[df_ab["Categoria"]=="Cripto"]["Ticker_API"].dropna() if x.strip()]
+    if criptos: out.update(get_cmc(tuple(set(criptos))))
+    stocks=[x.strip().upper() for x in df_ab[df_ab["Categoria"].isin(["Acción","ETF","Fondo"])]["Ticker_API"].dropna() if x.strip()]
+    for t in set(stocks):
+        px,chg=get_stock(t)
+        if px: out[t]={"price":px,"chg24":chg}
+    return out
+
+# ══════════════════════════════════════════════════════
+# CARGA DE DATOS
+# ══════════════════════════════════════════════════════
+COLS = ["_id","Fondo","Usuario","Fecha_Compra","Activo","Categoria",
+        "Cantidad","Precio_Compra","Broker","Ticker_API",
+        "Fecha_Venta","Precio_Venta","Estado","Notas"]
+
+@st.cache_data(ttl=60, show_spinner=False)
+def load_inv():
+    def norm(df):
+        num=["Cantidad","Precio_Compra","Precio_Venta"]
+        for c in num:
+            if c in df.columns: df[c]=pd.to_numeric(df[c],errors="coerce").fillna(0.0)
+            else: df[c]=0.0
+        for c in COLS:
+            if c not in df.columns: df[c]=""
+        return df[COLS]
+
+    df_new = fs_get("inversiones")
+    df_new = norm(df_new) if not df_new.empty else pd.DataFrame(columns=COLS)
+
+    df_ops = fs_get("operaciones")
+    rows_legacy=[]
+    if not df_ops.empty:
+        for _,r in df_ops.iterrows():
+            resultado=str(r.get("Resultado","Abierta"))
+            if resultado=="Abierta": estado,fv,pv="Abierta","",0.0
+            elif resultado in ("Ganadora","Perdedora","Cancelada"):
+                estado="Cerrada"
+                pe=float(r.get("Precio_Entrada",0) or 0)
+                tp=float(r.get("TP_pct",0) or 0)
+                sl=float(r.get("SL_pct",0) or 0)
+                if resultado=="Ganadora" and tp>0: pv=pe*(1+tp/100)
+                elif resultado=="Perdedora" and sl>0: pv=pe*(1-sl/100)
+                else: pv=pe
+                fv=str(r.get("Fecha",""))
+            else: estado,fv,pv="Abierta","",0.0
+            cant=float(r.get("Cantidad",0) or 0)
+            pe=float(r.get("Precio_Entrada",0) or 0)
+            vp=float(r.get("Valor_Pos",0) or 0)
+            if cant==0 and pe>0 and vp>0: cant=round(vp/pe,8)
+            cat=str(r.get("Categoria","") or r.get("Moneda","") or "Otro")
+            rows_legacy.append({
+                "_id":str(r.get("_id","")), "Fondo":str(r.get("Fondo","")),
+                "Usuario":str(r.get("Usuario","")), "Fecha_Compra":str(r.get("Fecha","")),
+                "Activo":str(r.get("Activo","") or r.get("Moneda","")),
+                "Categoria":cat, "Cantidad":cant, "Precio_Compra":pe,
+                "Broker":str(r.get("Broker","")), "Ticker_API":str(r.get("Ticker_API","")),
+                "Fecha_Venta":fv, "Precio_Venta":pv, "Estado":estado,
+                "Notas":str(r.get("Notas","")),
+            })
+
+    if rows_legacy:
+        df_leg=pd.DataFrame(rows_legacy)
+        for c in ["Cantidad","Precio_Compra","Precio_Venta"]:
+            df_leg[c]=pd.to_numeric(df_leg[c],errors="coerce").fillna(0.0)
+        df_leg["_id"]="ops_"+df_leg["_id"].astype(str)
+        # Deduplicar
+        if not df_new.empty:
+            keys_new=set(zip(df_new["Activo"].str.upper().str.strip(),
+                             df_new["Fecha_Compra"].astype(str).str[:10],
+                             df_new["Usuario"].str.lower().str.strip()))
+            mask_dup=df_leg.apply(lambda r:(
+                str(r["Activo"]).upper().strip(),str(r["Fecha_Compra"])[:10],
+                str(r["Usuario"]).lower().strip()) in keys_new, axis=1)
+            df_leg=df_leg[~mask_dup]
+    else:
+        df_leg=pd.DataFrame(columns=COLS)
+
+    combined=pd.concat([df_new,df_leg],ignore_index=True)
+    return combined if not combined.empty else pd.DataFrame(columns=COLS)
+
+@st.cache_data(ttl=60, show_spinner=False)
+def load_aportes():
+    df=fs_get("aportes")
+    if df.empty: return pd.DataFrame(columns=["_id","Fondo","Socio","Cedula","Fecha","Tipo","Monto","TipoCuenta","Usuario"])
+    if "Monto" in df.columns: df["Monto"]=pd.to_numeric(df["Monto"],errors="coerce").fillna(0.0)
+    return df
+
+@st.cache_data(ttl=60, show_spinner=False)
+def load_usuarios():
+    df=fs_get("usuarios")
+    if df.empty: return pd.DataFrame(columns=["_id","Email","Nombre","Modo","Fondo","Activo"])
+    return df
+
+# ══════════════════════════════════════════════════════
+# CÁLCULOS P&L
+# ══════════════════════════════════════════════════════
+def calcular_posicion(row, prices):
+    ticker=str(row.get("Ticker_API","")).strip().upper()
+    cat=str(row.get("Categoria",""))
+    cant=float(row.get("Cantidad",0) or 0)
+    pc=float(row.get("Precio_Compra",0) or 0)
+    pv=float(row.get("Precio_Venta",0) or 0)
+    estado=str(row.get("Estado","Abierta"))
+    costo=cant*pc
+
+    if estado=="Cerrada" and pv>0:
+        val=cant*pv; gp=val-costo
+        return costo,val,gp,(gp/costo*100 if costo else 0),pv,0
+
+    if cat in ["CDT","Cuenta Remunerada"] and pc>0 and costo>0:
+        try:
+            dias=max((pd.Timestamp.now()-pd.to_datetime(row.get("Fecha_Compra"))).days,0)
+            val=costo*((1+pc)**(dias/365)); gp=val-costo
+            return costo,val,gp,(gp/costo*100 if costo else 0),pc,0
+        except: return costo,costo,0,0,pc,0
+
+    if ticker and ticker in prices and prices[ticker].get("price",0)>0:
+        px=prices[ticker]["price"]; chg=prices[ticker].get("chg24",0)
+        if pc>0 and cant>0:
+            val=px*cant; gp=val-costo
+            return costo,val,gp,(gp/costo*100 if costo else 0),px,chg
+        if costo>0 and pc>0:
+            val=costo*px/pc; gp=val-costo
+            return costo,val,gp,(gp/costo*100 if costo else 0),px,chg
+
+    return costo,costo,0.0,0.0,pc,0
+
+# ══════════════════════════════════════════════════════
+# UI HELPERS
+# ══════════════════════════════════════════════════════
+PT=dict(paper_bgcolor="rgba(0,0,0,0)",plot_bgcolor="rgba(0,0,0,0)",
+        font=dict(family="IBM Plex Mono",color="#DCE5F0",size=11),
+        margin=dict(l=10,r=10,t=36,b=10),
+        xaxis=dict(gridcolor="#1e3350",linecolor="#2a4060",tickfont=dict(color="#8BA5C8")),
+        yaxis=dict(gridcolor="#1e3350",linecolor="#2a4060",tickfont=dict(color="#8BA5C8")))
+
+def money(v,f=1):
+    v2=v*f
+    if abs(v2)>=1e6: return f"${v2/1e6:.2f}M"
+    return f"${v2:,.2f}"
+
+def card(label,val,sub=None,color="#C8A84B"):
+    s=f'<div style="font:500 11px/1.4 IBM Plex Mono,mono;color:{color};margin-top:3px">{sub}</div>' if sub else ""
+    return f"""<div style="background:var(--surface);border:1px solid var(--border);border-radius:10px;
+        padding:16px 18px;position:relative;overflow:hidden;height:100%">
+      <div style="position:absolute;top:0;left:0;right:0;height:2px;background:{color}"></div>
+      <div style="font:400 9px/1 IBM Plex Mono,mono;color:var(--muted);letter-spacing:1.5px;
+                  text-transform:uppercase;margin-bottom:8px">{label}</div>
+      <div style="font:600 22px/1 IBM Plex Mono,mono;color:var(--text)">{val}</div>{s}</div>"""
+
+def sec(t):
+    st.markdown(f'<h2 style="margin:18px 0 10px">{t}</h2>', unsafe_allow_html=True)
+
+
+# ══════════════════════════════════════════════════════
+# LOGIN
+# ══════════════════════════════════════════════════════
+if "logged_in" not in st.session_state:
+    st.session_state.logged_in = False
+
+if not st.session_state.logged_in:
+    st.markdown(
+        '<div style="text-align:center;padding:40px 0 20px">'
+        + LOGO_IMG +
+        '<br><div style="font:400 11px/1.5 IBM Plex Mono,mono;color:#8BA5C8;'
+        'letter-spacing:2px;margin-top:8px">PLATAFORMA · ACCESO PRIVADO</div></div>',
+        unsafe_allow_html=True
+    )
+    _, col, _ = st.columns([1,1.2,1])
+    with col:
+        email = st.text_input("Correo electrónico", placeholder="usuario@email.com")
+        pwd   = st.text_input("Contraseña", type="password")
+        if st.button("ENTRAR →", use_container_width=True):
+            if email and pwd:
+                with st.spinner("Verificando…"):
+                    ok, result = firebase_login(email, pwd)
+                if ok:
+                    em    = email.strip().lower()
+                    rol   = "admin" if em == ADMIN_EMAIL.lower() else "usuario"
+                    token = result.get("idToken", "")
+                    df_u  = load_usuarios()
+                    modo_u = MODO_IND; fondo_u = None
+                    if not df_u.empty and "Email" in df_u.columns:
+                        fila = df_u[df_u["Email"].str.lower() == em]
+                        if not fila.empty:
+                            modo_u  = fila.iloc[0].get("Modo", MODO_IND)
+                            fondo_u = fila.iloc[0].get("Fondo") or None
+                    st.session_state.update({
+                        "logged_in": True, "usuario": em, "rol": rol,
+                        "modo": modo_u, "fondo_asignado": fondo_u,
+                        "fondo_sel": "Arkez Invest",
+                        "auth_token": token,
+                    })
+                    st.rerun()
+                else:
+                    st.error(f"❌ {result}")
+            else:
+                st.warning("Completa los dos campos")
+
+        # ── Recuperar contraseña ──────────────────────────────────────────
+        st.markdown("""<div style="text-align:center;margin-top:10px">
+          <span style="font:400 12px IBM Plex Mono,mono;color:#8BA5C8">
+            ¿Olvidaste tu contraseña? →</span></div>""", unsafe_allow_html=True)
+        if st.button("Enviar correo de recuperación", key="btn_reset",
+                     help="Te enviaremos un email para resetear tu contraseña"):
+            if email.strip():
+                with st.spinner("Enviando correo de recuperación…"):
+                    try:
+                        r_reset = requests.post(
+                            f"https://identitytoolkit.googleapis.com/v1/accounts:sendOobCode?key={FIREBASE_KEY}",
+                            json={"requestType": "PASSWORD_RESET", "email": email.strip()},
+                            timeout=8
+                        )
+                        if r_reset.status_code == 200:
+                            st.success(f"✓ Correo enviado a {email.strip()} — revisa tu bandeja de entrada")
+                        else:
+                            err = r_reset.json().get("error", {}).get("message", "Error")
+                            st.error(f"❌ {err}")
+                    except Exception as e:
+                        st.error(f"❌ Error: {e}")
+            else:
+                st.warning("Primero escribe tu correo electrónico")
+    st.stop()
 
 # ══════════════════════════════════════════════════════
 # SESIÓN Y DATOS
