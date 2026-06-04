@@ -178,8 +178,8 @@ MODO_OBS = "Observador de Fondo"
 # Logo Arkez oficial (sin INVEST) — base64 embebido
 LOGO_B64    = "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"
 LOGO_B64_SM = "iVBORw0KGgoAAAANSUhEUgAAAG4AAAAmCAYAAAAlUK76AAAABmJLR0QA/wD/AP+gvaeTAAAGa0lEQVR4nO2YeYxV5RmHn/f7zr1zZ1AQZqHISGstCrLMALIPMEsDYsqmDAygtdU0QrqQGmpMJOkQGyJdiNS0iamxC1imIIi1f9jKMuqItqnMHRpKC1VTG1png2FxlnvPOW//uHNn7izgMM7QpJwn+XJyf+f93vf93e/sEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBBwzfjzK0syqnaXrf9f9/H/hLkWRVouDHlMle1vvbD2s9ei3vXAoC/ckV3rchE2Aem+6FODXe96YdAXzhFvGzAk8UvLqnaXzRvsmtcDMpjJq3atnqVGjnapoxwrOD1uupSX+582f/aUkt8apEDRv2XHRhSeOLE31j1masmyXU3N8Vut4BqLa8XEVfRcS5tb3drW/POPqt+sT8aOGj99vmfDT4jG22pP/GlpUs/KK3lE0c3AMINZUF9zsHr0uBmZcWt3qgkN6VrRqPXbWmJt/uqz//jjhey8+VOM2EOX86Bwpi56ZNLVeh+0M04VUSM76H5wCFOrxp68/9Pmz8kvmiuwRNHhwOyG0LmVvcU1fRyLnW9uneOKzW92ZUbt+eZFdU0tZRdb4tuUtJfnLl16Y0fP1hrPpi30TSQzqWVNLl6i6E+BUcCD9TUHqwHU90SdjHy1oQKMHSpiI4kh6b51OjxbCTkKwy83gH4dwE5/JvWFqoqy+4EZve4U2XpkT+n+olV7L/W/glkPkDd+7Omak6fHqujXgV/3DEtstj7+zWP3LS4uBJpbW2NnCu57eOiZ2tqZFy7oWuDZ1CkqRABG5BfPUaUCEBHWN0QPv9TDiht7R+P+3fV/f+tib11+dJNXPazRHZGqRUzoKypsB3yUx67WeYqtgeXontJ0fL53hZDR1rP9ahjg5mmFWQgrrTHeS89tDw0fNvQ8MCdratG0PkzPiETCY1csKnwPxbjqj+4eoEh61sS5dxnf+wmQgcrmhujhn/XIJKqIhK5YrbLSPf+XqnPJkeaExqjwJICKPFFXc+T3fTLdjUFZON91HkcYkyK5Cm+nxoiyqWpP6Rj6gav2ISBy7z3Fx8Lh8Oe+9fCamkROs6FnMz2V5pbWk3t+99rtgsTDjj3VmTixsU4oF+PsV7H5wDONxw9tvVwvasNTJGx/M3LSvJdzJs07kDNx9r7P3DmjvLfY3AmLRqDsB4ag7KuvPrztKmx3YcAXrmpP6RhUH0nVVHnaE9YCLSlyurpOPxovNyjrAR792gM+wLrl9+QACKzNnbCoy2XJtK/cNzY/VThq2kJGTVtobitYOr6u8WzmsCFpvxzuXajojBYF8Dz/RhV7C4AIX6C01F6hIQdjshQyECKIyVCVnvGFhU5bqO1F4PNA1HFu+DKgV+8/WXSAibfJQ+LHQ+I47xiRWcC/vJC3pWjV3ktvvlD2fYTvdkbr6td3lz2zYE3F0b7mz85//W4wtwLMXvbgzHZ5XPs2PRZ2vwr8qPu8sDXHImnOfy62xGaqkmWN2XlLuHlDZWWlm9KPABjV98WLb/Fs+EmFxVmnGn/QAI/23pH/YX1NZe/38tS+m8wPBS0CGsX37v139JXmvnrujQE9497Yte5OK3zRhxGe685yfe8gwsbkQ4gNeduAf6ZMEfF5WsvL+96HmOSns48FeRc4BfwVaGrXN0BnPr/dYqvHxg/efvVLYEoB9Xx/cbSJG3qtof6HdSeqfmWMvwxoVvh25uTinpdhBfG8Bj7hf8yZUvyAoBuBmPpmRe3xNz7os9/LMGALp4q4XsuzrufN7dA8X+atqeh4Epuzam+LJr6idCDC9L6+HuRMLBkpsDhRzxTUVh+8q6760B111YcmiGfvAC4BtyXOyq5YSVxdGqIHKxHZCWSHxe7oZkIAFN8DqI9WRhFZByjCjsy84hU9fJtQXnbegldzJs070DEmzN6Xmzs7HWD0jJJMVH9Me2Ix/i9y8ove6xhTio/fPG1JRl/8pzJgC1e5c+VqkIIUyRPfbOoeN39NxYugXZ+kEq8HvR/9KWiYlYCDsqs++lo0dV/t8T/UCTwPIEaWJ/X0iPXSHFvjGT2b1Bzffgc4nR52xk5ftHxVUrcOGN971/pua1JrjB46oKqlQC2wZeTkOTmdDcXeF989hS+5ir09OUQk0x8ZE4C2uD8RuCnhkwiJe1znUJ1kWmORT/Lenf8CLgRg0veEd+AAAAAASUVORK5CYII="
-LOGO_IMG  = '<img src="data:image/png;base64,' + LOGO_B64    + '" style="width:160px;height:auto;display:block;margin:0 auto">'
-LOGO_SM   = '<img src="data:image/png;base64,' + LOGO_B64_SM + '" style="width:100px;height:auto;display:block;margin:0 auto">'
+LOGO_IMG  = '<img src="data:image/png;base64,' + LOGO_B64    + '" style="width:160px;height:auto;display:block;margin:0 auto;mix-blend-mode:multiply">'
+LOGO_SM   = '<img src="data:image/png;base64,' + LOGO_B64_SM + '" style="width:100px;height:auto;display:block;margin:0 auto;mix-blend-mode:multiply">'
 
 
 
@@ -188,6 +188,27 @@ LOGO_SM   = '<img src="data:image/png;base64,' + LOGO_B64_SM + '" style="width:1
 _tc = st.session_state.get("tema_sel", "🌙 Oscuro") == "☀️ Claro"
 if _tc:
     st.markdown("""<style>
+    /* ── NUCLEAR: forzar texto oscuro en TODOS los elementos ── */
+    [data-testid="stVerticalBlock"] *:not(svg):not(path):not(script):not(style) {
+        color: #1A2640 !important;
+    }
+    /* Excepciones de color: mantener colores semánticos */
+    [data-testid="stVerticalBlock"] *[style*="color:#2ECC87"],
+    [data-testid="stVerticalBlock"] *[style*="color:#E85555"],
+    [data-testid="stVerticalBlock"] *[style*="color:#C8A84B"],
+    [data-testid="stVerticalBlock"] *[style*="color:#F0C040"] {
+        color: inherit !important;
+    }
+    /* Cards HTML con fondo oscuro hardcoded */
+    div[style*="background:#162236"],
+    div[style*="background: #162236"],
+    div[style*="background:#0F1A2B"],
+    div[style*="background:#152034"],
+    div[style*="background:#1a2d42"],
+    div[style*="background:#111827"] {
+        background: #FFFFFF !important;
+        border-color: #C4D4E8 !important;
+    }
     /* Fondo y texto base */
     .stApp { background:#F0F4F8 !important; color:#1A2640 !important; }
 
@@ -851,36 +872,56 @@ else:
 # Aplicar filtro de periodo a las posiciones
 def en_periodo(p):
     """
-    Lógica correcta de período:
-    - "Todo el historial": incluye todo
-    - Para filtros específicos:
-      * Posiciones ABIERTAS: siempre se incluyen (siguen vigentes hoy)
-      * Posiciones CERRADAS: se incluyen si la fecha de VENTA cae dentro del período
-      * Posiciones ARCHIVADAS: se excluyen siempre del portafolio activo
+    Lógica de período:
+    - Todo el historial: todo (excepto archivadas)
+    - Filtros específicos:
+      * Archivadas: NUNCA se muestran
+      * Abiertas: SIEMPRE se incluyen (siguen activas hoy)
+      * Cerradas: solo si fecha_venta cae dentro del rango
     """
-    if f_ini is None: return True
     estado = p.get("Estado", "Abierta")
     if estado == "Archivada": return False
-    if estado == "Abierta": return True  # posición abierta siempre es "actual"
-    # Cerrada: incluir si la fecha de venta está en el período seleccionado
+    if f_ini is None: return True   # Todo el historial
+    if estado == "Abierta": return True
     try:
         fv = pd.to_datetime(p["F_Venta"]) if p["F_Venta"] else hoy
         return f_ini <= fv <= f_fin
     except: return True
 
-pos_periodo   = [p for p in posiciones if en_periodo(p) and p["Estado"] != "Archivada"]
+def en_periodo_kpi(p):
+    """Para los KPIs de ganancias: cerradas en el período."""
+    estado = p.get("Estado", "Abierta")
+    if estado == "Archivada": return False
+    if f_ini is None: return True
+    if estado == "Abierta": return True
+    try:
+        fv = pd.to_datetime(p["F_Venta"]) if p["F_Venta"] else hoy
+        return f_ini <= fv <= f_fin
+    except: return True
+
+# Todas las posiciones visibles (abiertas siempre + cerradas del período)
+pos_periodo   = [p for p in posiciones if en_periodo(p)]
 pos_ab_per    = [p for p in pos_periodo if p["Estado"] == "Abierta"]
 pos_cer_per   = [p for p in pos_periodo if p["Estado"] == "Cerrada"]
-inv_per       = sum(p["Invertido"]  for p in pos_periodo)
-act_per       = sum(p["Val_Actual"] for p in pos_periodo)
-gp_per        = sum(p["GP_usd"]     for p in pos_periodo)
-rend_per      = gp_per / inv_per * 100 if inv_per > 0 else 0
 
-# Badge de periodo
-per_badge = f'<span style="font:400 10px IBM Plex Mono,mono;color:#8BA5C8;margin-left:8px">Período: {periodo}</span>'
-if f_ini:
-    per_badge = f'<span style="font:400 10px IBM Plex Mono,mono;color:#8BA5C8;margin-left:8px">{f_ini.strftime("%d/%m/%Y")} → {f_fin.strftime("%d/%m/%Y")}</span>'
+# Capital: todas las posiciones abiertas (independiente del período)
+pos_abiertas_todas = [p for p in posiciones if p["Estado"] == "Abierta"]
+inv_per   = sum(p["Invertido"]  for p in pos_abiertas_todas)
+act_per   = sum(p["Val_Actual"] for p in pos_abiertas_todas)
+pnl_ab    = sum(p["GP_usd"]     for p in pos_abiertas_todas)
 
+# Ganancias/pérdidas realizadas: SOLO cerradas dentro del período seleccionado
+pnl_cerradas_periodo = sum(p["GP_usd"] for p in pos_cer_per)
+
+# G/P total del período = PnL abierto + PnL cerrado en período
+gp_per  = pnl_ab + pnl_cerradas_periodo
+rend_per = gp_per / inv_per * 100 if inv_per > 0 else 0
+
+# Badge informativo del período
+label_periodo = periodo if f_ini is None else f"{f_ini.strftime('%d/%m/%y')} → {f_fin.strftime('%d/%m/%y')}"
+
+# Badge de período
+per_badge = f'<span style="font:400 10px IBM Plex Mono,mono;color:#8BA5C8;margin-left:8px">{label_periodo}</span>'
 st.markdown(f'<div style="margin:4px 0 12px">{per_badge}</div>', unsafe_allow_html=True)
 
 gc = "#2ECC87" if gp_per >= 0 else "#E85555"
@@ -1077,7 +1118,9 @@ with t_dash:
                 labels=labels_d, values=values_d, hole=.55,
                 marker=dict(colors=colors_d, line=dict(color="#111827",width=2)),
                 textinfo="percent+label",
-                textfont=dict(color="#ffffff", size=11),
+                textfont=dict(color="#ffffff", size=10),
+                textposition="inside",
+                insidetextorientation="horizontal",
                 hovertemplate="<b>%{label}</b><br>%{value:$,.2f}"+sfx+"<br>%{percent}<extra></extra>",
             ))
             fig2.update_layout(**PT,
@@ -1430,6 +1473,47 @@ if puede_registrar:
                                 st.cache_data.clear(); time.sleep(0.5); st.rerun()
                             else:
                                 st.error("❌ Error actualizando")
+
+            # ── EDITAR POSICIÓN ABIERTA (compra mal ingresada) ──
+            pos_abiertas_edit = [p for p in posiciones if p["Estado"]=="Abierta" and not p["_id"].startswith("ops_")]
+            if pos_abiertas_edit:
+                st.markdown("---")
+                sec("Editar compra registrada")
+                st.markdown('<div style="font:400 11px IBM Plex Mono,mono;color:#8BA5C8;margin-bottom:8px">Corrige precio, cantidad, ticker o fecha de una posición abierta.</div>', unsafe_allow_html=True)
+                buscar_edit_ab = st.text_input("🔍 Buscar activo", placeholder="Filtrar…", key="buscar_edit_ab")
+                pos_ab_f = [p for p in pos_abiertas_edit
+                    if buscar_edit_ab.strip().lower() in p["Activo"].lower()]                     if buscar_edit_ab.strip() else pos_abiertas_edit
+                if not pos_ab_f: pos_ab_f = pos_abiertas_edit
+                lbs_ab_e = [f"{p['F_Compra']} — {p['Activo']} (${p['Px_Compra']:,.4f})" for p in pos_ab_f]
+                sel_ab_e = st.selectbox("Posición a editar", range(len(lbs_ab_e)),
+                                        format_func=lambda i: lbs_ab_e[i], key="sel_ab_e")
+                if sel_ab_e is not None:
+                    p_edit = pos_ab_f[sel_ab_e]
+                    ea1,ea2,ea3,ea4 = st.columns(4)
+                    try:
+                        fecha_edit_default = pd.to_datetime(p_edit["F_Compra"]).date()
+                    except:
+                        fecha_edit_default = date.today()
+                    nueva_fecha_c  = ea1.date_input("Fecha compra", value=fecha_edit_default, key="ef_c")
+                    nuevo_precio_c = ea2.number_input("Precio compra", value=float(p_edit["Px_Compra"]),
+                                                       min_value=0.0, step=0.0001, format="%.4f", key="ep_c")
+                    nuevo_ticker   = ea3.text_input("Ticker", value=p_edit["Ticker"], key="et_c")
+                    # Recalcular cantidad
+                    val_orig = p_edit["Val_ent"]
+                    nueva_qty = round(val_orig / nuevo_precio_c, 8) if nuevo_precio_c > 0 else p_edit["Cantidad"]
+                    ea4.text_input("Nueva cantidad (auto)", value=f"{nueva_qty:,.8f}", disabled=True)
+                    if st.button("✏️ ACTUALIZAR COMPRA", key="btn_edit_ab"):
+                        ok = fs_patch("inversiones", p_edit["_id"], {
+                            "Fecha_Compra":  str(nueva_fecha_c),
+                            "Precio_Compra": float(nuevo_precio_c),
+                            "Cantidad":      float(nueva_qty),
+                            "Ticker_API":    nuevo_ticker.strip().upper(),
+                        })
+                        if ok:
+                            st.success("✓ Compra actualizada correctamente")
+                            st.cache_data.clear(); st.rerun()
+                        else:
+                            st.error("❌ Error actualizando")
 
             # ── EDITAR POSICIÓN CERRADA ──
             pos_cerradas_todas = [p for p in posiciones if p["Estado"]=="Cerrada"]
