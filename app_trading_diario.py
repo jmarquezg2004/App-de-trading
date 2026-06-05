@@ -537,6 +537,37 @@ if not st.session_state.logged_in:
     st.stop()
 
 # ══════════════════════════════════════════════════════
+# TEMA CLARO
+# ══════════════════════════════════════════════════════
+if st.session_state.get("tema_sel") == "☀️ Claro":
+    st.markdown("""<style>
+    .stApp { background: #F5F7FA !important; }
+    .stApp * { color: #1A2640 !important; }
+    section[data-testid="stSidebar"] { background: #1B2A4A !important; }
+    section[data-testid="stSidebar"] * { color: #DCE5F0 !important; }
+    input, textarea { background: #FFFFFF !important; color: #1A2640 !important; -webkit-text-fill-color: #1A2640 !important; border-color: #C4D4E8 !important; }
+    input::placeholder, textarea::placeholder { color: #7A9AB8 !important; -webkit-text-fill-color: #7A9AB8 !important; }
+    input:disabled { color: #C8A84B !important; -webkit-text-fill-color: #C8A84B !important; }
+    [data-testid="stSelectbox"] > div > div, [data-baseweb="select"] > div { background: #FFFFFF !important; border-color: #C4D4E8 !important; }
+    [data-baseweb="popover"], [data-baseweb="menu"], [role="listbox"] { background: #FFFFFF !important; }
+    [data-baseweb="popover"] *, [data-baseweb="menu"] *, [role="listbox"] * { color: #1A2640 !important; }
+    [data-testid="metric-container"] { background: #FFFFFF !important; border-color: #C4D4E8 !important; }
+    [data-testid="stMetricValue"], [data-testid="stMetricLabel"] { color: #1A2640 !important; }
+    [data-testid="stForm"] { background: #EDF2F7 !important; border-color: #C4D4E8 !important; }
+    [data-testid="stTabs"] button { color: #4A6080 !important; }
+    [data-testid="stTabs"] button[aria-selected="true"] { color: #C8A84B !important; border-bottom-color: #C8A84B !important; }
+    .stButton > button { color: #0D1929 !important; }
+    hr { border-color: #C4D4E8 !important; }
+    [style*="color:#2ECC87"] { color: #2ECC87 !important; }
+    [style*="color:#E85555"] { color: #E85555 !important; }
+    [style*="color:#C8A84B"] { color: #C8A84B !important; }
+    [style*="color:#F0C040"] { color: #F0C040 !important; }
+    div[style*="background:#162236"] { background: #FFFFFF !important; }
+    div[style*="background:#0F1A2B"] { background: #EDF2F7 !important; }
+    div[style*="background:#152034"] { background: #E2EAF4 !important; }
+    </style>""", unsafe_allow_html=True)
+
+# ══════════════════════════════════════════════════════
 # SESIÓN Y DATOS
 # ══════════════════════════════════════════════════════
 rol    = st.session_state.rol
@@ -598,6 +629,8 @@ with st.sidebar:
     factor = trm if moneda=="COP" else 1.0
     sfx    = " COP" if moneda=="COP" else " USD"
 
+    st.markdown("---")
+    _tema = st.radio("Tema", ["🌙 Oscuro","☀️ Claro"], horizontal=True, key="tema_sel")
     st.markdown("---")
 
     st.markdown("---")
@@ -771,22 +804,31 @@ def en_periodo_kpi(p):
         return f_ini <= fv <= f_fin
     except: return True
 
-# Todas las posiciones visibles (abiertas siempre + cerradas del período)
-pos_periodo   = [p for p in posiciones if en_periodo(p)]
+def en_periodo_kpi(p):
+    """Posición activa durante el período: comprada antes de f_fin
+    y no vendida antes de f_ini."""
+    estado = p.get("Estado", "Abierta")
+    if estado == "Archivada": return False
+    if f_ini is None: return True  # Todo el historial
+    try:
+        fc = pd.to_datetime(p["F_Compra"])
+        if fc > f_fin: return False  # Comprada después del fin → no aplica
+        if estado == "Cerrada":
+            fv = pd.to_datetime(p["F_Venta"]) if p["F_Venta"] else hoy
+            if fv < f_ini: return False  # Vendida antes del inicio → no aplica
+        return True
+    except: return True
+
+# Posiciones activas en el período
+pos_periodo   = [p for p in posiciones if en_periodo_kpi(p)]
 pos_ab_per    = [p for p in pos_periodo if p["Estado"] == "Abierta"]
 pos_cer_per   = [p for p in pos_periodo if p["Estado"] == "Cerrada"]
 
-# Capital: todas las posiciones abiertas (independiente del período)
-pos_abiertas_todas = [p for p in posiciones if p["Estado"] == "Abierta"]
-inv_per   = sum(p["Invertido"]  for p in pos_abiertas_todas)
-act_per   = sum(p["Val_Actual"] for p in pos_abiertas_todas)
-pnl_ab    = sum(p["GP_usd"]     for p in pos_abiertas_todas)
-
-# Ganancias/pérdidas realizadas: SOLO cerradas dentro del período seleccionado
-pnl_cerradas_periodo = sum(p["GP_usd"] for p in pos_cer_per)
-
-# G/P total del período = PnL abierto + PnL cerrado en período
-gp_per  = pnl_ab + pnl_cerradas_periodo
+# KPIs del período
+inv_per  = sum(p["Invertido"]  for p in pos_periodo)
+act_per  = sum(p["Val_Actual"] for p in pos_periodo)
+pnl_tot  = sum(p["GP_usd"]     for p in pos_periodo)
+gp_per   = pnl_tot
 rend_per = gp_per / inv_per * 100 if inv_per > 0 else 0
 
 # Badge informativo del período
