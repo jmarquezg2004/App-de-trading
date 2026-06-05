@@ -14,11 +14,11 @@ st.markdown("""
 
 /* Variables de tema — oscuro por defecto */
 :root {
-    --bg:         #111827;
-    --sidebar-bg: #0D1929;
-    --surface:    #162236;
-    --surface2:   #0F1A2B;
-    --border:     #1E3354;
+    --bg:         #17202E;
+    --sidebar-bg: #152030;
+    --surface:    #1E2E42;
+    --surface2:   #17202E;
+    --border:     #263D58;
     --text:       #ffffff;
     --muted:      #8BA5C8;
     --label:      #B0C4DC;
@@ -441,8 +441,8 @@ def calcular_posicion(row, prices):
 PT=dict(paper_bgcolor="rgba(0,0,0,0)",plot_bgcolor="rgba(0,0,0,0)",
         font=dict(family="IBM Plex Mono",color="#DCE5F0",size=11),
         margin=dict(l=10,r=10,t=36,b=10),
-        xaxis=dict(gridcolor="#1e3350",linecolor="#2a4060",tickfont=dict(color="#8BA5C8")),
-        yaxis=dict(gridcolor="#1e3350",linecolor="#2a4060",tickfont=dict(color="#8BA5C8")))
+        xaxis=dict(gridcolor="#243D55",linecolor="#304D70",tickfont=dict(color="#8BA5C8")),
+        yaxis=dict(gridcolor="#243D55",linecolor="#304D70",tickfont=dict(color="#8BA5C8")))
 
 def money(v,f=1):
     v2=v*f
@@ -512,10 +512,10 @@ if not st.session_state.logged_in:
                 st.warning("Completa los dos campos")
 
         # ── Recuperar contraseña ──────────────────────────────────────────
-        st.markdown("""<div style="text-align:center;margin-top:10px">
-          <span style="font:400 12px IBM Plex Mono,mono;color:#8BA5C8">
-            ¿Olvidaste tu contraseña? →</span></div>""", unsafe_allow_html=True)
-        if st.button("Enviar correo de recuperación", key="btn_reset",
+        st.markdown("""<div style="text-align:center;margin-top:14px">
+          <span style="font:400 11px IBM Plex Mono,mono;color:#8BA5C8;letter-spacing:1px">
+            ¿Olvidaste tu contraseña?</span></div>""", unsafe_allow_html=True)
+        if st.button("→ Enviar correo de recuperación", key="btn_reset",
                      help="Te enviaremos un email para resetear tu contraseña"):
             if email.strip():
                 with st.spinner("Enviando correo de recuperación…"):
@@ -536,36 +536,6 @@ if not st.session_state.logged_in:
                 st.warning("Primero escribe tu correo electrónico")
     st.stop()
 
-# ══════════════════════════════════════════════════════
-# TEMA CLARO
-# ══════════════════════════════════════════════════════
-if st.session_state.get("tema_sel") == "☀️ Claro":
-    st.markdown("""<style>
-    .stApp { background: #F5F7FA !important; }
-    .stApp * { color: #1A2640 !important; }
-    section[data-testid="stSidebar"] { background: #1B2A4A !important; }
-    section[data-testid="stSidebar"] * { color: #DCE5F0 !important; }
-    input, textarea { background: #FFFFFF !important; color: #1A2640 !important; -webkit-text-fill-color: #1A2640 !important; border-color: #C4D4E8 !important; }
-    input::placeholder, textarea::placeholder { color: #7A9AB8 !important; -webkit-text-fill-color: #7A9AB8 !important; }
-    input:disabled { color: #C8A84B !important; -webkit-text-fill-color: #C8A84B !important; }
-    [data-testid="stSelectbox"] > div > div, [data-baseweb="select"] > div { background: #FFFFFF !important; border-color: #C4D4E8 !important; }
-    [data-baseweb="popover"], [data-baseweb="menu"], [role="listbox"] { background: #FFFFFF !important; }
-    [data-baseweb="popover"] *, [data-baseweb="menu"] *, [role="listbox"] * { color: #1A2640 !important; }
-    [data-testid="metric-container"] { background: #FFFFFF !important; border-color: #C4D4E8 !important; }
-    [data-testid="stMetricValue"], [data-testid="stMetricLabel"] { color: #1A2640 !important; }
-    [data-testid="stForm"] { background: #EDF2F7 !important; border-color: #C4D4E8 !important; }
-    [data-testid="stTabs"] button { color: #4A6080 !important; }
-    [data-testid="stTabs"] button[aria-selected="true"] { color: #C8A84B !important; border-bottom-color: #C8A84B !important; }
-    .stButton > button { color: #0D1929 !important; }
-    hr { border-color: #C4D4E8 !important; }
-    [style*="color:#2ECC87"] { color: #2ECC87 !important; }
-    [style*="color:#E85555"] { color: #E85555 !important; }
-    [style*="color:#C8A84B"] { color: #C8A84B !important; }
-    [style*="color:#F0C040"] { color: #F0C040 !important; }
-    div[style*="background:#162236"] { background: #FFFFFF !important; }
-    div[style*="background:#0F1A2B"] { background: #EDF2F7 !important; }
-    div[style*="background:#152034"] { background: #E2EAF4 !important; }
-    </style>""", unsafe_allow_html=True)
 
 # ══════════════════════════════════════════════════════
 # SESIÓN Y DATOS
@@ -592,7 +562,7 @@ with st.sidebar:
     </div>""", unsafe_allow_html=True)
 
     rc = "#C8A84B" if rol=="admin" else "#2ECC87"
-    st.markdown(f"""<div style="background:#152034;border:1px solid #1E3354;border-radius:8px;
+    st.markdown(f"""<div style="background:#1C2D40;border:1px solid #263D58;border-radius:8px;
         padding:10px 12px;margin-bottom:10px">
       <div style="font:400 9px IBM Plex Mono,mono;color:#8BA5C8;letter-spacing:1px;margin-bottom:3px">USUARIO</div>
       <div style="font:400 11px/1.4 IBM Plex Mono,mono;color:var(--text);word-break:break-all">{usuario}</div>
@@ -630,8 +600,7 @@ with st.sidebar:
     sfx    = " COP" if moneda=="COP" else " USD"
 
     st.markdown("---")
-    _tema = st.radio("Tema", ["🌙 Oscuro","☀️ Claro"], horizontal=True, key="tema_sel")
-    st.markdown("---")
+
 
     st.markdown("---")
     if st.button("🚪 Cerrar sesión", use_container_width=True):
@@ -1065,7 +1034,7 @@ with t_dash:
                              if p["Ticker"].upper()==tk.upper() and p["Estado"]=="Abierta"), None)
             pnl_html = f'<div style="font:400 9px IBM Plex Mono,mono;color:{"#2ECC87" if pnl_real>=0 else "#E85555"}">P&L: {"+" if pnl_real>=0 else ""}{pnl_real:.2f}%</div>' if pnl_real is not None else ""
             with cols_p[i%min(len(prices),5)]:
-                st.markdown(f"""<div style="background:#162236;border:1px solid #1E3354;
+                st.markdown(f"""<div style="background:#1E2E42;border:1px solid #263D58;
                     border-radius:8px;padding:12px;text-align:center;margin-bottom:8px">
                   <div style="font:600 11px/1.5 IBM Plex Mono,mono;color:#C8A84B">{tk}</div>
                   <div style="font:600 15px/1.4 IBM Plex Mono,mono;color:var(--text)">{pxs}</div>
@@ -1088,7 +1057,7 @@ with t_port:
             chg_str = f"{'▲' if p['Chg24']>=0 else '▼'} {abs(p['Chg24']):.2f}%" if p["Chg24"]!=0 else "—"
             chg_clr = "#2ECC87" if p["Chg24"]>=0 else "#E85555"
 
-            st.markdown(f"""<div style="background:#162236;border:1px solid #1E3354;
+            st.markdown(f"""<div style="background:#1E2E42;border:1px solid #263D58;
                 border-radius:10px;padding:14px 18px;margin-bottom:10px;
                 display:flex;align-items:center;gap:16px;flex-wrap:wrap">
               <div style="min-width:120px">
@@ -1130,7 +1099,7 @@ with t_port:
         for p in pos_cer_per:
             gc3 = "#2ECC87" if p["GP_usd"]>=0 else "#E85555"
             sg3 = "+" if p["GP_usd"]>=0 else ""
-            st.markdown(f"""<div style="background:#0F1A2B;border:1px solid #1E3354;
+            st.markdown(f"""<div style="background:#17202E;border:1px solid #263D58;
                 border-radius:10px;padding:12px 18px;margin-bottom:8px;
                 display:flex;align-items:center;gap:16px;flex-wrap:wrap;opacity:.9">
               <div style="min-width:120px">
@@ -1334,7 +1303,7 @@ if puede_registrar:
                     gp_venta = (precio_v - pos_sel["Px_Compra"]) * pos_sel["Cantidad"]
                     gp_pct_v = gp_venta / pos_sel["Invertido"] * 100 if pos_sel["Invertido"] else 0
                     clr_v    = "#2ECC87" if gp_venta >= 0 else "#E85555"
-                    st.markdown(f"""<div style="background:#162236;border:1px solid #1E3354;
+                    st.markdown(f"""<div style="background:#1E2E42;border:1px solid #263D58;
                         border-radius:8px;padding:12px 16px;margin:8px 0;
                         display:flex;gap:24px;flex-wrap:wrap">
                       <div><div style="font:400 9px IBM Plex Mono,mono;color:#8BA5C8">RESULTADO VENTA</div>
@@ -1555,7 +1524,7 @@ if rol == "admin" or puede_registrar:
                 money(cash_neto, factor)+sfx,
                 "Depósitos - Retiros", color=cn_color), unsafe_allow_html=True)
 
-        st.markdown("""<div style="background:#162236;border:1px solid #1E3354;
+        st.markdown("""<div style="background:#1E2E42;border:1px solid #263D58;
             border-left:3px solid #C8A84B;border-radius:0 8px 8px 0;
             padding:10px 14px;margin:14px 0;font:400 11px/1.7 IBM Plex Mono,mono;color:#B0C4DC">
           <strong>Depósito:</strong> ingresaste dinero a la cuenta (aún no invertido en activos).<br>
@@ -1652,7 +1621,7 @@ if rol == "admin" or puede_registrar:
 if rol == "admin":
     with t_usr:
         sec("Gestión de usuarios")
-        st.markdown("""<div style="background:#162236;border:1px solid #1E3354;border-left:3px solid #C8A84B;
+        st.markdown("""<div style="background:#1E2E42;border:1px solid #263D58;border-left:3px solid #C8A84B;
             border-radius:0 8px 8px 0;padding:10px 14px;margin-bottom:14px;
             font:400 12px/1.7 IBM Plex Mono,mono;color:#B0C4DC">
           <strong>Portafolio Individual</strong> → el usuario entra y registra sus propias inversiones.<br>
@@ -1733,7 +1702,7 @@ if rol == "admin":
 
         with ca2:
             sec("APIs activas")
-            st.markdown(f"""<div style="background:#162236;border:1px solid #1E3354;
+            st.markdown(f"""<div style="background:#1E2E42;border:1px solid #263D58;
                 border-radius:8px;padding:14px;font:400 11px/2 IBM Plex Mono,mono">
               <div style="color:#8BA5C8;font-size:9px;letter-spacing:1px;margin-bottom:8px">FUENTES</div>
               <div style="color:#F0C040">● CoinMarketCap — Cripto</div>
