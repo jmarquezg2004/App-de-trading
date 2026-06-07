@@ -14,11 +14,11 @@ st.markdown("""
 
 /* Variables de tema — oscuro por defecto */
 :root {
-    --bg:         #17202E;
-    --sidebar-bg: #152030;
-    --surface:    #1E2E42;
-    --surface2:   #17202E;
-    --border:     #263D58;
+    --bg:         #1C2B3A;
+    --sidebar-bg: #1A2840;
+    --surface:    #243450;
+    --surface2:   #1C2B3A;
+    --border:     #2E4D6E;
     --text:       #ffffff;
     --muted:      #8BA5C8;
     --label:      #B0C4DC;
@@ -168,9 +168,7 @@ CATS_MANUALES = {"Inmueble","Negocio","Ganadería","Vehículo","Dividendo","Segu
 CAT_CLR_MAP = {
     "Acción":"#C8A84B","ETF":"#2ECC87","Cripto":"#E87844",
     "CDT":"#6BA3BE","Fondo":"#9B8EC4","Cuenta Remunerada":"#F0C040",
-    "Inmueble":"#E85555","Negocio":"#FF9F43","Ganadería":"#A29BFE",
-    "Vehículo":"#55EFC4","Dividendo":"#FFEAA7","Seguro":"#74B9FF",
-    "Arriendo":"#FD79A8","Otro":"#8BA5C8",
+    "Otro":"#8BA5C8",
 }
 MODO_IND = "Portafolio Individual"
 MODO_OBS = "Observador de Fondo"
@@ -283,12 +281,23 @@ def get_cmc(syms):
             "https://pro-api.coinmarketcap.com/v2/cryptocurrency/quotes/latest",
             params={"symbol":",".join(syms),"convert":"USD"},
             headers={"X-CMC_PRO_API_KEY":CMC_KEY,"Accept":"application/json"}, timeout=10)
-        if r.status_code!=200: return {}
+        if r.status_code!=200:
+            # Intentar con v1 como fallback
+            r2 = requests.get(
+                "https://pro-api.coinmarketcap.com/v1/cryptocurrency/quotes/latest",
+                params={"symbol":",".join(syms),"convert":"USD"},
+                headers={"X-CMC_PRO_API_KEY":CMC_KEY,"Accept":"application/json"}, timeout=10)
+            if r2.status_code!=200: return {}
+            data = r2.json().get("data",{})
+        else:
+            data = r.json().get("data",{})
         out={}
-        for sym,items in r.json().get("data",{}).items():
+        for sym,items in data.items():
             item = items[0] if isinstance(items,list) else items
             q = item.get("quote",{}).get("USD",{})
-            out[sym.upper()]={"price":q.get("price",0),"chg24":q.get("percent_change_24h",0)}
+            price = q.get("price",0)
+            if price and float(price) > 0:
+                out[sym.upper()]={"price":float(price),"chg24":q.get("percent_change_24h",0)}
         return out
     except: return {}
 
@@ -430,9 +439,14 @@ def calcular_posicion(row, prices):
             val=px*cant; gp=val-costo
             return costo,val,gp,(gp/costo*100 if costo else 0),px,chg
         if costo>0 and pc>0:
-            val=costo*px/pc; gp=val-costo
+            # Fallback: usar ratio precio_actual/precio_compra
+            val=costo*(px/pc); gp=val-costo
             return costo,val,gp,(gp/costo*100 if costo else 0),px,chg
+        if costo>0 and pc==0:
+            # Sin precio de compra: mostrar valor actual = costo (sin P&L)
+            return costo,costo,0.0,0.0,px,chg
 
+    # Sin precio de mercado: verificar si hay valor actual en notas
     return costo,costo,0.0,0.0,pc,0
 
 # ══════════════════════════════════════════════════════
@@ -441,8 +455,8 @@ def calcular_posicion(row, prices):
 PT=dict(paper_bgcolor="rgba(0,0,0,0)",plot_bgcolor="rgba(0,0,0,0)",
         font=dict(family="IBM Plex Mono",color="#DCE5F0",size=11),
         margin=dict(l=10,r=10,t=36,b=10),
-        xaxis=dict(gridcolor="#243D55",linecolor="#304D70",tickfont=dict(color="#8BA5C8")),
-        yaxis=dict(gridcolor="#243D55",linecolor="#304D70",tickfont=dict(color="#8BA5C8")))
+        xaxis=dict(gridcolor="#2D4F70",linecolor="#385D80",tickfont=dict(color="#8BA5C8")),
+        yaxis=dict(gridcolor="#2D4F70",linecolor="#385D80",tickfont=dict(color="#8BA5C8")))
 
 def money(v,f=1):
     v2=v*f
@@ -512,13 +526,12 @@ if not st.session_state.logged_in:
                 st.warning("Completa los dos campos")
 
         # ── Recuperar contraseña ──────────────────────────────────────────
-        st.markdown("""<div style="text-align:center;margin-top:14px">
-          <span style="font:400 11px IBM Plex Mono,mono;color:#8BA5C8;letter-spacing:1px">
-            ¿Olvidaste tu contraseña?</span></div>""", unsafe_allow_html=True)
-        if st.button("→ Enviar correo de recuperación", key="btn_reset",
-                     help="Te enviaremos un email para resetear tu contraseña"):
+        # Recuperar contraseña — sin botón (fondo blanco), usando checkbox como trigger
+        st.markdown("<div style='height:10px'></div>", unsafe_allow_html=True)
+        if st.checkbox("¿Olvidaste tu contraseña? → Enviar correo de recuperación",
+                       key="chk_reset"):
             if email.strip():
-                with st.spinner("Enviando correo de recuperación…"):
+                with st.spinner("Enviando correo…"):
                     try:
                         r_reset = requests.post(
                             f"https://identitytoolkit.googleapis.com/v1/accounts:sendOobCode?key={FIREBASE_KEY}",
@@ -526,7 +539,7 @@ if not st.session_state.logged_in:
                             timeout=8
                         )
                         if r_reset.status_code == 200:
-                            st.success(f"✓ Correo enviado a {email.strip()} — revisa tu bandeja de entrada")
+                            st.success(f"✓ Correo enviado a {email.strip()} — revisa tu bandeja")
                         else:
                             err = r_reset.json().get("error", {}).get("message", "Error")
                             st.error(f"❌ {err}")
@@ -562,7 +575,7 @@ with st.sidebar:
     </div>""", unsafe_allow_html=True)
 
     rc = "#C8A84B" if rol=="admin" else "#2ECC87"
-    st.markdown(f"""<div style="background:#1C2D40;border:1px solid #263D58;border-radius:8px;
+    st.markdown(f"""<div style="background:#233348;border:1px solid #2E4D6E;border-radius:8px;
         padding:10px 12px;margin-bottom:10px">
       <div style="font:400 9px IBM Plex Mono,mono;color:#8BA5C8;letter-spacing:1px;margin-bottom:3px">USUARIO</div>
       <div style="font:400 11px/1.4 IBM Plex Mono,mono;color:var(--text);word-break:break-all">{usuario}</div>
@@ -693,6 +706,8 @@ total_actual_real = total_actual + max(cash_neto, 0)  # solo suma cash si es pos
 total_gp_real     = total_gp + cash_neto if cash_neto < 0 else total_gp
 rend_pct = total_gp / total_invertido * 100 if total_invertido > 0 else 0
 
+# Ordenar por fecha de compra: más reciente primero
+posiciones.sort(key=lambda p: str(p.get("F_Compra","")) , reverse=True)
 pos_abiertas = [p for p in posiciones if p["Estado"]=="Abierta"]
 pos_cerradas = [p for p in posiciones if p["Estado"]=="Cerrada"]
 
@@ -773,32 +788,32 @@ def en_periodo_kpi(p):
         return f_ini <= fv <= f_fin
     except: return True
 
-def en_periodo_kpi(p):
-    """Posición activa durante el período: comprada antes de f_fin
-    y no vendida antes de f_ini."""
-    estado = p.get("Estado", "Abierta")
-    if estado == "Archivada": return False
-    if f_ini is None: return True  # Todo el historial
+# Posiciones activas hoy (no archivadas)
+pos_activas   = [p for p in posiciones if p["Estado"] != "Archivada"]
+pos_ab_per    = [p for p in pos_activas if p["Estado"] == "Abierta"]
+
+# Cerradas: filtrar por período seleccionado
+def cerrada_en_periodo(p):
+    if p["Estado"] != "Cerrada": return False
+    if f_ini is None: return True  # todo el historial
     try:
-        fc = pd.to_datetime(p["F_Compra"])
-        if fc > f_fin: return False  # Comprada después del fin → no aplica
-        if estado == "Cerrada":
-            fv = pd.to_datetime(p["F_Venta"]) if p["F_Venta"] else hoy
-            if fv < f_ini: return False  # Vendida antes del inicio → no aplica
-        return True
+        fv = pd.to_datetime(p["F_Venta"]) if p["F_Venta"] else hoy
+        return f_ini <= fv <= f_fin
     except: return True
 
-# Posiciones activas en el período
-pos_periodo   = [p for p in posiciones if en_periodo_kpi(p)]
-pos_ab_per    = [p for p in pos_periodo if p["Estado"] == "Abierta"]
-pos_cer_per   = [p for p in pos_periodo if p["Estado"] == "Cerrada"]
+pos_cer_per = [p for p in pos_activas if cerrada_en_periodo(p)]
 
-# KPIs del período
-inv_per  = sum(p["Invertido"]  for p in pos_periodo)
-act_per  = sum(p["Val_Actual"] for p in pos_periodo)
-pnl_tot  = sum(p["GP_usd"]     for p in pos_periodo)
-gp_per   = pnl_tot
+# KPIs — portafolio actual siempre refleja el estado real HOY
+inv_per  = sum(p["Invertido"]  for p in pos_ab_per)   # solo abiertas
+act_per  = sum(p["Val_Actual"] for p in pos_ab_per)   # valor actual abiertas
+# G/P = PnL flotante de abiertas + PnL realizado de cerradas en período
+pnl_ab   = sum(p["GP_usd"] for p in pos_ab_per)
+pnl_cer  = sum(p["GP_usd"] for p in pos_cer_per)
+gp_per   = pnl_ab + pnl_cer
 rend_per = gp_per / inv_per * 100 if inv_per > 0 else 0
+
+# Para mostrar en KPI de período
+label_periodo_cer = f"({len(pos_cer_per)} cerradas {'en período' if f_ini else 'en total'})"
 
 # Badge informativo del período
 label_periodo = periodo if f_ini is None else f"{f_ini.strftime('%d/%m/%y')} → {f_fin.strftime('%d/%m/%y')}"
@@ -815,12 +830,12 @@ with k3: st.markdown(card("Ganancia / Pérdida",
     f"{'+'if gp_per>=0 else ''}{money(gp_per,factor)}{sfx}",
     f"{'▲' if rend_per>=0 else '▼'} {abs(rend_per):.2f}%", color=gc), unsafe_allow_html=True)
 with k4: st.markdown(card("Posiciones abiertas", str(len(pos_ab_per)),
-    f"{len(pos_cer_per)} cerradas en período", color="#F0C040"), unsafe_allow_html=True)
+    label_periodo_cer, color="#F0C040"), unsafe_allow_html=True)
 with k5:
     ganadoras_per = sum(1 for p in pos_cer_per if p["GP_usd"] > 0)
     wr = ganadoras_per/len(pos_cer_per)*100 if pos_cer_per else 0
-    st.markdown(card("Win rate", f"{wr:.1f}%",
-        f"{ganadoras_per}/{len(pos_cer_per)} cerradas en verde", color="#9B8EC4"), unsafe_allow_html=True)
+    wr_label = f"{ganadoras_per}/{len(pos_cer_per)} cerradas en verde" if pos_cer_per else "Sin ops cerradas"
+    st.markdown(card("Win rate", f"{wr:.1f}%", wr_label, color="#9B8EC4"), unsafe_allow_html=True)
 
 # ── Indicadores de análisis (fila secundaria) ─────────────
 ops_cerradas_calc = [p for p in posiciones if p["Estado"]=="Cerrada"]
@@ -898,23 +913,29 @@ with t_dash:
 
     with cl:
         sec("Evolución del portafolio")
-        if pos_periodo:
+        posiciones_graf = [p for p in posiciones if p["Estado"] != "Archivada"]
+        if posiciones_graf:
             eventos = []
             hoy_ts = pd.Timestamp.now().normalize()
-            for p in posiciones:  # usar TODAS las posiciones para la curva completa
-                if p["Estado"] == "Archivada": continue
+            for p in posiciones_graf:
                 try:
                     fc = pd.to_datetime(p["F_Compra"])
                     fv = pd.to_datetime(p["F_Venta"]) if p["F_Venta"] else hoy_ts
                     # Recortar al período seleccionado
-                    if f_fin is not None:
-                        fv = min(fv, f_fin)
-                    if f_ini is not None:
-                        fc = max(fc, f_ini)
-                    if fc > fv: continue
-                    eventos.append({"fecha": fc, "invertido": p["Invertido"], "actual": p["Invertido"]})
+                    if f_fin is not None: fv = min(fv, f_fin)
+                    if f_ini is not None: fc_graf = max(fc, f_ini)
+                    else: fc_graf = fc
+                    if fc_graf > fv: continue
+                    # Valor al inicio del período (proporcional al tiempo transcurrido)
+                    eventos.append({"fecha": fc_graf, "invertido": p["Invertido"],
+                                    "actual": p["Invertido"] if fc_graf == fc else p["Val_Actual"]})
                     eventos.append({"fecha": fv, "invertido": p["Invertido"], "actual": p["Val_Actual"]})
                 except: pass
+            # Agregar punto de HOY si no hay fecha fin
+            if f_fin is None and eventos:
+                eventos.append({"fecha": hoy_ts,
+                                "invertido": sum(p["Invertido"] for p in posiciones_graf if p["Estado"]=="Abierta"),
+                                "actual":    sum(p["Val_Actual"] for p in posiciones_graf if p["Estado"]=="Abierta")})
 
             if eventos:
                 df_ev = pd.DataFrame(eventos).sort_values("fecha")
@@ -1034,7 +1055,7 @@ with t_dash:
                              if p["Ticker"].upper()==tk.upper() and p["Estado"]=="Abierta"), None)
             pnl_html = f'<div style="font:400 9px IBM Plex Mono,mono;color:{"#2ECC87" if pnl_real>=0 else "#E85555"}">P&L: {"+" if pnl_real>=0 else ""}{pnl_real:.2f}%</div>' if pnl_real is not None else ""
             with cols_p[i%min(len(prices),5)]:
-                st.markdown(f"""<div style="background:#1E2E42;border:1px solid #263D58;
+                st.markdown(f"""<div style="background:#243450;border:1px solid #2E4D6E;
                     border-radius:8px;padding:12px;text-align:center;margin-bottom:8px">
                   <div style="font:600 11px/1.5 IBM Plex Mono,mono;color:#C8A84B">{tk}</div>
                   <div style="font:600 15px/1.4 IBM Plex Mono,mono;color:var(--text)">{pxs}</div>
@@ -1057,7 +1078,7 @@ with t_port:
             chg_str = f"{'▲' if p['Chg24']>=0 else '▼'} {abs(p['Chg24']):.2f}%" if p["Chg24"]!=0 else "—"
             chg_clr = "#2ECC87" if p["Chg24"]>=0 else "#E85555"
 
-            st.markdown(f"""<div style="background:#1E2E42;border:1px solid #263D58;
+            st.markdown(f"""<div style="background:#243450;border:1px solid #2E4D6E;
                 border-radius:10px;padding:14px 18px;margin-bottom:10px;
                 display:flex;align-items:center;gap:16px;flex-wrap:wrap">
               <div style="min-width:120px">
@@ -1099,7 +1120,7 @@ with t_port:
         for p in pos_cer_per:
             gc3 = "#2ECC87" if p["GP_usd"]>=0 else "#E85555"
             sg3 = "+" if p["GP_usd"]>=0 else ""
-            st.markdown(f"""<div style="background:#17202E;border:1px solid #263D58;
+            st.markdown(f"""<div style="background:#1C2B3A;border:1px solid #2E4D6E;
                 border-radius:10px;padding:12px 18px;margin-bottom:8px;
                 display:flex;align-items:center;gap:16px;flex-wrap:wrap;opacity:.9">
               <div style="min-width:120px">
@@ -1201,47 +1222,20 @@ if puede_registrar:
                 qty_registro    = valor_pos       # cantidad = capital total
 
             else:
-                # Activos reales: inmueble, negocio, ganado, vehículo, etc.
-                cat_labels = {
-                    "Inmueble": "🏠 Inmueble (apartamento, casa, lote, finca…)",
-                    "Negocio":  "🏢 Negocio (empresa, local, participación…)",
-                    "Ganadería":"🐄 Ganadería / Criadero",
-                    "Vehículo": "🚗 Vehículo en alquiler",
-                    "Dividendo":"💰 Dividendo / Herencia / Fideicomiso",
-                    "Seguro":   "🛡 Seguro en dólares / Póliza",
-                    "Arriendo": "🏘 Ingreso por arrendamiento",
-                    "Otro":     "📦 Otro activo real",
-                }
-                lbl = cat_labels.get(categoria, categoria)
-                st.markdown(f"""<div style="font:400 11px IBM Plex Mono,mono;color:#8BA5C8;
-                    margin:-4px 0 8px;padding:8px 12px;background:var(--surface);
-                    border-left:3px solid #E87844;border-radius:0 6px 6px 0">
-                  <strong>{lbl}</strong> — ingresa el valor total de la inversión.
-                  Actualiza el valor manualmente cuando cambie.</div>""", unsafe_allow_html=True)
+                # Otro — mismo formulario que mercado pero sin ticker obligatorio
                 c4,c5,c6  = st.columns(3)
-                valor_pos = c4.number_input("Valor total invertido (USD)", min_value=0.0,
-                                             step=0.01, format="%.2f",
-                                             help="Ej: costo del apartamento, valor del negocio…")
-                valor_act = c5.number_input("Valor actual estimado (USD)", min_value=0.0,
-                                             step=0.01, format="%.2f",
-                                             help="Si es diferente al de compra. Si es igual, deja en 0.")
-                broker    = c6.text_input("Ubicación / Intermediario",
-                                           placeholder="Ciudad, banco, corredor…")
+                precio_c  = c4.number_input("Precio / valor unitario (USD)", min_value=0.0,
+                                             step=0.0001, format="%.4f")
+                valor_pos = c5.number_input("Capital invertido (USD)", min_value=0.0,
+                                             step=0.01, format="%.2f")
+                broker    = c6.text_input("Broker / Entidad", placeholder="Entidad, lugar…")
                 c7,c8     = st.columns(2)
-                ingreso_m = c7.number_input("Ingreso mensual (arriendo/dividendo, USD)",
-                                             min_value=0.0, step=0.01, format="%.2f",
-                                             help="Si genera ingreso periódico. Opcional.")
-                notas     = c8.text_input("Descripción / notas")
-                ticker_api= ""
-                # Para activos manuales: precio_compra = valor invertido, cantidad = 1
-                precio_registro = valor_pos
-                qty_registro    = 1.0
-                # El valor actual se guarda en notas si es diferente
-                notas_final = notas.strip()
-                if valor_act > 0 and valor_act != valor_pos:
-                    notas_final += f" | Valor actual: ${valor_act:,.2f}"
-                if ingreso_m > 0:
-                    notas_final += f" | Ingreso mensual: ${ingreso_m:,.2f}/mes"
+                ticker_api= c7.text_input("Ticker (opcional)", placeholder="Si tiene ticker de mercado")
+                notas     = c8.text_input("Notas (opcional)")
+                qty       = round(valor_pos / precio_c, 8) if precio_c > 0 and valor_pos > 0 else 1.0
+                st.text_input("Cantidad calculada", value=f"{qty:,.8f}", disabled=True)
+                precio_registro = precio_c if precio_c > 0 else valor_pos
+                qty_registro    = qty
 
             if st.form_submit_button("💾 REGISTRAR INVERSIÓN", use_container_width=True):
                 if not activo.strip():
@@ -1249,7 +1243,7 @@ if puede_registrar:
                 elif valor_pos <= 0:
                     st.error("❌ El capital invertido debe ser mayor a 0")
                 else:
-                    notas_save = notas.strip() if es_mercado or es_cdt else notas_final
+                    notas_save = notas.strip()
                     ok, msg = fs_post("inversiones", {
                         "Fondo":         fondo,
                         "Usuario":       usuario,
@@ -1303,7 +1297,7 @@ if puede_registrar:
                     gp_venta = (precio_v - pos_sel["Px_Compra"]) * pos_sel["Cantidad"]
                     gp_pct_v = gp_venta / pos_sel["Invertido"] * 100 if pos_sel["Invertido"] else 0
                     clr_v    = "#2ECC87" if gp_venta >= 0 else "#E85555"
-                    st.markdown(f"""<div style="background:#1E2E42;border:1px solid #263D58;
+                    st.markdown(f"""<div style="background:#243450;border:1px solid #2E4D6E;
                         border-radius:8px;padding:12px 16px;margin:8px 0;
                         display:flex;gap:24px;flex-wrap:wrap">
                       <div><div style="font:400 9px IBM Plex Mono,mono;color:#8BA5C8">RESULTADO VENTA</div>
@@ -1524,7 +1518,7 @@ if rol == "admin" or puede_registrar:
                 money(cash_neto, factor)+sfx,
                 "Depósitos - Retiros", color=cn_color), unsafe_allow_html=True)
 
-        st.markdown("""<div style="background:#1E2E42;border:1px solid #263D58;
+        st.markdown("""<div style="background:#243450;border:1px solid #2E4D6E;
             border-left:3px solid #C8A84B;border-radius:0 8px 8px 0;
             padding:10px 14px;margin:14px 0;font:400 11px/1.7 IBM Plex Mono,mono;color:#B0C4DC">
           <strong>Depósito:</strong> ingresaste dinero a la cuenta (aún no invertido en activos).<br>
@@ -1621,7 +1615,7 @@ if rol == "admin" or puede_registrar:
 if rol == "admin":
     with t_usr:
         sec("Gestión de usuarios")
-        st.markdown("""<div style="background:#1E2E42;border:1px solid #263D58;border-left:3px solid #C8A84B;
+        st.markdown("""<div style="background:#243450;border:1px solid #2E4D6E;border-left:3px solid #C8A84B;
             border-radius:0 8px 8px 0;padding:10px 14px;margin-bottom:14px;
             font:400 12px/1.7 IBM Plex Mono,mono;color:#B0C4DC">
           <strong>Portafolio Individual</strong> → el usuario entra y registra sus propias inversiones.<br>
@@ -1702,7 +1696,7 @@ if rol == "admin":
 
         with ca2:
             sec("APIs activas")
-            st.markdown(f"""<div style="background:#1E2E42;border:1px solid #263D58;
+            st.markdown(f"""<div style="background:#243450;border:1px solid #2E4D6E;
                 border-radius:8px;padding:14px;font:400 11px/2 IBM Plex Mono,mono">
               <div style="color:#8BA5C8;font-size:9px;letter-spacing:1px;margin-bottom:8px">FUENTES</div>
               <div style="color:#F0C040">● CoinMarketCap — Cripto</div>
