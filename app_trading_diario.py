@@ -750,15 +750,19 @@ for _, row in df_inv.iterrows():
         "Usuario":    row.get("Usuario","—"),
     })
 
-# Cash neto: depósitos extra + retiros (no son compras de activos)
-# Aporte = entró dinero al fondo/portafolio
-# Retiro = salió dinero → reduce el valor real del portafolio
+# Movimientos de capital
 cash_aportes = 0.0
 cash_retiros = 0.0
 if not df_ap.empty and "Tipo" in df_ap.columns:
     cash_aportes = df_ap[df_ap["Tipo"]=="Aporte"]["Monto"].sum()
     cash_retiros = df_ap[df_ap["Tipo"]=="Retiro"]["Monto"].sum()
-cash_neto = cash_aportes - cash_retiros  # positivo = hay cash disponible, negativo = retiraron más
+
+# Cash disponible real (como un broker):
+# = Total depositado - Total retirado - Capital actualmente invertido en posiciones abiertas
+# Esto es el dinero que tienes en el broker SIN invertir
+cash_neto = cash_aportes - cash_retiros - total_invertido
+# Patrimonio total = valor del portafolio + cash disponible
+patrimonio_total = total_actual + max(cash_neto, 0)
 
 # Portafolio real = valor de posiciones abiertas + cash neto (retiros ya restan)
 # Si hay retiros, el valor total baja aunque las posiciones estén bien
@@ -956,14 +960,14 @@ st.markdown("<br>", unsafe_allow_html=True)
 puede_registrar = (rol=="admin") or (modo==MODO_IND)
 
 if rol == "admin":
-    tabs = st.tabs(["⬡ Dashboard","◈ Portafolio","📌 Registrar","💵 Capital","👥 Usuarios","⚙ Admin"])
-    t_dash,t_port,t_reg,t_cap,t_usr,t_adm = tabs
+    tabs = st.tabs(["⬡ Dashboard","◈ Portafolio","📌 Registrar","💵 Capital","📅 Rendimiento","👥 Usuarios","⚙ Admin"])
+    t_dash,t_port,t_reg,t_cap,t_rend,t_usr,t_adm = tabs
 elif puede_registrar:
-    tabs = st.tabs(["⬡ Dashboard","◈ Mi portafolio","📌 Registrar","💵 Capital"])
-    t_dash,t_port,t_reg,t_cap = tabs
+    tabs = st.tabs(["⬡ Dashboard","◈ Mi portafolio","📌 Registrar","💵 Capital","📅 Rendimiento"])
+    t_dash,t_port,t_reg,t_cap,t_rend = tabs
 else:
-    tabs = st.tabs(["⬡ Dashboard","◈ Portafolio"])
-    t_dash,t_port = tabs
+    tabs = st.tabs(["⬡ Dashboard","◈ Portafolio","📅 Rendimiento"])
+    t_dash,t_port,t_rend = tabs
 
 # ══════════════════════════════════════════════════════
 # DASHBOARD
@@ -1626,18 +1630,22 @@ if puede_registrar:
 if rol == "admin" or puede_registrar:
     with t_cap:
         # Resumen de cash actual
-        cap1, cap2, cap3 = st.columns(3)
+        cap1, cap2, cap3, cap4 = st.columns(4)
         with cap1:
             st.markdown(card("Depósitos acumulados",
-                money(cash_aportes, factor)+sfx, color="#2ECC87"), unsafe_allow_html=True)
+                money(cash_aportes, factor)+sfx, color="#1A8A5A"), unsafe_allow_html=True)
         with cap2:
             st.markdown(card("Retiros acumulados",
-                money(cash_retiros, factor)+sfx, color="#E85555"), unsafe_allow_html=True)
+                money(cash_retiros, factor)+sfx, color="#C83030"), unsafe_allow_html=True)
         with cap3:
-            cn_color = "#2ECC87" if cash_neto >= 0 else "#E85555"
-            st.markdown(card("Cash neto disponible",
+            cn_color = "#1A8A5A" if cash_neto >= 0 else "#C83030"
+            st.markdown(card("Cash sin invertir",
                 money(cash_neto, factor)+sfx,
-                "Depósitos - Retiros", color=cn_color), unsafe_allow_html=True)
+                "Depósitos - Retiros - Invertido", color=cn_color), unsafe_allow_html=True)
+        with cap4:
+            st.markdown(card("Patrimonio total",
+                money(patrimonio_total, factor)+sfx,
+                "Portafolio + Cash disponible", color="#C8A84B"), unsafe_allow_html=True)
 
         st.markdown("""<div style="background:#FFFFFF;border:1px solid #1E3354;
             border-left:3px solid #C8A84B;border-radius:0 8px 8px 0;
@@ -1729,6 +1737,156 @@ if rol == "admin" or puede_registrar:
                     = Cash neto: <strong style="color:{"#2ECC87" if total_dep-total_ret>=0 else "#E85555"}">
                     {money(total_dep-total_ret)}{sfx}</strong></div>
                 </div>""", unsafe_allow_html=True)
+
+# ══════════════════════════════════════════════════════
+# RENDIMIENTO MENSUAL
+# ══════════════════════════════════════════════════════
+_tiene_rend = (rol == "admin") or puede_registrar or True
+with t_rend:
+    sec("Rendimiento acumulado por mes")
+
+    # Selector de año
+    años_disp = sorted(set(
+        pd.to_datetime(p["F_Compra"]).year
+        for p in posiciones if p.get("F_Compra")
+    ), reverse=True) if posiciones else [datetime.now().year]
+    if not años_disp: años_disp = [datetime.now().year]
+
+    col_año, _ = st.columns([1,3])
+    año_sel = col_año.selectbox("Año", años_disp, key="año_rend")
+
+    MESES = ["Enero","Febrero","Marzo","Abril","Mayo","Junio",
+             "Julio","Agosto","Septiembre","Octubre","Noviembre","Diciembre"]
+
+    # Para cada mes del año seleccionado, calcular:
+    # - Capital invertido al final del mes
+    # - Valor del portafolio al final del mes
+    # - PnL realizado (posiciones cerradas en ese mes)
+    # - PnL flotante (posiciones abiertas al final del mes)
+
+    meses_data = []
+    hoy_ts = pd.Timestamp.now().normalize()
+
+    for mes_num in range(1, 13):
+        import calendar
+        ultimo_dia = calendar.monthrange(año_sel, mes_num)[1]
+        f_inicio = pd.Timestamp(año_sel, mes_num, 1)
+        f_fin_mes = pd.Timestamp(año_sel, mes_num, ultimo_dia)
+
+        # No mostrar meses futuros
+        if f_inicio > hoy_ts:
+            break
+
+        # Posiciones activas en este mes
+        inv_mes = 0.0
+        val_mes = 0.0
+        pnl_realizado = 0.0
+        pnl_flotante  = 0.0
+        n_abiertas = 0
+        n_cerradas = 0
+
+        for p in posiciones:
+            if p["Estado"] == "Archivada": continue
+            try:
+                fc = pd.to_datetime(p["F_Compra"])
+                fv = pd.to_datetime(p["F_Venta"]) if p["F_Venta"] else hoy_ts
+
+                # Posición comprada antes o durante este mes
+                if fc > f_fin_mes: continue
+
+                if p["Estado"] == "Cerrada":
+                    # Cerrada en este mes → suma al PnL realizado
+                    if f_inicio <= fv <= f_fin_mes:
+                        pnl_realizado += p["GP_usd"]
+                        n_cerradas += 1
+                    # Cerrada antes de este mes → no incluir
+                    elif fv < f_inicio:
+                        continue
+                    # Cerrada después → abierta durante el mes
+                    else:
+                        inv_mes += p["Invertido"]
+                        val_mes += p["Invertido"]  # en el pasado = costo
+                        n_abiertas += 1
+                else:
+                    # Abierta → si fue comprada antes o durante el mes
+                    inv_mes += p["Invertido"]
+                    val_mes += p["Val_Actual"] if f_fin_mes >= hoy_ts else p["Invertido"]
+                    pnl_flotante += p["GP_usd"] if f_fin_mes >= hoy_ts else 0
+                    n_abiertas += 1
+            except: pass
+
+        pnl_total = pnl_flotante + pnl_realizado
+        rend_pct  = pnl_total / inv_mes * 100 if inv_mes > 0 else 0
+
+        meses_data.append({
+            "mes": mes_num,
+            "nombre": MESES[mes_num-1],
+            "inv": inv_mes,
+            "val": val_mes,
+            "pnl_real": pnl_realizado,
+            "pnl_flot": pnl_flotante,
+            "pnl_tot":  pnl_total,
+            "rend_pct": rend_pct,
+            "n_ab": n_abiertas,
+            "n_cer": n_cerradas,
+        })
+
+    if meses_data:
+        # Cards por mes
+        cols_m = st.columns(3)
+        for i, m in enumerate(meses_data):
+            clr = "#1A8A5A" if m["pnl_tot"] >= 0 else "#C83030"
+            sgn = "+" if m["pnl_tot"] >= 0 else ""
+            with cols_m[i % 3]:
+                st.markdown(f"""<div style="background:#FFFFFF;border:1px solid #C8D4E8;
+                    border-radius:10px;padding:14px 16px;margin-bottom:12px;
+                    border-top:3px solid {clr};box-shadow:0 1px 4px rgba(27,43,75,0.07)">
+                  <div style="font:700 12px IBM Plex Mono,mono;color:#1B2B4B;margin-bottom:8px">
+                    {m['nombre']} {año_sel}</div>
+                  <div style="display:flex;justify-content:space-between;margin-bottom:4px">
+                    <span style="font:400 9px IBM Plex Mono,mono;color:#5A7A9A">INVERTIDO</span>
+                    <span style="font:500 11px IBM Plex Mono,mono;color:#1B2B4B">{money(m['inv']*factor)}{sfx}</span>
+                  </div>
+                  <div style="display:flex;justify-content:space-between;margin-bottom:4px">
+                    <span style="font:400 9px IBM Plex Mono,mono;color:#5A7A9A">VALOR</span>
+                    <span style="font:500 11px IBM Plex Mono,mono;color:#1B2B4B">{money(m['val']*factor)}{sfx}</span>
+                  </div>
+                  <div style="display:flex;justify-content:space-between;margin-bottom:4px">
+                    <span style="font:400 9px IBM Plex Mono,mono;color:#5A7A9A">REALIZADO</span>
+                    <span style="font:500 11px IBM Plex Mono,mono;color:{('#1A8A5A' if m['pnl_real']>=0 else '#C83030')}">{'+' if m['pnl_real']>=0 else ''}{money(m['pnl_real']*factor)}{sfx}</span>
+                  </div>
+                  <div style="border-top:1px solid #E4EAF0;margin:8px 0 6px"></div>
+                  <div style="display:flex;justify-content:space-between;align-items:center">
+                    <span style="font:600 13px IBM Plex Mono,mono;color:{clr}">{sgn}{money(m['pnl_tot']*factor)}{sfx}</span>
+                    <span style="font:700 13px IBM Plex Mono,mono;color:{clr};background:{'rgba(26,138,90,0.1)' if m['pnl_tot']>=0 else 'rgba(200,48,48,0.1)'};
+                          padding:2px 8px;border-radius:4px">{sgn}{m['rend_pct']:.2f}%</span>
+                  </div>
+                  <div style="font:400 9px IBM Plex Mono,mono;color:#8AA5C0;margin-top:4px">
+                    {m['n_ab']} abiertas · {m['n_cer']} cerradas</div>
+                </div>""", unsafe_allow_html=True)
+
+        # Resumen del año
+        total_año_pnl = sum(m["pnl_tot"] for m in meses_data)
+        total_año_inv = max(m["inv"] for m in meses_data) if meses_data else 0
+        rend_año = total_año_pnl / total_año_inv * 100 if total_año_inv > 0 else 0
+        clr_año = "#1A8A5A" if total_año_pnl >= 0 else "#C83030"
+        st.markdown(f"""<div style="background:#1B2B4B;border-radius:10px;padding:16px 20px;
+            margin-top:8px;display:flex;gap:32px;flex-wrap:wrap;align-items:center">
+          <div>
+            <div style="font:400 9px IBM Plex Mono,mono;color:#7A9CC0;letter-spacing:1px">RESUMEN {año_sel}</div>
+            <div style="font:700 20px IBM Plex Mono,mono;color:{clr_año}">{'+' if total_año_pnl>=0 else ''}{money(total_año_pnl*factor)}{sfx}</div>
+          </div>
+          <div>
+            <div style="font:400 9px IBM Plex Mono,mono;color:#7A9CC0">RENTABILIDAD AÑO</div>
+            <div style="font:700 20px IBM Plex Mono,mono;color:{clr_año}">{'+' if rend_año>=0 else ''}{rend_año:.2f}%</div>
+          </div>
+          <div>
+            <div style="font:400 9px IBM Plex Mono,mono;color:#7A9CC0">MESES CON GANANCIA</div>
+            <div style="font:700 20px IBM Plex Mono,mono;color:#E8EDF5">{sum(1 for m in meses_data if m['pnl_tot']>0)}/{len(meses_data)}</div>
+          </div>
+        </div>""", unsafe_allow_html=True)
+    else:
+        st.info("Sin datos para el año seleccionado.")
 
 # ══════════════════════════════════════════════════════
 # USUARIOS (admin)
