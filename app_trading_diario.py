@@ -779,8 +779,6 @@ rend_pct         = total_gp / cap_en_abiertas * 100 if cap_en_abiertas > 0 else 
 
 # Portafolio real = valor de posiciones abiertas + cash neto (retiros ya restan)
 # Si hay retiros, el valor total baja aunque las posiciones estén bien
-total_actual_real = total_actual + max(cash_neto, 0)  # solo suma cash si es positivo
-total_gp_real     = total_gp + cash_neto if cash_neto < 0 else total_gp
 rend_pct = total_gp / total_invertido * 100 if total_invertido > 0 else 0
 
 # Ordenar por fecha de compra: más reciente primero
