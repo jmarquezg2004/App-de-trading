@@ -14,25 +14,14 @@ st.markdown("""
 
 /* Variables de tema — oscuro por defecto */
 :root {
-    --bg:         #1C2B3A;
-    --sidebar-bg: #1A2840;
-    --surface:    #243450;
-    --surface2:   #1C2B3A;
-    --border:     #2E4D6E;
-    --text:       #ffffff;
-    --muted:      #8BA5C8;
-    --label:      #B0C4DC;
-}
-/* Tema claro */
-body.tema-claro {
-    --bg:         #F0F4F8;
-    --sidebar-bg: #E2EAF4;
-    --surface:    #FFFFFF;
-    --surface2:   #EDF2F7;
-    --border:     #C4D4E8;
-    --text:       #1A2640;
-    --muted:      #4A6080;
-    --label:      #3A5070;
+    --bg:         #131E2E;
+    --sidebar-bg: #0F1824;
+    --surface:    #1B2A40;
+    --surface2:   #131E2E;
+    --border:     #243550;
+    --text:       #E8EDF5;
+    --muted:      #7A9CC0;
+    --label:      #9BB5D0;
 }
 
 html, body { font-family: 'IBM Plex Sans', sans-serif; }
@@ -273,33 +262,71 @@ def get_trm():
     except: pass
     return 4200.0
 
+# Mapa de tickers a IDs de CoinGecko
+COINGECKO_IDS = {
+    "BTC":"bitcoin","ETH":"ethereum","SOL":"solana","BNB":"binancecoin",
+    "ADA":"cardano","XRP":"ripple","DOT":"polkadot","MATIC":"matic-network",
+    "AVAX":"avalanche-2","LINK":"chainlink","UNI":"uniswap","ATOM":"cosmos",
+    "LTC":"litecoin","BCH":"bitcoin-cash","ALGO":"algorand","XLM":"stellar",
+    "VET":"vechain","SAND":"the-sandbox","MANA":"decentraland",
+    "HYPE":"hyperliquid","ZEC":"zcash","ZCSH":"zcash","ZEN":"horizen",
+    "DOGE":"dogecoin","SHIB":"shiba-inu","PEPE":"pepe","WIF":"dogwifcoin",
+    "APT":"aptos","SUI":"sui","ARB":"arbitrum","OP":"optimism",
+    "INJ":"injective-protocol","TIA":"celestia","BLUR":"blur",
+    "AAVE":"aave","MKR":"maker","SNX":"synthetix-network-token",
+}
+
 @st.cache_data(ttl=300)
 def get_cmc(syms):
+    """Obtiene precios cripto: CoinGecko (gratis) → Yahoo Finance fallback."""
     if not syms: return {}
-    try:
-        r = requests.get(
-            "https://pro-api.coinmarketcap.com/v2/cryptocurrency/quotes/latest",
-            params={"symbol":",".join(syms),"convert":"USD"},
-            headers={"X-CMC_PRO_API_KEY":CMC_KEY,"Accept":"application/json"}, timeout=10)
-        if r.status_code!=200:
-            # Intentar con v1 como fallback
-            r2 = requests.get(
-                "https://pro-api.coinmarketcap.com/v1/cryptocurrency/quotes/latest",
-                params={"symbol":",".join(syms),"convert":"USD"},
-                headers={"X-CMC_PRO_API_KEY":CMC_KEY,"Accept":"application/json"}, timeout=10)
-            if r2.status_code!=200: return {}
-            data = r2.json().get("data",{})
-        else:
-            data = r.json().get("data",{})
-        out={}
-        for sym,items in data.items():
-            item = items[0] if isinstance(items,list) else items
-            q = item.get("quote",{}).get("USD",{})
-            price = q.get("price",0)
+    out = {}
+
+    # 1. CoinGecko — gratis, sin key, amplia cobertura
+    ids_map = {}
+    for s in syms:
+        cg_id = COINGECKO_IDS.get(s.upper())
+        if cg_id:
+            ids_map[cg_id] = s.upper()
+
+    if ids_map:
+        try:
+            r = requests.get(
+                "https://api.coingecko.com/api/v3/simple/price",
+                params={
+                    "ids": ",".join(ids_map.keys()),
+                    "vs_currencies": "usd",
+                    "include_24hr_change": "true"
+                },
+                headers={"Accept": "application/json",
+                         "User-Agent": "ArkzInvest/1.0"},
+                timeout=10
+            )
+            if r.status_code == 200:
+                data = r.json()
+                for cg_id, sym in ids_map.items():
+                    if cg_id in data:
+                        price = data[cg_id].get("usd", 0)
+                        chg   = data[cg_id].get("usd_24h_change", 0)
+                        if price and float(price) > 0:
+                            out[sym] = {"price": float(price), "chg24": float(chg or 0)}
+        except: pass
+
+    # 2. Para tickers no en CoinGecko, usar Yahoo Finance (BTC-USD, ETH-USD)
+    missing = [s for s in syms if s.upper() not in out]
+    for sym in missing:
+        try:
+            import yfinance as yf
+            ticker_yahoo = f"{sym.upper()}-USD"
+            info = yf.Ticker(ticker_yahoo).fast_info
+            price = getattr(info, "last_price", None) or getattr(info, "previous_close", None)
+            prev  = getattr(info, "previous_close", price) or price
+            chg   = ((price - prev) / prev * 100) if price and prev else 0
             if price and float(price) > 0:
-                out[sym.upper()]={"price":float(price),"chg24":q.get("percent_change_24h",0)}
-        return out
-    except: return {}
+                out[sym.upper()] = {"price": float(price), "chg24": float(chg)}
+        except: pass
+
+    return out
 
 @st.cache_data(ttl=300)
 def get_stock(ticker):
@@ -362,10 +389,14 @@ def load_inv():
                 else: pv=pe
                 fv=str(r.get("Fecha",""))
             else: estado,fv,pv="Abierta","",0.0
+            pe=float(r.get("Precio_Entrada",0) or r.get("Precio_Compra",0) or 0)
+            vp=float(r.get("Valor_Pos",0) or r.get("Invertido",0) or 0)
             cant=float(r.get("Cantidad",0) or 0)
-            pe=float(r.get("Precio_Entrada",0) or 0)
-            vp=float(r.get("Valor_Pos",0) or 0)
-            if cant==0 and pe>0 and vp>0: cant=round(vp/pe,8)
+            # Reconstruir cantidad si falta
+            if cant==0 and pe>0 and vp>0:
+                cant=round(vp/pe,8)
+            elif cant==0 and vp>0:
+                cant=vp  # Sin precio: cant = capital (para CDT/posiciones manuales)
             cat=str(r.get("Categoria","") or r.get("Moneda","") or "Otro")
             rows_legacy.append({
                 "_id":str(r.get("_id","")), "Fondo":str(r.get("Fondo","")),
@@ -420,7 +451,24 @@ def calcular_posicion(row, prices):
     pc=float(row.get("Precio_Compra",0) or 0)
     pv=float(row.get("Precio_Venta",0) or 0)
     estado=str(row.get("Estado","Abierta"))
-    costo=cant*pc
+
+    # Calcular costo según categoría
+    # Para CDT/Remunerada: cant = capital total, pc = TEA
+    if cat in ["CDT","Cuenta Remunerada"]:
+        costo = cant  # cant ES el capital en CDT
+    elif cant > 0 and pc > 0:
+        costo = cant * pc
+    elif cant == 0 and pc > 0:
+        # Legacy: Valor_Pos / Precio_Entrada estaba guardado mal
+        # Intentar reconstruir desde Notas o usar costo directo
+        vp = float(row.get("Valor_Pos", 0) or 0)
+        if vp > 0:
+            cant = round(vp / pc, 8)
+            costo = vp
+        else:
+            costo = 0.0
+    else:
+        costo = cant * pc if pc > 0 else 0.0
 
     if estado=="Cerrada" and pv>0:
         val=cant*pv; gp=val-costo
@@ -455,8 +503,8 @@ def calcular_posicion(row, prices):
 PT=dict(paper_bgcolor="rgba(0,0,0,0)",plot_bgcolor="rgba(0,0,0,0)",
         font=dict(family="IBM Plex Mono",color="#DCE5F0",size=11),
         margin=dict(l=10,r=10,t=36,b=10),
-        xaxis=dict(gridcolor="#2D4F70",linecolor="#385D80",tickfont=dict(color="#8BA5C8")),
-        yaxis=dict(gridcolor="#2D4F70",linecolor="#385D80",tickfont=dict(color="#8BA5C8")))
+        xaxis=dict(gridcolor="#243550",linecolor="#2E4A65",tickfont=dict(color="#8BA5C8")),
+        yaxis=dict(gridcolor="#243550",linecolor="#2E4A65",tickfont=dict(color="#8BA5C8")))
 
 def money(v,f=1):
     v2=v*f
@@ -575,7 +623,7 @@ with st.sidebar:
     </div>""", unsafe_allow_html=True)
 
     rc = "#C8A84B" if rol=="admin" else "#2ECC87"
-    st.markdown(f"""<div style="background:#233348;border:1px solid #2E4D6E;border-radius:8px;
+    st.markdown(f"""<div style="background:#182438;border:1px solid #243550;border-radius:8px;
         padding:10px 12px;margin-bottom:10px">
       <div style="font:400 9px IBM Plex Mono,mono;color:#8BA5C8;letter-spacing:1px;margin-bottom:3px">USUARIO</div>
       <div style="font:400 11px/1.4 IBM Plex Mono,mono;color:var(--text);word-break:break-all">{usuario}</div>
@@ -1055,7 +1103,7 @@ with t_dash:
                              if p["Ticker"].upper()==tk.upper() and p["Estado"]=="Abierta"), None)
             pnl_html = f'<div style="font:400 9px IBM Plex Mono,mono;color:{"#2ECC87" if pnl_real>=0 else "#E85555"}">P&L: {"+" if pnl_real>=0 else ""}{pnl_real:.2f}%</div>' if pnl_real is not None else ""
             with cols_p[i%min(len(prices),5)]:
-                st.markdown(f"""<div style="background:#243450;border:1px solid #2E4D6E;
+                st.markdown(f"""<div style="background:#1B2A40;border:1px solid #243550;
                     border-radius:8px;padding:12px;text-align:center;margin-bottom:8px">
                   <div style="font:600 11px/1.5 IBM Plex Mono,mono;color:#C8A84B">{tk}</div>
                   <div style="font:600 15px/1.4 IBM Plex Mono,mono;color:var(--text)">{pxs}</div>
@@ -1078,7 +1126,7 @@ with t_port:
             chg_str = f"{'▲' if p['Chg24']>=0 else '▼'} {abs(p['Chg24']):.2f}%" if p["Chg24"]!=0 else "—"
             chg_clr = "#2ECC87" if p["Chg24"]>=0 else "#E85555"
 
-            st.markdown(f"""<div style="background:#243450;border:1px solid #2E4D6E;
+            st.markdown(f"""<div style="background:#1B2A40;border:1px solid #243550;
                 border-radius:10px;padding:14px 18px;margin-bottom:10px;
                 display:flex;align-items:center;gap:16px;flex-wrap:wrap">
               <div style="min-width:120px">
@@ -1120,7 +1168,7 @@ with t_port:
         for p in pos_cer_per:
             gc3 = "#2ECC87" if p["GP_usd"]>=0 else "#E85555"
             sg3 = "+" if p["GP_usd"]>=0 else ""
-            st.markdown(f"""<div style="background:#1C2B3A;border:1px solid #2E4D6E;
+            st.markdown(f"""<div style="background:#131E2E;border:1px solid #243550;
                 border-radius:10px;padding:12px 18px;margin-bottom:8px;
                 display:flex;align-items:center;gap:16px;flex-wrap:wrap;opacity:.9">
               <div style="min-width:120px">
@@ -1297,7 +1345,7 @@ if puede_registrar:
                     gp_venta = (precio_v - pos_sel["Px_Compra"]) * pos_sel["Cantidad"]
                     gp_pct_v = gp_venta / pos_sel["Invertido"] * 100 if pos_sel["Invertido"] else 0
                     clr_v    = "#2ECC87" if gp_venta >= 0 else "#E85555"
-                    st.markdown(f"""<div style="background:#243450;border:1px solid #2E4D6E;
+                    st.markdown(f"""<div style="background:#1B2A40;border:1px solid #243550;
                         border-radius:8px;padding:12px 16px;margin:8px 0;
                         display:flex;gap:24px;flex-wrap:wrap">
                       <div><div style="font:400 9px IBM Plex Mono,mono;color:#8BA5C8">RESULTADO VENTA</div>
@@ -1518,7 +1566,7 @@ if rol == "admin" or puede_registrar:
                 money(cash_neto, factor)+sfx,
                 "Depósitos - Retiros", color=cn_color), unsafe_allow_html=True)
 
-        st.markdown("""<div style="background:#243450;border:1px solid #2E4D6E;
+        st.markdown("""<div style="background:#1B2A40;border:1px solid #243550;
             border-left:3px solid #C8A84B;border-radius:0 8px 8px 0;
             padding:10px 14px;margin:14px 0;font:400 11px/1.7 IBM Plex Mono,mono;color:#B0C4DC">
           <strong>Depósito:</strong> ingresaste dinero a la cuenta (aún no invertido en activos).<br>
@@ -1615,7 +1663,7 @@ if rol == "admin" or puede_registrar:
 if rol == "admin":
     with t_usr:
         sec("Gestión de usuarios")
-        st.markdown("""<div style="background:#243450;border:1px solid #2E4D6E;border-left:3px solid #C8A84B;
+        st.markdown("""<div style="background:#1B2A40;border:1px solid #243550;border-left:3px solid #C8A84B;
             border-radius:0 8px 8px 0;padding:10px 14px;margin-bottom:14px;
             font:400 12px/1.7 IBM Plex Mono,mono;color:#B0C4DC">
           <strong>Portafolio Individual</strong> → el usuario entra y registra sus propias inversiones.<br>
@@ -1696,7 +1744,7 @@ if rol == "admin":
 
         with ca2:
             sec("APIs activas")
-            st.markdown(f"""<div style="background:#243450;border:1px solid #2E4D6E;
+            st.markdown(f"""<div style="background:#1B2A40;border:1px solid #243550;
                 border-radius:8px;padding:14px;font:400 11px/2 IBM Plex Mono,mono">
               <div style="color:#8BA5C8;font-size:9px;letter-spacing:1px;margin-bottom:8px">FUENTES</div>
               <div style="color:#F0C040">● CoinMarketCap — Cripto</div>
