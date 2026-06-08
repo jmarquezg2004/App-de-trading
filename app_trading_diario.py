@@ -1135,9 +1135,15 @@ with t_dash:
             clr="#2ECC87" if chg>=0 else "#E85555"
             pxs=f"${px:,.4f}" if px<10 else f"${px:,.2f}"
             # Buscar P&L real de esta posición
-            pnl_real = next((p["GP_pct"] for p in posiciones
-                             if p["Ticker"].upper()==tk.upper() and p["Estado"]=="Abierta"), None)
-            pnl_html = f'<div style="font:400 9px IBM Plex Mono,mono;color:{"#2ECC87" if pnl_real>=0 else "#E85555"}">P&L: {"+" if pnl_real>=0 else ""}{pnl_real:.2f}%</div>' if pnl_real is not None else ""
+            pnl_pos = next((p for p in posiciones
+                            if p["Ticker"].upper()==tk.upper() and p["Estado"]=="Abierta"), None)
+            if pnl_pos is not None:
+                pnl_usd = pnl_pos["GP_usd"] * factor
+                pnl_clr = "#1A8A5A" if pnl_usd >= 0 else "#C83030"
+                pnl_sgn = "+" if pnl_usd >= 0 else ""
+                pnl_html = f'<div style="font:500 10px IBM Plex Mono,mono;color:{pnl_clr}">P&L: {pnl_sgn}{money(pnl_usd)}{sfx}</div>'
+            else:
+                pnl_html = ""
             with cols_p[i%min(len(prices),5)]:
                 st.markdown(f"""<div style="background:#FFFFFF;border:1px solid #1E3354;
                     border-radius:8px;padding:12px;text-align:center;margin-bottom:8px">
@@ -1454,20 +1460,51 @@ if puede_registrar:
                                         format_func=lambda i: lbs_ab_e[i], key="sel_ab_e")
                 if sel_ab_e is not None:
                     p_edit = pos_ab_f[sel_ab_e]
-                    ea1,ea2,ea3,ea4 = st.columns(4)
                     try:
                         fecha_edit_default = pd.to_datetime(p_edit["F_Compra"]).date()
                     except:
                         fecha_edit_default = date.today()
-                    nueva_fecha_c  = ea1.date_input("Fecha compra", value=fecha_edit_default, key="ef_c")
-                    nuevo_precio_c = ea2.number_input("Precio compra", value=float(p_edit["Px_Compra"]),
-                                                       min_value=0.0, step=0.0001, format="%.4f", key="ep_c")
-                    nuevo_ticker   = ea3.text_input("Ticker", value=p_edit["Ticker"], key="et_c")
-                    # Recalcular cantidad
-                    val_orig = p_edit["Invertido"]
-                    nueva_qty = round(val_orig / nuevo_precio_c, 8) if nuevo_precio_c > 0 else p_edit["Cantidad"]
-                    ea4.text_input("Nueva cantidad (auto)", value=f"{nueva_qty:,.8f}", disabled=True)
-                    if st.button("✏️ ACTUALIZAR COMPRA", key="btn_edit_ab"):
+
+                    es_cdt_edit = p_edit.get("Categoria","") in ["CDT","Cuenta Remunerada"]
+
+                    if es_cdt_edit:
+                        # CDT/Remunerada: editar TEA y capital
+                        tea_actual = float(p_edit["Px_Compra"]) * 100 if float(p_edit["Px_Compra"]) <= 1 else float(p_edit["Px_Compra"])
+                        cap_actual = float(p_edit["Cantidad"]) if float(p_edit["Cantidad"]) > 0 else float(p_edit["Invertido"])
+                        ec1,ec2,ec3 = st.columns(3)
+                        nueva_fecha_c = ec1.date_input("Fecha apertura", value=fecha_edit_default, key="ef_c")
+                        nueva_tea     = ec2.number_input("Tasa anual % (TEA)",
+                                                          value=tea_actual, min_value=0.0,
+                                                          max_value=100.0, step=0.01, format="%.2f",
+                                                          help="Ej: 13.5 para 13.5% EA anual",
+                                                          key="et_tea")
+                        nuevo_cap     = ec3.number_input("Capital (USD)",
+                                                          value=cap_actual, min_value=0.0,
+                                                          step=0.01, format="%.2f", key="ec_cap")
+                        st.markdown(f'<div style="font:400 10px IBM Plex Mono,mono;color:#5A7A9A;margin:4px 0">TEA: {nueva_tea:.2f}% → el sistema calcula el crecimiento diario automáticamente</div>', unsafe_allow_html=True)
+                        if st.button("✏️ ACTUALIZAR CDT/REMUNERADA", key="btn_edit_cdt"):
+                            ok = fs_patch("inversiones", p_edit["_id"], {
+                                "Fecha_Compra":  str(nueva_fecha_c),
+                                "Precio_Compra": float(nueva_tea / 100),
+                                "Cantidad":      float(nuevo_cap),
+                                "Ticker_API":    "",
+                            })
+                            if ok:
+                                st.success(f"✓ CDT/Remunerada actualizado — TEA: {nueva_tea:.2f}%")
+                                st.cache_data.clear(); st.rerun()
+                            else:
+                                st.error("❌ Error actualizando")
+                    else:
+                        # Activo de mercado: editar precio, ticker, fecha
+                        ea1,ea2,ea3,ea4 = st.columns(4)
+                        nueva_fecha_c  = ea1.date_input("Fecha compra", value=fecha_edit_default, key="ef_c")
+                        nuevo_precio_c = ea2.number_input("Precio compra", value=float(p_edit["Px_Compra"]),
+                                                           min_value=0.0, step=0.0001, format="%.4f", key="ep_c")
+                        nuevo_ticker   = ea3.text_input("Ticker", value=p_edit["Ticker"], key="et_c")
+                        val_orig = p_edit["Invertido"]
+                        nueva_qty = round(val_orig / nuevo_precio_c, 8) if nuevo_precio_c > 0 else p_edit["Cantidad"]
+                        ea4.text_input("Nueva cantidad (auto)", value=f"{nueva_qty:,.8f}", disabled=True)
+                    if not es_cdt_edit and st.button("✏️ ACTUALIZAR COMPRA", key="btn_edit_ab"):
                         ok = fs_patch("inversiones", p_edit["_id"], {
                             "Fecha_Compra":  str(nueva_fecha_c),
                             "Precio_Compra": float(nuevo_precio_c),
