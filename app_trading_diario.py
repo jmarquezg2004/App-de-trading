@@ -1036,56 +1036,80 @@ with t_dash:
         sec("Evolución del portafolio")
         posiciones_graf = [p for p in posiciones if p["Estado"] != "Archivada"]
         if posiciones_graf:
-            hoy_ts = pd.Timestamp.now().normalize()
+            hoy_ts_graf = pd.Timestamp.now().normalize()
 
-            # Construir serie temporal correcta:
-            # En cada fecha clave, calcular el valor TOTAL del portafolio
-            # = suma de todas las posiciones activas en esa fecha
-
-            # 1. Recopilar todas las fechas clave (compras y ventas)
+            # Fechas clave: compras, ventas, hoy
             fechas_clave = set()
             for p in posiciones_graf:
                 try:
-                    fc = pd.to_datetime(p["F_Compra"])
-                    fechas_clave.add(fc)
+                    fechas_clave.add(pd.to_datetime(p["F_Compra"]))
                     if p["F_Venta"]:
-                        fv = pd.to_datetime(p["F_Venta"])
-                        fechas_clave.add(fv)
+                        fechas_clave.add(pd.to_datetime(p["F_Venta"]))
                 except: pass
-            fechas_clave.add(hoy_ts)
+            fechas_clave.add(hoy_ts_graf)
 
-            # Aplicar filtro de período
             if f_ini is not None:
                 fechas_clave = {f for f in fechas_clave if f_ini <= f <= f_fin}
-                fechas_clave.add(f_ini)
-                fechas_clave.add(f_fin)
+                fechas_clave.update([f_ini, f_fin])
 
             fechas_ordenadas = sorted(fechas_clave)
 
-            # 2. Para cada fecha, calcular valor total del portafolio en ese momento
+            # Para cada fecha calcular PATRIMONIO TOTAL:
+            # = valor posiciones abiertas en esa fecha
+            # + capital recuperado de posiciones cerradas ANTES de esa fecha (ganancias realizadas)
+            # + depósitos acumulados hasta esa fecha - retiros - capital en abiertas
             puntos = []
             for fecha in fechas_ordenadas:
-                valor_portafolio = 0.0
-                capital_portafolio = 0.0
+                cap_abiertas_fecha   = 0.0
+                valor_abiertas_fecha = 0.0
+                cap_recuperado_fecha = 0.0  # de cerradas antes de esta fecha
+
                 for p in posiciones_graf:
                     try:
                         fc = pd.to_datetime(p["F_Compra"])
-                        fv = pd.to_datetime(p["F_Venta"]) if p["F_Venta"] else hoy_ts
-                        # Posición activa en esta fecha?
-                        if fc <= fecha <= fv:
-                            capital_portafolio += p["Invertido"]
-                            # Valor en fecha final = valor actual; en fechas pasadas = costo
-                            if fecha >= hoy_ts.normalize() or (p["F_Venta"] and fecha >= pd.to_datetime(p["F_Venta"])):
-                                valor_portafolio += p["Val_Actual"]
-                            else:
-                                valor_portafolio += p["Invertido"]  # en el pasado = costo
-                    except: pass
-                if capital_portafolio > 0:
-                    puntos.append({"fecha": fecha,
-                                   "invertido": capital_portafolio,
-                                   "actual": valor_portafolio})
+                        fv = pd.to_datetime(p["F_Venta"]) if p["F_Venta"] else hoy_ts_graf
 
-            eventos = puntos  # compatibilidad con el código que sigue
+                        if fc > fecha: continue  # no comprada aún
+
+                        if p["Estado"] == "Cerrada" and fv <= fecha:
+                            # Posición ya cerrada antes de esta fecha
+                            cap_recuperado_fecha += p["Val_Actual"]  # precio de venta
+                        elif fc <= fecha <= fv:
+                            # Posición abierta en esta fecha
+                            cap_abiertas_fecha += p["Invertido"]
+                            if fecha >= hoy_ts_graf:
+                                valor_abiertas_fecha += p["Val_Actual"]
+                            else:
+                                valor_abiertas_fecha += p["Invertido"]  # costo en pasado
+                    except: pass
+
+                # Depósitos - retiros hasta esta fecha
+                dep_fecha = 0.0
+                ret_fecha = 0.0
+                if not df_ap.empty and "Fecha" in df_ap.columns:
+                    try:
+                        df_ap["Fecha_ts"] = pd.to_datetime(df_ap["Fecha"])
+                        dep_fecha = df_ap[(df_ap["Tipo"]=="Aporte")  & (df_ap["Fecha_ts"] <= fecha)]["Monto"].sum()
+                        ret_fecha = df_ap[(df_ap["Tipo"]=="Retiro") & (df_ap["Fecha_ts"] <= fecha)]["Monto"].sum()
+                    except: pass
+
+                # Cash libre en esta fecha
+                cash_fecha = dep_fecha - ret_fecha - cap_abiertas_fecha + cap_recuperado_fecha
+
+                # Patrimonio = valor abiertas + cash libre
+                patrimonio_fecha = valor_abiertas_fecha + max(cash_fecha, 0)
+
+                # Capital comprometido = lo que está en abiertas + lo que estaba en cerradas
+                capital_total = cap_abiertas_fecha + (dep_fecha - ret_fecha - cap_abiertas_fecha)                                 if dep_fecha > 0 else cap_abiertas_fecha
+
+                if cap_abiertas_fecha > 0 or cap_recuperado_fecha > 0:
+                    puntos.append({
+                        "fecha":     fecha,
+                        "invertido": dep_fecha - ret_fecha if dep_fecha > 0 else cap_abiertas_fecha,
+                        "actual":    patrimonio_fecha,
+                    })
+
+            eventos = puntos
 
             if eventos:
                 df_val = pd.DataFrame(eventos).sort_values("fecha").drop_duplicates("fecha")
@@ -1968,7 +1992,7 @@ with t_rend:
                     <span style="font:500 12px IBM Plex Mono,mono;color:#1B2B4B">{money(m['inv']*factor)}{sfx}</span>
                   </div>
                   <div style="display:flex;justify-content:space-between;margin-bottom:6px">
-                    <span style="font:400 9px IBM Plex Mono,mono;color:#5A7A9A;letter-spacing:0.5px">CAPITAL ACTUAL</span>
+                    <span style="font:400 9px IBM Plex Mono,mono;color:#5A7A9A;letter-spacing:0.5px">{"CAPITAL ACTUAL" if m.get("es_actual") else "CAPITAL FINAL"}</span>
                     <span style="font:500 12px IBM Plex Mono,mono;color:#1B2B4B">{money(m['act']*factor)}{sfx}</span>
                   </div>
                   <div style="border-top:1px solid #E4EAF0;margin:8px 0 8px"></div>
