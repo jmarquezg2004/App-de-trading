@@ -14,30 +14,31 @@ st.markdown("""
 
 /* Paleta Arkez Invest — arkezinvest.com */
 :root {
-    --bg:         #0E1C2E;
-    --sidebar-bg: #0A1520;
-    --surface:    #162238;
-    --surface2:   #0E1C2E;
-    --border:     #1E3354;
+    --bg:         #EDF0F5;
+    --sidebar-bg: #1B2B4B;
+    --surface:    #FFFFFF;
+    --surface2:   #E4E8F0;
+    --border:     #C8D4E8;
     --nav:        #1B2B4B;
-    --text:       #E8EDF5;
-    --muted:      #7A9CC0;
-    --label:      #9BB5D0;
+    --text:       #1B2B4B;
+    --muted:      #5A7A9A;
+    --label:      #4A6A8A;
     --gold:       #C8A84B;
     --green:      #2ECC87;
     --red:        #E85555;
 }
 
 html, body { font-family: 'IBM Plex Sans', sans-serif; }
-.stApp { background: var(--bg) !important; color: var(--text); }
-.stApp > div { background: var(--bg) !important; }
+.stApp { background: #EDF0F5 !important; color: #1B2B4B; }
+.stApp > div { background: #EDF0F5 !important; }
+.main .block-container { background: #EDF0F5 !important; }
 h1 { font-family:'IBM Plex Mono',monospace!important; color:#C8A84B!important; letter-spacing:2px; }
-h2 { font-family:'IBM Plex Mono',monospace!important; font-size:11px!important; letter-spacing:1.5px; text-transform:uppercase; color:var(--muted)!important; }
+h2 { font-family:'IBM Plex Mono',monospace!important; font-size:11px!important; letter-spacing:1.5px; text-transform:uppercase; color:#5A7A9A!important; }
 h3 { font-family:'IBM Plex Mono',monospace!important; font-size:13px!important; color:#C8A84B!important; }
 hr { border-color:var(--border)!important; }
 
 section[data-testid="stSidebar"] { background:var(--sidebar-bg)!important; border-right:1px solid var(--border); }
-section[data-testid="stSidebar"] label { color:var(--muted)!important; font-size:12px!important; }
+section[data-testid="stSidebar"] label { color:#5A7A9A!important; font-size:12px!important; }
 
 /* TODOS los inputs */
 input, textarea {
@@ -57,8 +58,8 @@ input:disabled {
 
 /* Selectbox */
 [data-testid="stSelectbox"]>div>div {
-    background:var(--surface)!important; border:1px solid var(--border)!important;
-    border-radius:6px!important; color:var(--text)!important;
+    background:#FFFFFF!important; border:1px solid #C8D4E8!important;
+    border-radius:6px!important; color:#1B2B4B!important;
 }
 [data-testid="stSelectbox"] span,
 [data-testid="stSelectbox"] p { color:#ffffff!important; font-size:13px!important; }
@@ -99,7 +100,7 @@ input:disabled {
 /* Tabs */
 [data-testid="stTabs"] button {
     font-family:'IBM Plex Mono',monospace!important; font-size:11px!important;
-    letter-spacing:1px; text-transform:uppercase; color:#8BA5C8!important; background:transparent!important;
+    letter-spacing:1px; text-transform:uppercase; color:#5A7A9A!important; background:transparent!important;
 }
 [data-testid="stTabs"] button[aria-selected="true"] {
     color:#C8A84B!important; border-bottom:2px solid #C8A84B!important;
@@ -108,7 +109,7 @@ input:disabled {
 
 /* Métricas */
 [data-testid="metric-container"] {
-    background:var(--surface); border:1px solid var(--border); border-radius:10px;
+    background:#FFFFFF; border:1px solid #C8D4E8; border-radius:10px;
     padding:16px!important; position:relative; overflow:hidden;
 }
 [data-testid="metric-container"]::before {
@@ -117,7 +118,7 @@ input:disabled {
 }
 [data-testid="stMetricValue"] {
     font-family:'IBM Plex Mono',monospace!important; font-size:1.4rem!important;
-    color:var(--text)!important; font-weight:600!important;
+    color:#1B2B4B!important; font-weight:600!important;
 }
 [data-testid="stMetricLabel"] {
     font-family:'IBM Plex Mono',monospace!important; font-size:0.68rem!important;
@@ -125,17 +126,17 @@ input:disabled {
 }
 
 /* DataFrames */
-[data-testid="stDataFrame"] { border:1px solid var(--border); border-radius:8px; overflow:hidden; }
+[data-testid="stDataFrame"] { border:1px solid #C8D4E8; border-radius:8px; overflow:hidden; }
 
 /* Alerts */
 [data-testid="stAlert"] {
     border-radius:8px!important; border-left-width:3px!important;
-    background:var(--surface)!important; font-family:'IBM Plex Mono',monospace!important; color:#ffffff!important;
+    background:#FFFFFF!important; font-family:'IBM Plex Mono',monospace!important; color:#1B2B4B!important;
 }
 
 /* Form */
 [data-testid="stForm"] {
-    background:var(--bg)!important; border:1px solid var(--border)!important;
+    background:#FFFFFF!important; border:1px solid #C8D4E8!important;
     border-radius:10px!important; padding:20px!important;
 }
 
@@ -519,12 +520,12 @@ def money(v,f=1):
 
 def card(label,val,sub=None,color="#C8A84B"):
     s=f'<div style="font:500 11px/1.4 IBM Plex Mono,mono;color:{color};margin-top:3px">{sub}</div>' if sub else ""
-    return f"""<div style="background:var(--surface);border:1px solid var(--border);border-radius:10px;
-        padding:16px 18px;position:relative;overflow:hidden;height:100%">
+    return f"""<div style="background:#FFFFFF;border:1px solid #C8D4E8;border-radius:10px;
+        padding:16px 18px;position:relative;overflow:hidden;height:100%;box-shadow:0 1px 4px rgba(0,0,0,0.06)">
       <div style="position:absolute;top:0;left:0;right:0;height:2px;background:{color}"></div>
-      <div style="font:400 9px/1 IBM Plex Mono,mono;color:var(--muted);letter-spacing:1.5px;
+      <div style="font:400 9px/1 IBM Plex Mono,mono;color:#5A7A9A;letter-spacing:1.5px;
                   text-transform:uppercase;margin-bottom:8px">{label}</div>
-      <div style="font:600 22px/1 IBM Plex Mono,mono;color:var(--text)">{val}</div>{s}</div>"""
+      <div style="font:600 22px/1 IBM Plex Mono,mono;color:#1B2B4B">{val}</div>{s}</div>"""
 
 def sec(t):
     st.markdown(f'<h2 style="margin:18px 0 10px">{t}</h2>', unsafe_allow_html=True)
@@ -649,16 +650,16 @@ with st.sidebar:
             fondo = fa
         else:
             fondo = f"personal_{usuario.split('@')[0]}"
-        st.markdown(f"""<div style="background:var(--surface);border:1px solid var(--border);border-radius:6px;
+        st.markdown(f"""<div style="background:#162A48;border:1px solid #243D5E;border-radius:6px;
             padding:8px 12px;margin-bottom:8px">
-          <div style="font:400 9px IBM Plex Mono,mono;color:var(--muted)">FONDO / PORTAFOLIO</div>
+          <div style="font:400 9px IBM Plex Mono,mono;color:#7A9CC0">FONDO / PORTAFOLIO</div>
           <div style="font:600 12px IBM Plex Mono,mono;color:#C8A84B">{fondo}</div>
         </div>""", unsafe_allow_html=True)
 
     trm = get_trm()
-    st.markdown(f"""<div style="background:var(--surface);border:1px solid var(--border);border-radius:8px;
+    st.markdown(f"""<div style="background:#162A48;border:1px solid #243D5E;border-radius:8px;
         padding:9px 12px;margin:8px 0">
-      <div style="font:400 9px IBM Plex Mono,mono;color:var(--muted);letter-spacing:1px">TRM USD/COP</div>
+      <div style="font:400 9px IBM Plex Mono,mono;color:#7A9CC0;letter-spacing:1px">TRM USD/COP</div>
       <div style="font:600 16px/1.5 IBM Plex Mono,mono;color:#F0C040">${trm:,.2f}</div>
     </div>""", unsafe_allow_html=True)
 
@@ -910,35 +911,35 @@ if posiciones and ops_cerradas_calc:
     ind1, ind2, ind3, ind_sep = st.columns([1,1,1,2])
     with ind1:
         rr_color = "#2ECC87" if rr >= 1 else "#E85555"
-        st.markdown(f"""<div style="background:var(--surface);border:1px solid var(--border);
+        st.markdown(f"""<div style="background:#FFFFFF;border:1px solid #C8D4E8;
             border-radius:8px;padding:10px 14px;border-left:3px solid {rr_color}">
-          <div style="font:400 9px IBM Plex Mono,mono;color:var(--muted);letter-spacing:1px">R/R RATIO</div>
+          <div style="font:400 9px IBM Plex Mono,mono;color:#5A7A9A;letter-spacing:1px">R/R RATIO</div>
           <div style="font:600 18px IBM Plex Mono,mono;color:{rr_color}">{rr:.2f}</div>
-          <div style="font:400 9px IBM Plex Mono,mono;color:var(--muted)">
+          <div style="font:400 9px IBM Plex Mono,mono;color:#5A7A9A">
             {'✓ Favorable' if rr>=1 else '✗ Desfavorable'} (meta: >1.0)</div>
         </div>""", unsafe_allow_html=True)
     with ind2:
         esp_color = "#2ECC87" if esperanza > 0 else "#E85555"
-        st.markdown(f"""<div style="background:var(--surface);border:1px solid var(--border);
+        st.markdown(f"""<div style="background:#FFFFFF;border:1px solid #C8D4E8;
             border-radius:8px;padding:10px 14px;border-left:3px solid {esp_color}">
-          <div style="font:400 9px IBM Plex Mono,mono;color:var(--muted);letter-spacing:1px">ESPERANZA MATEMÁTICA</div>
+          <div style="font:400 9px IBM Plex Mono,mono;color:#5A7A9A;letter-spacing:1px">ESPERANZA MATEMÁTICA</div>
           <div style="font:600 18px IBM Plex Mono,mono;color:{esp_color}">
             {'+'if esperanza>=0 else ''}{money(esperanza,factor)}</div>
-          <div style="font:400 9px IBM Plex Mono,mono;color:var(--muted)">
+          <div style="font:400 9px IBM Plex Mono,mono;color:#5A7A9A">
             Por operación cerrada</div>
         </div>""", unsafe_allow_html=True)
     with ind3:
         pf_color = "#2ECC87" if pf >= 1 else "#E85555"
-        st.markdown(f"""<div style="background:var(--surface);border:1px solid var(--border);
+        st.markdown(f"""<div style="background:#FFFFFF;border:1px solid #C8D4E8;
             border-radius:8px;padding:10px 14px;border-left:3px solid {pf_color}">
-          <div style="font:400 9px IBM Plex Mono,mono;color:var(--muted);letter-spacing:1px">PROFIT FACTOR</div>
+          <div style="font:400 9px IBM Plex Mono,mono;color:#5A7A9A;letter-spacing:1px">PROFIT FACTOR</div>
           <div style="font:600 18px IBM Plex Mono,mono;color:{pf_color}">{pf:.2f}x</div>
-          <div style="font:400 9px IBM Plex Mono,mono;color:var(--muted)">
+          <div style="font:400 9px IBM Plex Mono,mono;color:#5A7A9A">
             {'✓ Sistema rentable' if pf>=1 else '✗ Sistema no rentable'} (meta: >1.0)</div>
         </div>""", unsafe_allow_html=True)
     with ind_sep:
         st.markdown(f"""<div style="padding:10px 14px">
-          <div style="font:400 9px IBM Plex Mono,mono;color:var(--muted);margin-bottom:4px">
+          <div style="font:400 9px IBM Plex Mono,mono;color:#5A7A9A;margin-bottom:4px">
             Basado en {len(pnls)} ops cerradas · Avg gan: +{money(avg_g,factor)} · Avg per: -{money(avg_p,factor)}</div>
         </div>""", unsafe_allow_html=True)
 
@@ -1067,9 +1068,9 @@ with t_dash:
             gp_color = "#2ECC87" if gp_per>=0 else "#E85555"
             st.markdown(f"""<div style="display:flex;gap:24px;flex-wrap:wrap;padding:8px 4px">
               <div><div style="font:400 9px IBM Plex Mono,mono;color:#8BA5C8;letter-spacing:1px">INVERTIDO</div>
-                <div style="font:600 14px IBM Plex Mono,mono;color:var(--text)">{money(inv_per,factor)}{sfx}</div></div>
+                <div style="font:600 14px IBM Plex Mono,mono;color:#1B2B4B">{money(inv_per,factor)}{sfx}</div></div>
               <div><div style="font:400 9px IBM Plex Mono,mono;color:#8BA5C8;letter-spacing:1px">VALOR HOY</div>
-                <div style="font:600 14px IBM Plex Mono,mono;color:var(--text)">{money(act_per,factor)}{sfx}</div></div>
+                <div style="font:600 14px IBM Plex Mono,mono;color:#1B2B4B">{money(act_per,factor)}{sfx}</div></div>
               <div><div style="font:400 9px IBM Plex Mono,mono;color:#8BA5C8;letter-spacing:1px">GANANCIA TOTAL</div>
                 <div style="font:600 14px IBM Plex Mono,mono;color:{gp_color}">
                   {'+'if gp_per>=0 else ''}{money(gp_per,factor)}{sfx} ({'+' if rend_per>=0 else ''}{rend_per:.2f}%)</div></div>
@@ -1136,7 +1137,7 @@ with t_dash:
                 st.markdown(f"""<div style="background:#162238;border:1px solid #1E3354;
                     border-radius:8px;padding:12px;text-align:center;margin-bottom:8px">
                   <div style="font:600 11px/1.5 IBM Plex Mono,mono;color:#C8A84B">{tk}</div>
-                  <div style="font:600 15px/1.4 IBM Plex Mono,mono;color:var(--text)">{pxs}</div>
+                  <div style="font:600 15px/1.4 IBM Plex Mono,mono;color:#1B2B4B">{pxs}</div>
                   <div style="font:400 10px/1.3 IBM Plex Mono,mono;color:{clr}">
                     {'▲' if chg>=0 else '▼'} {abs(chg):.2f}% hoy</div>
                   {pnl_html}</div>""",
@@ -1180,11 +1181,11 @@ with t_port:
               </div>
               <div style="text-align:center;min-width:100px">
                 <div style="font:400 9px IBM Plex Mono,mono;color:#8BA5C8;letter-spacing:1px">INVERTIDO</div>
-                <div style="font:500 13px IBM Plex Mono,mono;color:var(--text)">{money(p['Invertido'],factor)}{sfx}</div>
+                <div style="font:500 13px IBM Plex Mono,mono;color:#1B2B4B">{money(p['Invertido'],factor)}{sfx}</div>
               </div>
               <div style="text-align:center;min-width:100px">
                 <div style="font:400 9px IBM Plex Mono,mono;color:#8BA5C8;letter-spacing:1px">VALOR HOY</div>
-                <div style="font:600 14px IBM Plex Mono,mono;color:var(--text)">{money(p['Val_Actual'],factor)}{sfx}</div>
+                <div style="font:600 14px IBM Plex Mono,mono;color:#1B2B4B">{money(p['Val_Actual'],factor)}{sfx}</div>
               </div>
               <div style="text-align:center;min-width:90px">
                 <div style="font:400 9px IBM Plex Mono,mono;color:#8BA5C8;letter-spacing:1px">P&L</div>
