@@ -351,6 +351,40 @@ def get_stock(ticker):
         return float(price) if price else None, float(chg)
     except: return None, 0
 
+@st.cache_data(ttl=3600)  # caché 1 hora — no repetir llamadas históricas
+def get_precio_cierre_mes(ticker, año, mes, categoria):
+    """Obtiene el precio de cierre del último día hábil de un mes."""
+    import calendar as cal_mod
+    import yfinance as yf
+    import datetime as dt
+
+    ultimo_dia = cal_mod.monthrange(año, mes)[1]
+    f_fin = dt.date(año, mes, ultimo_dia)
+    # Pedir ventana de 7 días antes del fin del mes para asegurar conseguir el último hábil
+    f_ini = f_fin - dt.timedelta(days=7)
+
+    try:
+        if categoria == "Cripto":
+            # Yahoo Finance: BTC-USD, ETH-USD, etc.
+            yahoo_sym = f"{ticker.upper()}-USD"
+            # Intentar también con el mapa de CoinGecko
+            alt_syms = {
+                "HYPE": "HYPE-USD",
+                "ZCSH": "ZEC-USD",
+                "ZEC":  "ZEC-USD",
+            }
+            yahoo_sym = alt_syms.get(ticker.upper(), yahoo_sym)
+        else:
+            yahoo_sym = ticker.upper()
+
+        hist = yf.Ticker(yahoo_sym).history(
+            start=f_ini.strftime("%Y-%m-%d"),
+            end=(f_fin + dt.timedelta(days=1)).strftime("%Y-%m-%d")
+        )
+        if hist.empty: return None
+        return float(hist["Close"].iloc[-1])
+    except: return None
+
 def get_prices(df):
     out={}
     if df.empty: return out
@@ -757,25 +791,31 @@ if not df_ap.empty and "Tipo" in df_ap.columns:
     cash_aportes = df_ap[df_ap["Tipo"]=="Aporte"]["Monto"].sum()
     cash_retiros = df_ap[df_ap["Tipo"]=="Retiro"]["Monto"].sum()
 
-# Capital ACTUALMENTE en posiciones abiertas (no cerradas)
-cap_en_abiertas   = sum(p["Invertido"] for p in posiciones if p["Estado"] == "Abierta")
-valor_en_abiertas = sum(p["Val_Actual"] for p in posiciones if p["Estado"] == "Abierta")
-# PnL realizado de posiciones cerradas
-pnl_realizado_total = sum(p["GP_usd"] for p in posiciones if p["Estado"] == "Cerrada")
+# ── MODELO BROKER REAL (Opción B) ──────────────────────────
+# Capital en posiciones abiertas HOY
+cap_en_abiertas     = sum(p["Invertido"]  for p in posiciones if p["Estado"] == "Abierta")
+valor_en_abiertas   = sum(p["Val_Actual"] for p in posiciones if p["Estado"] == "Abierta")
+pnl_flotante        = valor_en_abiertas - cap_en_abiertas
 
-# Lógica broker:
-# Cash libre = lo que deposité - lo que retiré - lo que está en posiciones abiertas ahora
-cash_libre = cash_aportes - cash_retiros - cap_en_abiertas
+# Ganancias/pérdidas realizadas de posiciones cerradas
+# Cuando cierras una posición, el capital recuperado vuelve a tu cuenta
+cap_recuperado_cerradas = sum(p["Val_Actual"] for p in posiciones if p["Estado"] == "Cerrada")
+pnl_realizado_total     = sum(p["GP_usd"]     for p in posiciones if p["Estado"] == "Cerrada")
+cap_original_cerradas   = sum(p["Invertido"]  for p in posiciones if p["Estado"] == "Cerrada")
 
-# Patrimonio total = valor de posiciones abiertas + cash libre
-# (si cash_libre < 0 significa que invertiste más de lo que depositaste — posible con ganancias reinvertidas)
-patrimonio_total = valor_en_abiertas + max(cash_libre, 0)
+# Cash disponible en el broker (como Schwab, IBKR, Binance):
+# = Depósitos - Retiros - Capital en abiertas + Capital recuperado de cerradas
+# El capital recuperado de cerradas ya está disponible para reinvertir
+cash_libre = cash_aportes - cash_retiros - cap_en_abiertas + cap_recuperado_cerradas
 
-# G/P total: PnL flotante de abiertas + PnL realizado de cerradas
-total_invertido  = cap_en_abiertas
+# Patrimonio total = portafolio abierto + cash disponible
+patrimonio_total = valor_en_abiertas + cash_libre
+
+# KPIs principales
+total_invertido  = cap_en_abiertas  # solo abiertas actuales
 total_actual     = valor_en_abiertas
-total_gp         = (valor_en_abiertas - cap_en_abiertas) + pnl_realizado_total
-rend_pct         = total_gp / cap_en_abiertas * 100 if cap_en_abiertas > 0 else 0
+total_gp         = pnl_flotante + pnl_realizado_total  # flotante + realizado
+rend_pct         = total_gp / (cap_en_abiertas + cap_original_cerradas) * 100                    if (cap_en_abiertas + cap_original_cerradas) > 0 else 0
 
 # Portafolio real = valor de posiciones abiertas + cash neto (retiros ya restan)
 # Si hay retiros, el valor total baja aunque las posiciones estén bien
@@ -1654,33 +1694,62 @@ if puede_registrar:
 if rol == "admin" or puede_registrar:
     with t_cap:
         # Resumen de cash actual
-        # Resumen financiero estilo broker
-        st.markdown(f"""<div style="background:#1B2B4B;border-radius:12px;padding:18px 24px;
-            margin-bottom:16px;display:flex;gap:0;flex-wrap:wrap">
-          <div style="flex:1;min-width:160px;padding:0 20px;border-right:1px solid #2E4D6E">
-            <div style="font:400 9px IBM Plex Mono,mono;color:#7A9CC0;letter-spacing:1.5px;margin-bottom:4px">DEPÓSITOS TOTALES</div>
-            <div style="font:700 20px IBM Plex Mono,mono;color:#E8EDF5">{money(cash_aportes*factor)}{sfx}</div>
-            <div style="font:400 9px IBM Plex Mono,mono;color:#7A9CC0;margin-top:2px">Todo lo que pusiste en la cuenta</div>
+        # ── Panel estilo broker ─────────────────────────────────
+        # Fila 1: Flujos de dinero
+        st.markdown(f"""<div style="background:#1B2B4B;border-radius:12px;padding:16px 20px;
+            margin-bottom:10px">
+          <div style="font:600 9px IBM Plex Mono,mono;color:#C8A84B;letter-spacing:2px;margin-bottom:12px">
+            FLUJOS DE CAPITAL</div>
+          <div style="display:flex;gap:0;flex-wrap:wrap">
+            <div style="flex:1;min-width:140px;padding:0 16px;border-right:1px solid #2E4D6E">
+              <div style="font:400 9px IBM Plex Mono,mono;color:#7A9CC0;letter-spacing:1px;margin-bottom:3px">DEPÓSITOS</div>
+              <div style="font:700 18px IBM Plex Mono,mono;color:#2ECC87">+{money(cash_aportes*factor)}{sfx}</div>
+              <div style="font:400 9px IBM Plex Mono,mono;color:#7A9CC0">Todo lo ingresado</div>
+            </div>
+            <div style="flex:1;min-width:140px;padding:0 16px;border-right:1px solid #2E4D6E">
+              <div style="font:400 9px IBM Plex Mono,mono;color:#7A9CC0;letter-spacing:1px;margin-bottom:3px">RETIROS</div>
+              <div style="font:700 18px IBM Plex Mono,mono;color:#E85555">-{money(cash_retiros*factor)}{sfx}</div>
+              <div style="font:400 9px IBM Plex Mono,mono;color:#7A9CC0">Lo que retiraste</div>
+            </div>
+            <div style="flex:1;min-width:140px;padding:0 16px;border-right:1px solid #2E4D6E">
+              <div style="font:400 9px IBM Plex Mono,mono;color:#7A9CC0;letter-spacing:1px;margin-bottom:3px">GANANCIAS REALIZADAS</div>
+              <div style="font:700 18px IBM Plex Mono,mono;color:{'#2ECC87' if pnl_realizado_total>=0 else '#E85555'}">{'+' if pnl_realizado_total>=0 else ''}{money(pnl_realizado_total*factor)}{sfx}</div>
+              <div style="font:400 9px IBM Plex Mono,mono;color:#7A9CC0">De posiciones cerradas</div>
+            </div>
+            <div style="flex:1;min-width:140px;padding:0 16px">
+              <div style="font:400 9px IBM Plex Mono,mono;color:#7A9CC0;letter-spacing:1px;margin-bottom:3px">SALDO NETO APORTADO</div>
+              <div style="font:700 18px IBM Plex Mono,mono;color:#E8EDF5">{money((cash_aportes-cash_retiros)*factor)}{sfx}</div>
+              <div style="font:400 9px IBM Plex Mono,mono;color:#7A9CC0">Depósitos - Retiros</div>
+            </div>
           </div>
-          <div style="flex:1;min-width:160px;padding:0 20px;border-right:1px solid #2E4D6E">
-            <div style="font:400 9px IBM Plex Mono,mono;color:#7A9CC0;letter-spacing:1.5px;margin-bottom:4px">RETIROS TOTALES</div>
-            <div style="font:700 20px IBM Plex Mono,mono;color:#E85555">-{money(cash_retiros*factor)}{sfx}</div>
-            <div style="font:400 9px IBM Plex Mono,mono;color:#7A9CC0;margin-top:2px">Lo que retiraste de la cuenta</div>
-          </div>
-          <div style="flex:1;min-width:160px;padding:0 20px;border-right:1px solid #2E4D6E">
-            <div style="font:400 9px IBM Plex Mono,mono;color:#7A9CC0;letter-spacing:1.5px;margin-bottom:4px">EN POSICIONES ABIERTAS</div>
-            <div style="font:700 20px IBM Plex Mono,mono;color:#C8A84B">{money(cap_en_abiertas*factor)}{sfx}</div>
-            <div style="font:400 9px IBM Plex Mono,mono;color:#7A9CC0;margin-top:2px">Capital actualmente invertido</div>
-          </div>
-          <div style="flex:1;min-width:160px;padding:0 20px;border-right:1px solid #2E4D6E">
-            <div style="font:400 9px IBM Plex Mono,mono;color:#7A9CC0;letter-spacing:1.5px;margin-bottom:4px">CASH LIBRE</div>
-            <div style="font:700 20px IBM Plex Mono,mono;color:{'#2ECC87' if cash_libre>=0 else '#E85555'}">{money(cash_libre*factor)}{sfx}</div>
-            <div style="font:400 9px IBM Plex Mono,mono;color:#7A9CC0;margin-top:2px">Depósitos - Retiros - Invertido</div>
-          </div>
-          <div style="flex:1;min-width:160px;padding:0 20px">
-            <div style="font:400 9px IBM Plex Mono,mono;color:#C8A84B;letter-spacing:1.5px;margin-bottom:4px">PATRIMONIO TOTAL</div>
-            <div style="font:700 20px IBM Plex Mono,mono;color:#C8A84B">{money(patrimonio_total*factor)}{sfx}</div>
-            <div style="font:400 9px IBM Plex Mono,mono;color:#7A9CC0;margin-top:2px">Portafolio actual + Cash libre</div>
+        </div>""", unsafe_allow_html=True)
+
+        # Fila 2: Estado actual
+        st.markdown(f"""<div style="background:#1B2B4B;border-radius:12px;padding:16px 20px;
+            margin-bottom:16px">
+          <div style="font:600 9px IBM Plex Mono,mono;color:#C8A84B;letter-spacing:2px;margin-bottom:12px">
+            ESTADO ACTUAL DEL PORTAFOLIO</div>
+          <div style="display:flex;gap:0;flex-wrap:wrap">
+            <div style="flex:1;min-width:140px;padding:0 16px;border-right:1px solid #2E4D6E">
+              <div style="font:400 9px IBM Plex Mono,mono;color:#7A9CC0;letter-spacing:1px;margin-bottom:3px">EN POSICIONES ABIERTAS</div>
+              <div style="font:700 18px IBM Plex Mono,mono;color:#C8A84B">{money(cap_en_abiertas*factor)}{sfx}</div>
+              <div style="font:400 9px IBM Plex Mono,mono;color:#7A9CC0">Capital activo invertido</div>
+            </div>
+            <div style="flex:1;min-width:140px;padding:0 16px;border-right:1px solid #2E4D6E">
+              <div style="font:400 9px IBM Plex Mono,mono;color:#7A9CC0;letter-spacing:1px;margin-bottom:3px">VALOR ACTUAL PORTAFOLIO</div>
+              <div style="font:700 18px IBM Plex Mono,mono;color:#E8EDF5">{money(valor_en_abiertas*factor)}{sfx}</div>
+              <div style="font:400 9px IBM Plex Mono,mono;color:{'#2ECC87' if pnl_flotante>=0 else '#E85555'}">PnL flotante: {'+' if pnl_flotante>=0 else ''}{money(pnl_flotante*factor)}{sfx}</div>
+            </div>
+            <div style="flex:1;min-width:140px;padding:0 16px;border-right:1px solid #2E4D6E">
+              <div style="font:400 9px IBM Plex Mono,mono;color:#7A9CC0;letter-spacing:1px;margin-bottom:3px">CASH DISPONIBLE</div>
+              <div style="font:700 18px IBM Plex Mono,mono;color:{'#2ECC87' if cash_libre>=0 else '#E85555'}">{money(cash_libre*factor)}{sfx}</div>
+              <div style="font:400 9px IBM Plex Mono,mono;color:#7A9CC0">Para invertir o retirar</div>
+            </div>
+            <div style="flex:1;min-width:140px;padding:0 16px">
+              <div style="font:400 9px IBM Plex Mono,mono;color:#C8A84B;letter-spacing:1px;margin-bottom:3px">PATRIMONIO TOTAL</div>
+              <div style="font:700 22px IBM Plex Mono,mono;color:#C8A84B">{money(patrimonio_total*factor)}{sfx}</div>
+              <div style="font:400 9px IBM Plex Mono,mono;color:#7A9CC0">Portafolio + Cash</div>
+            </div>
           </div>
         </div>""", unsafe_allow_html=True)
 
@@ -1875,23 +1944,29 @@ with t_rend:
             clr = "#1A8A5A" if m["pnl_tot"] >= 0 else "#C83030"
             sgn = "+" if m["pnl_tot"] >= 0 else ""
             with cols_m[i % 3]:
+                badge_actual = ' <span style="font:500 8px IBM Plex Mono,mono;background:#1B2B4B;color:#C8A84B;padding:1px 6px;border-radius:3px">EN VIVO</span>' if m.get("es_actual") else ""
+                # Mostrar flotante si hay valor (tanto mes actual como histórico con precio real)
+                if m["pnl_flot"] != 0:
+                    flot_lbl = "FLOTANTE (EN VIVO)" if m.get("es_actual") else "FLOTANTE (CIERRE MES)"
+                    flot_clr = "#1A8A5A" if m["pnl_flot"] >= 0 else "#C83030"
+                    flot_sgn = "+" if m["pnl_flot"] >= 0 else ""
+                    flot_html = f'<div style="display:flex;justify-content:space-between;margin-bottom:4px"><span style="font:400 9px IBM Plex Mono,mono;color:#5A7A9A">{flot_lbl}</span><span style="font:500 11px IBM Plex Mono,mono;color:{flot_clr}">{flot_sgn}{money(m["pnl_flot"]*factor)}{sfx}</span></div>'
+                else:
+                    flot_html = '<div style="font:400 9px IBM Plex Mono,mono;color:#8AA5C0;font-style:italic;margin-bottom:4px">Sin precio histórico disponible</div>' if not m.get("es_actual") and m["n_ab"] > 0 else ""
                 st.markdown(f"""<div style="background:#FFFFFF;border:1px solid #C8D4E8;
                     border-radius:10px;padding:14px 16px;margin-bottom:12px;
                     border-top:3px solid {clr};box-shadow:0 1px 4px rgba(27,43,75,0.07)">
                   <div style="font:700 12px IBM Plex Mono,mono;color:#1B2B4B;margin-bottom:8px">
-                    {m['nombre']} {año_sel}</div>
+                    {m['nombre']} {año_sel}{badge_actual}</div>
                   <div style="display:flex;justify-content:space-between;margin-bottom:4px">
-                    <span style="font:400 9px IBM Plex Mono,mono;color:#5A7A9A">INVERTIDO</span>
+                    <span style="font:400 9px IBM Plex Mono,mono;color:#5A7A9A">CAPITAL EN EL MES</span>
                     <span style="font:500 11px IBM Plex Mono,mono;color:#1B2B4B">{money(m['inv']*factor)}{sfx}</span>
                   </div>
                   <div style="display:flex;justify-content:space-between;margin-bottom:4px">
-                    <span style="font:400 9px IBM Plex Mono,mono;color:#5A7A9A">VALOR</span>
-                    <span style="font:500 11px IBM Plex Mono,mono;color:#1B2B4B">{money(m['val']*factor)}{sfx}</span>
-                  </div>
-                  <div style="display:flex;justify-content:space-between;margin-bottom:4px">
-                    <span style="font:400 9px IBM Plex Mono,mono;color:#5A7A9A">REALIZADO</span>
+                    <span style="font:400 9px IBM Plex Mono,mono;color:#5A7A9A">REALIZADO (CERRADAS)</span>
                     <span style="font:500 11px IBM Plex Mono,mono;color:{('#1A8A5A' if m['pnl_real']>=0 else '#C83030')}">{'+' if m['pnl_real']>=0 else ''}{money(m['pnl_real']*factor)}{sfx}</span>
                   </div>
+                  {flot_html}
                   <div style="border-top:1px solid #E4EAF0;margin:8px 0 6px"></div>
                   <div style="display:flex;justify-content:space-between;align-items:center">
                     <span style="font:600 13px IBM Plex Mono,mono;color:{clr}">{sgn}{money(m['pnl_tot']*factor)}{sfx}</span>
