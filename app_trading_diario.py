@@ -137,7 +137,7 @@ input:disabled {
 /* Form */
 [data-testid="stForm"] {
     background:#FFFFFF!important; border:1px solid #C8D4E8!important;
-    border-radius:10px!important; padding:20px!important;
+    border-radius:10px!important; padding:20px!important; box-shadow:0 1px 4px rgba(27,43,75,0.08)!important;
 }
 
 /* Radio */
@@ -1110,7 +1110,7 @@ with t_dash:
                 labels=labels_d, values=values_d, hole=.55,
                 marker=dict(colors=colors_d, line=dict(color="#0E1C2E",width=2)),
                 textinfo="percent+label",
-                textfont=dict(color="#ffffff", size=10),
+                textfont=dict(color="#1B2B4B", size=10),
                 textposition="inside",
                 insidetextorientation="horizontal",
                 hovertemplate="<b>%{label}</b><br>%{value:$,.2f}"+sfx+"<br>%{percent}<extra></extra>",
@@ -1118,7 +1118,7 @@ with t_dash:
             fig2.update_layout(**PT,
                 title=dict(text=titulo_d, font=dict(size=11,color="#8BA5C8"),x=.5),
                 showlegend=True,
-                legend=dict(font=dict(color="#ffffff",size=10),bgcolor="rgba(0,0,0,0)"))
+                legend=dict(font=dict(color="#1B2B4B",size=10),bgcolor="rgba(0,0,0,0)"))
             st.plotly_chart(fig2, use_container_width=True, config={"displayModeBar":False})
         elif posiciones:
             st.info("Todas las posiciones están cerradas.")
@@ -1264,7 +1264,7 @@ if puede_registrar:
             if es_mercado and not es_cdt:
                 # Mercado: precio por unidad + capital → calcula cantidad
                 st.markdown("""<div style="font:400 11px IBM Plex Mono,mono;color:#5A7A9A;
-                    margin:-4px 0 8px;padding:8px 12px;background:var(--surface);
+                    margin:-4px 0 8px;padding:8px 12px;background:#EFF4FF;
                     border-left:3px solid #C8A84B;border-radius:0 6px 6px 0">
                   <strong>Activo de mercado</strong> — ingresa el precio por unidad y el capital.
                   La cantidad se calcula automáticamente.</div>""", unsafe_allow_html=True)
@@ -1289,7 +1289,7 @@ if puede_registrar:
             elif es_cdt:
                 # CDT/Remunerada: capital + TEA anual
                 st.markdown("""<div style="font:400 11px IBM Plex Mono,mono;color:#5A7A9A;
-                    margin:-4px 0 8px;padding:8px 12px;background:var(--surface);
+                    margin:-4px 0 8px;padding:8px 12px;background:#EDF6FF;
                     border-left:3px solid #6BA3BE;border-radius:0 6px 6px 0">
                   <strong>CDT / Cuenta Remunerada</strong> — ingresa el capital y la tasa anual.
                   El valor crece automáticamente con el tiempo.</div>""", unsafe_allow_html=True)
@@ -1671,8 +1671,8 @@ if rol == "admin" or puede_registrar:
                 dfh["Monto"] = dfh["Monto"] * factor
 
             def ct(v):
-                if v=="Aporte":  return "color:#2ECC87;font-weight:600"
-                if v=="Retiro":  return "color:#E85555;font-weight:600"
+                if v=="Aporte":  return "color:#1A8A5A;font-weight:600"
+                if v=="Retiro":  return "color:#C83030;font-weight:600"
                 return ""
             styled_h = dfh.style.format({"Monto":"${:,.2f}"})
             if "Tipo" in dfh.columns:
