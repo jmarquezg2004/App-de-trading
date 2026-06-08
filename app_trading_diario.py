@@ -12,20 +12,25 @@ st.markdown("""
 <style>
 @import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@300;400;500;600&display=swap');
 
-/* Variables de tema — oscuro por defecto */
+/* Paleta Arkez Invest — arkezinvest.com */
 :root {
-    --bg:         #131E2E;
-    --sidebar-bg: #0F1824;
-    --surface:    #1B2A40;
-    --surface2:   #131E2E;
-    --border:     #243550;
+    --bg:         #0E1C2E;
+    --sidebar-bg: #0A1520;
+    --surface:    #162238;
+    --surface2:   #0E1C2E;
+    --border:     #1E3354;
+    --nav:        #1B2B4B;
     --text:       #E8EDF5;
     --muted:      #7A9CC0;
     --label:      #9BB5D0;
+    --gold:       #C8A84B;
+    --green:      #2ECC87;
+    --red:        #E85555;
 }
 
 html, body { font-family: 'IBM Plex Sans', sans-serif; }
-.stApp { background: var(--bg); color: var(--text); }
+.stApp { background: var(--bg) !important; color: var(--text); }
+.stApp > div { background: var(--bg) !important; }
 h1 { font-family:'IBM Plex Mono',monospace!important; color:#C8A84B!important; letter-spacing:2px; }
 h2 { font-family:'IBM Plex Mono',monospace!important; font-size:11px!important; letter-spacing:1.5px; text-transform:uppercase; color:var(--muted)!important; }
 h3 { font-family:'IBM Plex Mono',monospace!important; font-size:13px!important; color:#C8A84B!important; }
@@ -64,7 +69,7 @@ input:disabled {
 [role="listbox"], [role="listbox"] * {
     background:var(--surface)!important; color:var(--text)!important;
     font-family:'IBM Plex Mono',monospace!important; font-size:13px!important;
-    border-color:#2a4060!important;
+    border-color:#1E3354!important;
 }
 [role="option"]:hover { background:#243b55!important; color:#C8A84B!important; }
 [aria-selected="true"] { background:#1e3a5a!important; color:#C8A84B!important; }
@@ -79,13 +84,13 @@ input:disabled {
 
 /* Number input buttons */
 [data-testid="stNumberInput"] button {
-    background:#1a3050!important; color:#ffffff!important; border-color:#2a4060!important;
+    background:#162238!important; color:#ffffff!important; border-color:#1E3354!important;
 }
 
 /* Botones */
 .stButton>button {
     background:linear-gradient(135deg,#C8A84B,#A07830)!important;
-    color:#0D1929!important; border:none!important; border-radius:6px!important;
+    color:#0A1520!important; border:none!important; border-radius:6px!important;
     font-family:'IBM Plex Mono',monospace!important; font-weight:600!important;
     letter-spacing:1px!important; text-transform:uppercase!important; font-size:12px!important;
 }
@@ -98,6 +103,7 @@ input:disabled {
 }
 [data-testid="stTabs"] button[aria-selected="true"] {
     color:#C8A84B!important; border-bottom:2px solid #C8A84B!important;
+    background: var(--surface) !important;
 }
 
 /* Métricas */
@@ -503,8 +509,8 @@ def calcular_posicion(row, prices):
 PT=dict(paper_bgcolor="rgba(0,0,0,0)",plot_bgcolor="rgba(0,0,0,0)",
         font=dict(family="IBM Plex Mono",color="#DCE5F0",size=11),
         margin=dict(l=10,r=10,t=36,b=10),
-        xaxis=dict(gridcolor="#243550",linecolor="#2E4A65",tickfont=dict(color="#8BA5C8")),
-        yaxis=dict(gridcolor="#243550",linecolor="#2E4A65",tickfont=dict(color="#8BA5C8")))
+        xaxis=dict(gridcolor="#1E3354",linecolor="#1E3354",tickfont=dict(color="#8BA5C8")),
+        yaxis=dict(gridcolor="#1E3354",linecolor="#1E3354",tickfont=dict(color="#8BA5C8")))
 
 def money(v,f=1):
     v2=v*f
@@ -535,7 +541,7 @@ if not st.session_state.logged_in:
         '<div style="text-align:center;padding:40px 0 20px">'
         '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 120" width="140" height="84" style="display:block;margin:0 auto">'
         '<polygon points="100,5 15,115 40,115 100,35 160,115 185,115" fill="#C8A84B"/>'
-        '<polygon points="75,115 88,88 112,88 125,115 108,115 100,95 92,115" fill="#0D1929"/>'
+        '<polygon points="75,115 88,88 112,88 125,115 108,115 100,95 92,115" fill="#0A1520"/>'
         '</svg>'
         '<div style="font:700 26px/1 IBM Plex Mono,mono;color:#C8A84B;letter-spacing:4px;margin:8px 0 4px">ARKEZ</div>'
         '<div style="font:400 11px/1.5 IBM Plex Mono,mono;color:#8BA5C8;letter-spacing:2px">PLATAFORMA · ACCESO PRIVADO</div>'
@@ -623,7 +629,7 @@ with st.sidebar:
     </div>""", unsafe_allow_html=True)
 
     rc = "#C8A84B" if rol=="admin" else "#2ECC87"
-    st.markdown(f"""<div style="background:#182438;border:1px solid #243550;border-radius:8px;
+    st.markdown(f"""<div style="background:#0E1C2E;border:1px solid #1E3354;border-radius:8px;
         padding:10px 12px;margin-bottom:10px">
       <div style="font:400 9px IBM Plex Mono,mono;color:#8BA5C8;letter-spacing:1px;margin-bottom:3px">USUARIO</div>
       <div style="font:400 11px/1.4 IBM Plex Mono,mono;color:var(--text);word-break:break-all">{usuario}</div>
@@ -769,7 +775,7 @@ if rol != "admin":
             ' <span style="font:600 9px IBM Plex Mono,mono;background:rgba(155,142,196,.12);color:#9B8EC4;border:1px solid #9B8EC4;padding:1px 7px;border-radius:20px">SOLO LECTURA</span>'
 
 st.markdown(f"""<div style="display:flex;align-items:center;gap:14px;flex-wrap:wrap;margin-bottom:4px">
-  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 120" width="36" height="22" style="flex-shrink:0"><polygon points="100,5 15,115 40,115 100,35 160,115 185,115" fill="#C8A84B"/><polygon points="75,115 88,88 112,88 125,115 108,115 100,95 92,115" fill="#0D1929"/></svg>
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 120" width="36" height="22" style="flex-shrink:0"><polygon points="100,5 15,115 40,115 100,35 160,115 185,115" fill="#C8A84B"/><polygon points="75,115 88,88 112,88 125,115 108,115 100,95 92,115" fill="#0A1520"/></svg>
   <div>
     <div style="font:600 18px/1 IBM Plex Mono,mono;color:#C8A84B;letter-spacing:2px">
       {fondo.upper()}{badge}</div>
@@ -963,37 +969,61 @@ with t_dash:
         sec("Evolución del portafolio")
         posiciones_graf = [p for p in posiciones if p["Estado"] != "Archivada"]
         if posiciones_graf:
-            eventos = []
             hoy_ts = pd.Timestamp.now().normalize()
+
+            # Construir serie temporal correcta:
+            # En cada fecha clave, calcular el valor TOTAL del portafolio
+            # = suma de todas las posiciones activas en esa fecha
+
+            # 1. Recopilar todas las fechas clave (compras y ventas)
+            fechas_clave = set()
             for p in posiciones_graf:
                 try:
                     fc = pd.to_datetime(p["F_Compra"])
-                    fv = pd.to_datetime(p["F_Venta"]) if p["F_Venta"] else hoy_ts
-                    # Recortar al período seleccionado
-                    if f_fin is not None: fv = min(fv, f_fin)
-                    if f_ini is not None: fc_graf = max(fc, f_ini)
-                    else: fc_graf = fc
-                    if fc_graf > fv: continue
-                    # Valor al inicio del período (proporcional al tiempo transcurrido)
-                    eventos.append({"fecha": fc_graf, "invertido": p["Invertido"],
-                                    "actual": p["Invertido"] if fc_graf == fc else p["Val_Actual"]})
-                    eventos.append({"fecha": fv, "invertido": p["Invertido"], "actual": p["Val_Actual"]})
+                    fechas_clave.add(fc)
+                    if p["F_Venta"]:
+                        fv = pd.to_datetime(p["F_Venta"])
+                        fechas_clave.add(fv)
                 except: pass
-            # Agregar punto de HOY si no hay fecha fin
-            if f_fin is None and eventos:
-                eventos.append({"fecha": hoy_ts,
-                                "invertido": sum(p["Invertido"] for p in posiciones_graf if p["Estado"]=="Abierta"),
-                                "actual":    sum(p["Val_Actual"] for p in posiciones_graf if p["Estado"]=="Abierta")})
+            fechas_clave.add(hoy_ts)
+
+            # Aplicar filtro de período
+            if f_ini is not None:
+                fechas_clave = {f for f in fechas_clave if f_ini <= f <= f_fin}
+                fechas_clave.add(f_ini)
+                fechas_clave.add(f_fin)
+
+            fechas_ordenadas = sorted(fechas_clave)
+
+            # 2. Para cada fecha, calcular valor total del portafolio en ese momento
+            puntos = []
+            for fecha in fechas_ordenadas:
+                valor_portafolio = 0.0
+                capital_portafolio = 0.0
+                for p in posiciones_graf:
+                    try:
+                        fc = pd.to_datetime(p["F_Compra"])
+                        fv = pd.to_datetime(p["F_Venta"]) if p["F_Venta"] else hoy_ts
+                        # Posición activa en esta fecha?
+                        if fc <= fecha <= fv:
+                            capital_portafolio += p["Invertido"]
+                            # Valor en fecha final = valor actual; en fechas pasadas = costo
+                            if fecha >= hoy_ts.normalize() or (p["F_Venta"] and fecha >= pd.to_datetime(p["F_Venta"])):
+                                valor_portafolio += p["Val_Actual"]
+                            else:
+                                valor_portafolio += p["Invertido"]  # en el pasado = costo
+                    except: pass
+                if capital_portafolio > 0:
+                    puntos.append({"fecha": fecha,
+                                   "invertido": capital_portafolio,
+                                   "actual": valor_portafolio})
+
+            eventos = puntos  # compatibilidad con el código que sigue
 
             if eventos:
-                df_ev = pd.DataFrame(eventos).sort_values("fecha")
-                # Agrupar por fecha sumando todas las posiciones activas en ese momento
-                df_val = df_ev.groupby("fecha").agg(
-                    invertido=("invertido","sum"),
-                    actual=("actual","sum")
-                ).reset_index()
-                df_val["invertido"] *= factor
-                df_val["actual"]    *= factor
+                df_val = pd.DataFrame(eventos).sort_values("fecha").drop_duplicates("fecha")
+                df_val["invertido"] = df_val["invertido"] * factor
+                df_val["actual"]    = df_val["actual"]    * factor
 
                 fig = go.Figure()
                 # Área de valor actual (portafolio)
@@ -1003,7 +1033,7 @@ with t_dash:
                     line=dict(color="#C8A84B", width=2.5),
                     fill="tozeroy", fillcolor="rgba(200,168,75,0.08)",
                     marker=dict(color="#C8A84B", size=7,
-                                line=dict(color="#111827", width=1.5)),
+                                line=dict(color="#0E1C2E", width=1.5)),
                     name=f"Valor ({moneda})",
                     hovertemplate="<b>%{x|%d/%m/%Y}</b><br>Valor: %{y:$,.2f}"+sfx+"<extra></extra>"
                 ))
@@ -1072,7 +1102,7 @@ with t_dash:
 
             fig2 = go.Figure(go.Pie(
                 labels=labels_d, values=values_d, hole=.55,
-                marker=dict(colors=colors_d, line=dict(color="#111827",width=2)),
+                marker=dict(colors=colors_d, line=dict(color="#0E1C2E",width=2)),
                 textinfo="percent+label",
                 textfont=dict(color="#ffffff", size=10),
                 textposition="inside",
@@ -1103,7 +1133,7 @@ with t_dash:
                              if p["Ticker"].upper()==tk.upper() and p["Estado"]=="Abierta"), None)
             pnl_html = f'<div style="font:400 9px IBM Plex Mono,mono;color:{"#2ECC87" if pnl_real>=0 else "#E85555"}">P&L: {"+" if pnl_real>=0 else ""}{pnl_real:.2f}%</div>' if pnl_real is not None else ""
             with cols_p[i%min(len(prices),5)]:
-                st.markdown(f"""<div style="background:#1B2A40;border:1px solid #243550;
+                st.markdown(f"""<div style="background:#162238;border:1px solid #1E3354;
                     border-radius:8px;padding:12px;text-align:center;margin-bottom:8px">
                   <div style="font:600 11px/1.5 IBM Plex Mono,mono;color:#C8A84B">{tk}</div>
                   <div style="font:600 15px/1.4 IBM Plex Mono,mono;color:var(--text)">{pxs}</div>
@@ -1126,7 +1156,7 @@ with t_port:
             chg_str = f"{'▲' if p['Chg24']>=0 else '▼'} {abs(p['Chg24']):.2f}%" if p["Chg24"]!=0 else "—"
             chg_clr = "#2ECC87" if p["Chg24"]>=0 else "#E85555"
 
-            st.markdown(f"""<div style="background:#1B2A40;border:1px solid #243550;
+            st.markdown(f"""<div style="background:#162238;border:1px solid #1E3354;
                 border-radius:10px;padding:14px 18px;margin-bottom:10px;
                 display:flex;align-items:center;gap:16px;flex-wrap:wrap">
               <div style="min-width:120px">
@@ -1168,7 +1198,7 @@ with t_port:
         for p in pos_cer_per:
             gc3 = "#2ECC87" if p["GP_usd"]>=0 else "#E85555"
             sg3 = "+" if p["GP_usd"]>=0 else ""
-            st.markdown(f"""<div style="background:#131E2E;border:1px solid #243550;
+            st.markdown(f"""<div style="background:#131E2E;border:1px solid #1E3354;
                 border-radius:10px;padding:12px 18px;margin-bottom:8px;
                 display:flex;align-items:center;gap:16px;flex-wrap:wrap;opacity:.9">
               <div style="min-width:120px">
@@ -1345,7 +1375,7 @@ if puede_registrar:
                     gp_venta = (precio_v - pos_sel["Px_Compra"]) * pos_sel["Cantidad"]
                     gp_pct_v = gp_venta / pos_sel["Invertido"] * 100 if pos_sel["Invertido"] else 0
                     clr_v    = "#2ECC87" if gp_venta >= 0 else "#E85555"
-                    st.markdown(f"""<div style="background:#1B2A40;border:1px solid #243550;
+                    st.markdown(f"""<div style="background:#162238;border:1px solid #1E3354;
                         border-radius:8px;padding:12px 16px;margin:8px 0;
                         display:flex;gap:24px;flex-wrap:wrap">
                       <div><div style="font:400 9px IBM Plex Mono,mono;color:#8BA5C8">RESULTADO VENTA</div>
@@ -1566,7 +1596,7 @@ if rol == "admin" or puede_registrar:
                 money(cash_neto, factor)+sfx,
                 "Depósitos - Retiros", color=cn_color), unsafe_allow_html=True)
 
-        st.markdown("""<div style="background:#1B2A40;border:1px solid #243550;
+        st.markdown("""<div style="background:#162238;border:1px solid #1E3354;
             border-left:3px solid #C8A84B;border-radius:0 8px 8px 0;
             padding:10px 14px;margin:14px 0;font:400 11px/1.7 IBM Plex Mono,mono;color:#B0C4DC">
           <strong>Depósito:</strong> ingresaste dinero a la cuenta (aún no invertido en activos).<br>
@@ -1663,7 +1693,7 @@ if rol == "admin" or puede_registrar:
 if rol == "admin":
     with t_usr:
         sec("Gestión de usuarios")
-        st.markdown("""<div style="background:#1B2A40;border:1px solid #243550;border-left:3px solid #C8A84B;
+        st.markdown("""<div style="background:#162238;border:1px solid #1E3354;border-left:3px solid #C8A84B;
             border-radius:0 8px 8px 0;padding:10px 14px;margin-bottom:14px;
             font:400 12px/1.7 IBM Plex Mono,mono;color:#B0C4DC">
           <strong>Portafolio Individual</strong> → el usuario entra y registra sus propias inversiones.<br>
@@ -1744,7 +1774,7 @@ if rol == "admin":
 
         with ca2:
             sec("APIs activas")
-            st.markdown(f"""<div style="background:#1B2A40;border:1px solid #243550;
+            st.markdown(f"""<div style="background:#162238;border:1px solid #1E3354;
                 border-radius:8px;padding:14px;font:400 11px/2 IBM Plex Mono,mono">
               <div style="color:#8BA5C8;font-size:9px;letter-spacing:1px;margin-bottom:8px">FUENTES</div>
               <div style="color:#F0C040">● CoinMarketCap — Cripto</div>
