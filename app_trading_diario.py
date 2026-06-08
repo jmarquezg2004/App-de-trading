@@ -757,12 +757,25 @@ if not df_ap.empty and "Tipo" in df_ap.columns:
     cash_aportes = df_ap[df_ap["Tipo"]=="Aporte"]["Monto"].sum()
     cash_retiros = df_ap[df_ap["Tipo"]=="Retiro"]["Monto"].sum()
 
-# Cash disponible real (como un broker):
-# = Total depositado - Total retirado - Capital actualmente invertido en posiciones abiertas
-# Esto es el dinero que tienes en el broker SIN invertir
-cash_neto = cash_aportes - cash_retiros - total_invertido
-# Patrimonio total = valor del portafolio + cash disponible
-patrimonio_total = total_actual + max(cash_neto, 0)
+# Capital ACTUALMENTE en posiciones abiertas (no cerradas)
+cap_en_abiertas   = sum(p["Invertido"] for p in posiciones if p["Estado"] == "Abierta")
+valor_en_abiertas = sum(p["Val_Actual"] for p in posiciones if p["Estado"] == "Abierta")
+# PnL realizado de posiciones cerradas
+pnl_realizado_total = sum(p["GP_usd"] for p in posiciones if p["Estado"] == "Cerrada")
+
+# Lógica broker:
+# Cash libre = lo que deposité - lo que retiré - lo que está en posiciones abiertas ahora
+cash_libre = cash_aportes - cash_retiros - cap_en_abiertas
+
+# Patrimonio total = valor de posiciones abiertas + cash libre
+# (si cash_libre < 0 significa que invertiste más de lo que depositaste — posible con ganancias reinvertidas)
+patrimonio_total = valor_en_abiertas + max(cash_libre, 0)
+
+# G/P total: PnL flotante de abiertas + PnL realizado de cerradas
+total_invertido  = cap_en_abiertas
+total_actual     = valor_en_abiertas
+total_gp         = (valor_en_abiertas - cap_en_abiertas) + pnl_realizado_total
+rend_pct         = total_gp / cap_en_abiertas * 100 if cap_en_abiertas > 0 else 0
 
 # Portafolio real = valor de posiciones abiertas + cash neto (retiros ya restan)
 # Si hay retiros, el valor total baja aunque las posiciones estén bien
@@ -793,7 +806,7 @@ st.markdown(f"""<div style="display:flex;align-items:center;gap:14px;flex-wrap:w
       ARKEZ · PLATAFORMA · PRECIOS EN TIEMPO REAL</div>
   </div>
   <div style="margin-left:auto;font:400 10px IBM Plex Mono,mono;color:#5A7A9A">
-    {datetime.now().strftime('%d/%m/%Y %H:%M')}</div></div>
+    {(datetime.utcnow() - __import__('datetime').timedelta(hours=5)).strftime('%d/%m/%Y %H:%M')}</div></div>
 <hr style="margin:12px 0 18px">""", unsafe_allow_html=True)
 
 # ── FILTRO DE PERIODO ──────────────────────────────────
@@ -855,6 +868,9 @@ def en_periodo_kpi(p):
 # Posiciones activas hoy (no archivadas)
 pos_activas   = [p for p in posiciones if p["Estado"] != "Archivada"]
 pos_ab_per    = [p for p in pos_activas if p["Estado"] == "Abierta"]
+# Sincronizar con variables recalculadas arriba
+inv_per = cap_en_abiertas
+act_per = valor_en_abiertas
 
 # Cerradas: filtrar por período seleccionado
 def cerrada_en_periodo(p):
@@ -874,7 +890,7 @@ act_per  = sum(p["Val_Actual"] for p in pos_ab_per)   # valor actual abiertas
 pnl_ab   = sum(p["GP_usd"] for p in pos_ab_per)
 pnl_cer  = sum(p["GP_usd"] for p in pos_cer_per)
 gp_per   = pnl_ab + pnl_cer
-rend_per = gp_per / inv_per * 100 if inv_per > 0 else 0
+rend_per = gp_per / cap_en_abiertas * 100 if cap_en_abiertas > 0 else 0
 
 # Para mostrar en KPI de período
 label_periodo_cer = f"({len(pos_cer_per)} cerradas {'en período' if f_ini else 'en total'})"
@@ -890,9 +906,12 @@ gc = "#2ECC87" if gp_per >= 0 else "#E85555"
 k1,k2,k3,k4,k5 = st.columns(5)
 with k1: st.markdown(card("Portafolio actual",   money(act_per,factor)+sfx), unsafe_allow_html=True)
 with k2: st.markdown(card("Total invertido",     money(inv_per,factor)+sfx, color="#8BA5C8"), unsafe_allow_html=True)
-with k3: st.markdown(card("Ganancia / Pérdida",
-    f"{'+'if gp_per>=0 else ''}{money(gp_per,factor)}{sfx}",
-    f"{'▲' if rend_per>=0 else '▼'} {abs(rend_per):.2f}%", color=gc), unsafe_allow_html=True)
+with k3:
+    gp_str = f"{'+'if gp_per>=0 else ''}{money(gp_per,factor)}"
+    # Si el valor es muy largo, usar formato abreviado
+    if len(gp_str) > 12: gp_str = f"{'+'if gp_per>=0 else ''}{money(gp_per,factor)}"
+    st.markdown(card("Ganancia / Pérdida", gp_str+sfx,
+        f"{'▲' if rend_per>=0 else '▼'} {abs(rend_per):.2f}%", color=gc), unsafe_allow_html=True)
 with k4: st.markdown(card("Posiciones abiertas", str(len(pos_ab_per)),
     label_periodo_cer, color="#F0C040"), unsafe_allow_html=True)
 with k5:
@@ -1500,20 +1519,27 @@ if puede_registrar:
                                 st.error("❌ Error actualizando")
                     else:
                         # Activo de mercado: editar precio, ticker, fecha
-                        ea1,ea2,ea3,ea4 = st.columns(4)
+                        ea1,ea2 = st.columns(2)
                         nueva_fecha_c  = ea1.date_input("Fecha compra", value=fecha_edit_default, key="ef_c")
-                        nuevo_precio_c = ea2.number_input("Precio compra", value=float(p_edit["Px_Compra"]),
+                        nuevo_ticker   = ea2.text_input("Ticker", value=p_edit["Ticker"], key="et_c")
+                        eb1,eb2,eb3 = st.columns(3)
+                        nuevo_precio_c = eb1.number_input("Precio compra (USD/unidad)",
+                                                           value=float(p_edit["Px_Compra"]),
                                                            min_value=0.0, step=0.0001, format="%.4f", key="ep_c")
-                        nuevo_ticker   = ea3.text_input("Ticker", value=p_edit["Ticker"], key="et_c")
-                        val_orig = p_edit["Invertido"]
-                        nueva_qty = round(val_orig / nuevo_precio_c, 8) if nuevo_precio_c > 0 else p_edit["Cantidad"]
-                        ea4.text_input("Nueva cantidad (auto)", value=f"{nueva_qty:,.8f}", disabled=True)
+                        nuevo_capital  = eb2.number_input("Capital invertido (USD)",
+                                                           value=float(p_edit["Invertido"]),
+                                                           min_value=0.0, step=0.01, format="%.2f", key="ecap_c")
+                        nueva_qty = round(nuevo_capital / nuevo_precio_c, 8) if nuevo_precio_c > 0 else p_edit["Cantidad"]
+                        eb3.text_input("Cantidad calculada (auto)",
+                                       value=f"{nueva_qty:,.8f}", disabled=True,
+                                       help="Se recalcula automáticamente")
                     if not es_cdt_edit and st.button("✏️ ACTUALIZAR COMPRA", key="btn_edit_ab"):
                         ok = fs_patch("inversiones", p_edit["_id"], {
                             "Fecha_Compra":  str(nueva_fecha_c),
                             "Precio_Compra": float(nuevo_precio_c),
                             "Cantidad":      float(nueva_qty),
                             "Ticker_API":    nuevo_ticker.strip().upper(),
+                            "Valor_Pos":     float(nuevo_capital),
                         })
                         if ok:
                             st.success("✓ Compra actualizada correctamente")
@@ -1630,22 +1656,35 @@ if puede_registrar:
 if rol == "admin" or puede_registrar:
     with t_cap:
         # Resumen de cash actual
-        cap1, cap2, cap3, cap4 = st.columns(4)
-        with cap1:
-            st.markdown(card("Depósitos acumulados",
-                money(cash_aportes, factor)+sfx, color="#1A8A5A"), unsafe_allow_html=True)
-        with cap2:
-            st.markdown(card("Retiros acumulados",
-                money(cash_retiros, factor)+sfx, color="#C83030"), unsafe_allow_html=True)
-        with cap3:
-            cn_color = "#1A8A5A" if cash_neto >= 0 else "#C83030"
-            st.markdown(card("Cash sin invertir",
-                money(cash_neto, factor)+sfx,
-                "Depósitos - Retiros - Invertido", color=cn_color), unsafe_allow_html=True)
-        with cap4:
-            st.markdown(card("Patrimonio total",
-                money(patrimonio_total, factor)+sfx,
-                "Portafolio + Cash disponible", color="#C8A84B"), unsafe_allow_html=True)
+        # Resumen financiero estilo broker
+        st.markdown(f"""<div style="background:#1B2B4B;border-radius:12px;padding:18px 24px;
+            margin-bottom:16px;display:flex;gap:0;flex-wrap:wrap">
+          <div style="flex:1;min-width:160px;padding:0 20px;border-right:1px solid #2E4D6E">
+            <div style="font:400 9px IBM Plex Mono,mono;color:#7A9CC0;letter-spacing:1.5px;margin-bottom:4px">DEPÓSITOS TOTALES</div>
+            <div style="font:700 20px IBM Plex Mono,mono;color:#E8EDF5">{money(cash_aportes*factor)}{sfx}</div>
+            <div style="font:400 9px IBM Plex Mono,mono;color:#7A9CC0;margin-top:2px">Todo lo que pusiste en la cuenta</div>
+          </div>
+          <div style="flex:1;min-width:160px;padding:0 20px;border-right:1px solid #2E4D6E">
+            <div style="font:400 9px IBM Plex Mono,mono;color:#7A9CC0;letter-spacing:1.5px;margin-bottom:4px">RETIROS TOTALES</div>
+            <div style="font:700 20px IBM Plex Mono,mono;color:#E85555">-{money(cash_retiros*factor)}{sfx}</div>
+            <div style="font:400 9px IBM Plex Mono,mono;color:#7A9CC0;margin-top:2px">Lo que retiraste de la cuenta</div>
+          </div>
+          <div style="flex:1;min-width:160px;padding:0 20px;border-right:1px solid #2E4D6E">
+            <div style="font:400 9px IBM Plex Mono,mono;color:#7A9CC0;letter-spacing:1.5px;margin-bottom:4px">EN POSICIONES ABIERTAS</div>
+            <div style="font:700 20px IBM Plex Mono,mono;color:#C8A84B">{money(cap_en_abiertas*factor)}{sfx}</div>
+            <div style="font:400 9px IBM Plex Mono,mono;color:#7A9CC0;margin-top:2px">Capital actualmente invertido</div>
+          </div>
+          <div style="flex:1;min-width:160px;padding:0 20px;border-right:1px solid #2E4D6E">
+            <div style="font:400 9px IBM Plex Mono,mono;color:#7A9CC0;letter-spacing:1.5px;margin-bottom:4px">CASH LIBRE</div>
+            <div style="font:700 20px IBM Plex Mono,mono;color:{'#2ECC87' if cash_libre>=0 else '#E85555'}">{money(cash_libre*factor)}{sfx}</div>
+            <div style="font:400 9px IBM Plex Mono,mono;color:#7A9CC0;margin-top:2px">Depósitos - Retiros - Invertido</div>
+          </div>
+          <div style="flex:1;min-width:160px;padding:0 20px">
+            <div style="font:400 9px IBM Plex Mono,mono;color:#C8A84B;letter-spacing:1.5px;margin-bottom:4px">PATRIMONIO TOTAL</div>
+            <div style="font:700 20px IBM Plex Mono,mono;color:#C8A84B">{money(patrimonio_total*factor)}{sfx}</div>
+            <div style="font:400 9px IBM Plex Mono,mono;color:#7A9CC0;margin-top:2px">Portafolio actual + Cash libre</div>
+          </div>
+        </div>""", unsafe_allow_html=True)
 
         st.markdown("""<div style="background:#FFFFFF;border:1px solid #1E3354;
             border-left:3px solid #C8A84B;border-radius:0 8px 8px 0;
