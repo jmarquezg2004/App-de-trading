@@ -1871,11 +1871,13 @@ with t_rend:
     # - PnL flotante (posiciones abiertas al final del mes)
 
     meses_data = []
-    hoy_ts = pd.Timestamp.now().normalize()
+    hoy_ts    = pd.Timestamp.now().normalize()
+    mes_actual = hoy_ts.month
+    año_actual = hoy_ts.year
 
+    import calendar as cal_mod
     for mes_num in range(1, 13):
-        import calendar
-        ultimo_dia = calendar.monthrange(año_sel, mes_num)[1]
+        ultimo_dia = cal_mod.monthrange(año_sel, mes_num)[1]
         f_inicio = pd.Timestamp(año_sel, mes_num, 1)
         f_fin_mes = pd.Timestamp(año_sel, mes_num, ultimo_dia)
 
