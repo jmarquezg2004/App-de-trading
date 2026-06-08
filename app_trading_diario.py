@@ -1938,43 +1938,38 @@ with t_rend:
         })
 
     if meses_data:
-        # Cards por mes
         cols_m = st.columns(3)
         for i, m in enumerate(meses_data):
-            clr = "#1A8A5A" if m["pnl_tot"] >= 0 else "#C83030"
-            sgn = "+" if m["pnl_tot"] >= 0 else ""
+            clr  = "#1A8A5A" if m["pnl_tot"] >= 0 else "#C83030"
+            sgn  = "+" if m["pnl_tot"] >= 0 else ""
+            badge = '''<span style="font:500 8px IBM Plex Mono,mono;background:#1B2B4B;color:#C8A84B;padding:1px 6px;border-radius:3px;margin-left:4px">EN VIVO</span>''' if m.get("es_actual") else '''<span style="font:500 8px IBM Plex Mono,mono;background:#E4EAF4;color:#5A7A9A;padding:1px 6px;border-radius:3px;margin-left:4px">CIERRE MES</span>'''
             with cols_m[i % 3]:
-                badge_actual = ' <span style="font:500 8px IBM Plex Mono,mono;background:#1B2B4B;color:#C8A84B;padding:1px 6px;border-radius:3px">EN VIVO</span>' if m.get("es_actual") else ""
-                # Mostrar flotante si hay valor (tanto mes actual como histórico con precio real)
-                if m["pnl_flot"] != 0:
-                    flot_lbl = "FLOTANTE (EN VIVO)" if m.get("es_actual") else "FLOTANTE (CIERRE MES)"
-                    flot_clr = "#1A8A5A" if m["pnl_flot"] >= 0 else "#C83030"
-                    flot_sgn = "+" if m["pnl_flot"] >= 0 else ""
-                    flot_html = f'<div style="display:flex;justify-content:space-between;margin-bottom:4px"><span style="font:400 9px IBM Plex Mono,mono;color:#5A7A9A">{flot_lbl}</span><span style="font:500 11px IBM Plex Mono,mono;color:{flot_clr}">{flot_sgn}{money(m["pnl_flot"]*factor)}{sfx}</span></div>'
-                else:
-                    flot_html = '<div style="font:400 9px IBM Plex Mono,mono;color:#8AA5C0;font-style:italic;margin-bottom:4px">Sin precio histórico disponible</div>' if not m.get("es_actual") and m["n_ab"] > 0 else ""
                 st.markdown(f"""<div style="background:#FFFFFF;border:1px solid #C8D4E8;
                     border-radius:10px;padding:14px 16px;margin-bottom:12px;
                     border-top:3px solid {clr};box-shadow:0 1px 4px rgba(27,43,75,0.07)">
-                  <div style="font:700 12px IBM Plex Mono,mono;color:#1B2B4B;margin-bottom:8px">
-                    {m['nombre']} {año_sel}{badge_actual}</div>
-                  <div style="display:flex;justify-content:space-between;margin-bottom:4px">
-                    <span style="font:400 9px IBM Plex Mono,mono;color:#5A7A9A">CAPITAL EN EL MES</span>
-                    <span style="font:500 11px IBM Plex Mono,mono;color:#1B2B4B">{money(m['inv']*factor)}{sfx}</span>
+                  <div style="font:700 12px IBM Plex Mono,mono;color:#1B2B4B;margin-bottom:12px">
+                    {m['nombre']} {año_sel} {badge}</div>
+                  <div style="display:flex;justify-content:space-between;margin-bottom:6px">
+                    <span style="font:400 9px IBM Plex Mono,mono;color:#5A7A9A;letter-spacing:0.5px">CAPITAL INVERTIDO</span>
+                    <span style="font:500 12px IBM Plex Mono,mono;color:#1B2B4B">{money(m['inv']*factor)}{sfx}</span>
                   </div>
-                  <div style="display:flex;justify-content:space-between;margin-bottom:4px">
-                    <span style="font:400 9px IBM Plex Mono,mono;color:#5A7A9A">REALIZADO (CERRADAS)</span>
-                    <span style="font:500 11px IBM Plex Mono,mono;color:{('#1A8A5A' if m['pnl_real']>=0 else '#C83030')}">{'+' if m['pnl_real']>=0 else ''}{money(m['pnl_real']*factor)}{sfx}</span>
+                  <div style="display:flex;justify-content:space-between;margin-bottom:6px">
+                    <span style="font:400 9px IBM Plex Mono,mono;color:#5A7A9A;letter-spacing:0.5px">CAPITAL ACTUAL</span>
+                    <span style="font:500 12px IBM Plex Mono,mono;color:#1B2B4B">{money(m['act']*factor)}{sfx}</span>
                   </div>
-                  {flot_html}
-                  <div style="border-top:1px solid #E4EAF0;margin:8px 0 6px"></div>
+                  <div style="border-top:1px solid #E4EAF0;margin:8px 0 8px"></div>
                   <div style="display:flex;justify-content:space-between;align-items:center">
-                    <span style="font:600 13px IBM Plex Mono,mono;color:{clr}">{sgn}{money(m['pnl_tot']*factor)}{sfx}</span>
-                    <span style="font:700 13px IBM Plex Mono,mono;color:{clr};background:{'rgba(26,138,90,0.1)' if m['pnl_tot']>=0 else 'rgba(200,48,48,0.1)'};
-                          padding:2px 8px;border-radius:4px">{sgn}{m['rend_pct']:.2f}%</span>
+                    <div>
+                      <div style="font:400 9px IBM Plex Mono,mono;color:#5A7A9A;margin-bottom:2px">PnL</div>
+                      <div style="font:700 16px IBM Plex Mono,mono;color:{clr}">{sgn}{money(m['pnl_tot']*factor)}{sfx}</div>
+                    </div>
+                    <div style="text-align:right">
+                      <div style="font:400 9px IBM Plex Mono,mono;color:#5A7A9A;margin-bottom:2px">RENDIMIENTO</div>
+                      <div style="font:700 18px IBM Plex Mono,mono;color:{clr};background:{'rgba(26,138,90,0.08)' if m['pnl_tot']>=0 else 'rgba(200,48,48,0.08)'};padding:3px 10px;border-radius:6px">{sgn}{m['rend_pct']:.2f}%</div>
+                    </div>
                   </div>
-                  <div style="font:400 9px IBM Plex Mono,mono;color:#8AA5C0;margin-top:4px">
-                    {m['n_ab']} abiertas · {m['n_cer']} cerradas</div>
+                  <div style="font:400 9px IBM Plex Mono,mono;color:#8AA5C0;margin-top:6px">
+                    {m['n_ab']} abiertas · {m['n_cer']} cerradas en el mes</div>
                 </div>""", unsafe_allow_html=True)
 
         # Resumen del año
