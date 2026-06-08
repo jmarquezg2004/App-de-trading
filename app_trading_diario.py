@@ -1882,59 +1882,71 @@ with t_rend:
         # No mostrar meses futuros
         if f_inicio > hoy_ts:
             break
+        es_mes_actual = (mes_num == mes_actual and año_sel == año_actual)
 
-        # Posiciones activas en este mes
-        inv_mes = 0.0
-        val_mes = 0.0
-        pnl_realizado = 0.0
-        pnl_flotante  = 0.0
-        n_abiertas = 0
-        n_cerradas = 0
+        cap_invertido = 0.0   # capital puesto en posiciones activas en el mes
+        cap_actual    = 0.0   # valor al cierre del mes
+        pnl_realizado = 0.0   # P&L de cerradas EN este mes
+        n_abiertas    = 0
+        n_cerradas    = 0
 
         for p in posiciones:
             if p["Estado"] == "Archivada": continue
             try:
                 fc = pd.to_datetime(p["F_Compra"])
                 fv = pd.to_datetime(p["F_Venta"]) if p["F_Venta"] else hoy_ts
-
-                # Posición comprada antes o durante este mes
                 if fc > f_fin_mes: continue
 
+                ticker_p = str(p.get("Ticker","")).strip().upper()
+                cat_p    = str(p.get("Categoria",""))
+                cant_p   = float(p.get("Cantidad", 0) or 0)
+                px_c     = float(p.get("Px_Compra", 0) or 0)
+                inv_p    = p["Invertido"]
+
+                def val_cierre(inv, cant, pxc, ticker, cat, val_actual):
+                    if es_mes_actual:
+                        return val_actual
+                    if ticker:
+                        px_h = get_precio_cierre_mes(ticker, año_sel, mes_num, cat)
+                        if px_h and px_h > 0:
+                            if cant > 0:   return cant * px_h
+                            elif pxc > 0:  return inv * px_h / pxc
+                    return inv  # fallback: costo
+
                 if p["Estado"] == "Cerrada":
-                    # Cerrada en este mes → suma al PnL realizado
                     if f_inicio <= fv <= f_fin_mes:
+                        # Cerrada en este mes
                         pnl_realizado += p["GP_usd"]
-                        n_cerradas += 1
-                    # Cerrada antes de este mes → no incluir
+                        cap_invertido += inv_p
+                        cap_actual    += p["Val_Actual"]
+                        n_cerradas    += 1
                     elif fv < f_inicio:
-                        continue
-                    # Cerrada después → abierta durante el mes
+                        continue  # cerrada antes del mes
                     else:
-                        inv_mes += p["Invertido"]
-                        val_mes += p["Invertido"]  # en el pasado = costo
-                        n_abiertas += 1
+                        # Abierta durante el mes, cerrada después
+                        cap_invertido += inv_p
+                        cap_actual    += val_cierre(inv_p, cant_p, px_c, ticker_p, cat_p, p["Val_Actual"])
+                        n_abiertas    += 1
                 else:
-                    # Abierta → si fue comprada antes o durante el mes
-                    inv_mes += p["Invertido"]
-                    val_mes += p["Val_Actual"] if f_fin_mes >= hoy_ts else p["Invertido"]
-                    pnl_flotante += p["GP_usd"] if f_fin_mes >= hoy_ts else 0
-                    n_abiertas += 1
+                    cap_invertido += inv_p
+                    cap_actual    += val_cierre(inv_p, cant_p, px_c, ticker_p, cat_p, p["Val_Actual"])
+                    n_abiertas    += 1
             except: pass
 
-        pnl_total = pnl_flotante + pnl_realizado
-        rend_pct  = pnl_total / inv_mes * 100 if inv_mes > 0 else 0
+        pnl_total = cap_actual - cap_invertido
+        rend_pct  = pnl_total / cap_invertido * 100 if cap_invertido > 0 else 0
 
         meses_data.append({
-            "mes": mes_num,
-            "nombre": MESES[mes_num-1],
-            "inv": inv_mes,
-            "val": val_mes,
-            "pnl_real": pnl_realizado,
-            "pnl_flot": pnl_flotante,
-            "pnl_tot":  pnl_total,
-            "rend_pct": rend_pct,
-            "n_ab": n_abiertas,
-            "n_cer": n_cerradas,
+            "mes":       mes_num,
+            "nombre":    MESES[mes_num-1],
+            "inv":       cap_invertido,
+            "act":       cap_actual,
+            "pnl_real":  pnl_realizado,
+            "pnl_tot":   pnl_total,
+            "rend_pct":  rend_pct,
+            "n_ab":      n_abiertas,
+            "n_cer":     n_cerradas,
+            "es_actual": es_mes_actual,
         })
 
     if meses_data:
