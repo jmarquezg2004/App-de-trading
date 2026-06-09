@@ -802,17 +802,28 @@ pnl_flotante      = valor_en_abiertas - cap_en_abiertas
 
 pnl_realizado_total   = sum(p["GP_usd"]    for p in posiciones if p["Estado"] == "Cerrada")
 cap_original_cerradas = sum(p["Invertido"] for p in posiciones if p["Estado"] == "Cerrada")
+cap_total_invertido   = cap_en_abiertas + cap_original_cerradas  # todo lo que alguna vez invertiste
 
-# FÓRMULA CORRECTA (como broker):
-# El dinero original de posiciones cerradas YA estaba en los depósitos.
-# Solo la GANANCIA neta es "dinero extra" que vuelve disponible.
-# Cash libre = Depósitos - Retiros - Capital actualmente en abiertas + PnL realizado
 total_comisiones_pagadas = sum(float(p.get("Comision_Compra",0) or 0) +
                              float(p.get("Comision_Venta",0) or 0)
                              for p in posiciones)
-cash_libre = cash_aportes - cash_retiros - cap_en_abiertas + pnl_realizado_total - total_comisiones_pagadas
 
-# Patrimonio total = valor actual del portafolio + cash libre
+# ── FÓRMULA BROKER CORRECTA ──────────────────────────────────
+# Cash = Depósitos - Retiros - Capital en abiertas + PnL realizado - Comisiones
+#
+# NO sumar el capital recuperado completo de cerradas porque ese capital
+# ya estaba contado en los depósitos originales. Solo la GANANCIA es dinero nuevo.
+# Archivadas se excluyen completamente.
+
+pnl_realizado_total = sum(p["GP_usd"] for p in posiciones if p["Estado"] == "Cerrada")
+
+cash_libre = (cash_aportes
+              - cash_retiros
+              - cap_en_abiertas
+              + pnl_realizado_total
+              - total_comisiones_pagadas)
+
+# Patrimonio total = valor actual portafolio abierto + cash disponible
 patrimonio_total = valor_en_abiertas + cash_libre
 
 # KPIs
