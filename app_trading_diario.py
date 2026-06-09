@@ -2132,9 +2132,13 @@ with t_rend:
                 </div>""", unsafe_allow_html=True)
 
         # Resumen del año
-        total_año_pnl = sum(m["pnl_tot"] for m in meses_data)
-        total_año_inv = max(m["inv"] for m in meses_data) if meses_data else 0
+        # Resumen correcto: no sumar PnL mes a mes (se duplica el flotante)
+        # Usar: PnL realizado acumulado + PnL flotante actual (una sola vez)
+        total_año_pnl = pnl_realizado_total + pnl_flotante  # variables globales ya calculadas
+        total_año_inv = cap_en_abiertas + cap_original_cerradas  # todo lo invertido en el año
         rend_año = total_año_pnl / total_año_inv * 100 if total_año_inv > 0 else 0
+        # Meses con ganancia: contar solo los que tienen PnL positivo real
+        meses_ganadores = sum(1 for m in meses_data if m["pnl_tot"] > 0)
         clr_año = "#1A8A5A" if total_año_pnl >= 0 else "#C83030"
         st.markdown(f"""<div style="background:#1B2B4B;border-radius:10px;padding:16px 20px;
             margin-top:8px;display:flex;gap:32px;flex-wrap:wrap;align-items:center">
@@ -2148,7 +2152,7 @@ with t_rend:
           </div>
           <div>
             <div style="font:400 9px IBM Plex Mono,mono;color:#7A9CC0">MESES CON GANANCIA</div>
-            <div style="font:700 20px IBM Plex Mono,mono;color:#E8EDF5">{sum(1 for m in meses_data if m['pnl_tot']>0)}/{len(meses_data)}</div>
+            <div style="font:700 20px IBM Plex Mono,mono;color:#E8EDF5">{meses_ganadores}/{len(meses_data)}</div>
           </div>
         </div>""", unsafe_allow_html=True)
     else:
