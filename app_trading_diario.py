@@ -8,6 +8,14 @@ import time
 st.set_page_config(page_title="Arkez — Plataforma", page_icon="⬡", layout="wide",
                    initial_sidebar_state="expanded")
 
+# Ocultar menú de Streamlit y footer (reduce superficie de ataque)
+st.markdown("""<style>
+#MainMenu {visibility: hidden;}
+footer {visibility: hidden;}
+header {visibility: hidden;}
+[data-testid="stToolbar"] {display: none;}
+</style>""", unsafe_allow_html=True)
+
 st.markdown("""
 <style>
 @import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@300;400;500;600&display=swap');
@@ -155,17 +163,17 @@ section[data-testid="stSidebar"] label { color:#B0C8E4!important; }
 # ══════════════════════════════════════════════════════
 # CONSTANTES
 # ══════════════════════════════════════════════════════
-FIREBASE_KEY = "AIzaSyC52gIJJRTE1B4BqeUwDmaX2fWKS3sSw10"
+# Credenciales — secrets con fallback hardcoded
+FIREBASE_KEY = st.secrets.get("FIREBASE_KEY", "AIzaSyC52gIJJRTE1B4BqeUwDmaX2fWKS3sSw10")
+ADMIN_EMAIL  = st.secrets.get("ADMIN_EMAIL",  "jmarquezg2004@gmail.com")
+CMC_KEY      = st.secrets.get("CMC_KEY",      "d67913f039804c6b900905ebad7c1aaf")
 FS_URL       = "https://firestore.googleapis.com/v1/projects/plataforma-de-inversiones/databases/(default)/documents"
-ADMIN_EMAIL  = "jmarquezg2004@gmail.com"
-CMC_KEY      = st.secrets.get("CMC_KEY", "d67913f039804c6b900905ebad7c1aaf")
 
 CATEGORIAS = [
     "Acción", "ETF", "Cripto", "CDT", "Fondo", "Cuenta Remunerada",
-    "Inmueble", "Negocio", "Ganadería", "Vehículo",
-    "Dividendo", "Seguro", "Arriendo", "Otro",
+    "Negocio", "Dividendo", "Otro",
 ]
-CATS_MANUALES = {"Inmueble","Negocio","Ganadería","Vehículo","Dividendo","Seguro","Arriendo","Otro"}
+CATS_MANUALES = {"Negocio","Dividendo","Otro"}
 CAT_CLR_MAP = {
     "Acción":"#C8A84B","ETF":"#2ECC87","Cripto":"#E87844",
     "CDT":"#6BA3BE","Fondo":"#9B8EC4","Cuenta Remunerada":"#F0C040",
@@ -187,11 +195,33 @@ LOGO_SM   = '<img src="data:image/png;base64,' + LOGO_B64_SM + '" style="width:1
 # ══════════════════════════════════════════════════════
 # FIREBASE AUTH
 # ══════════════════════════════════════════════════════
+def _sanitize(s, max_len=200):
+    if not isinstance(s, str): return ""
+    import re as _re
+    s = s.strip()[:max_len]
+    s = _re.sub(r"[<>;\\{}]", "", s)
+    return s
+
+def _sanitize_num(v, min_v=0.0, max_v=1e8):
+    """Valida que un número esté en rango razonable."""
+    try:
+        v = float(v)
+        return max(min_v, min(max_v, v))
+    except: return 0.0
+
 def firebase_login(email, pwd):
+    # Validar formato email básico
+    import re as _re
+    email = email.strip().lower()[:200]
+    if not _re.match(r'^[a-zA-Z0-9._%+\-]+@[a-zA-Z0-9.\-]+\.[a-zA-Z]{2,}$', email):
+        return False, "Formato de email inválido"
+    if len(pwd) < 6 or len(pwd) > 128:
+        return False, "Contraseña inválida"
     try:
         r = requests.post(
             f"https://identitytoolkit.googleapis.com/v1/accounts:signInWithPassword?key={FIREBASE_KEY}",
-            json={"email": email, "password": pwd, "returnSecureToken": True}, timeout=8)
+            json={"email": email, "password": pwd, "returnSecureToken": True},
+            timeout=8)
         if r.status_code == 200: return True, r.json()
         return False, r.json().get("error", {}).get("message", "Error")
     except Exception as e: return False, str(e)
@@ -209,10 +239,20 @@ def firebase_crear(email, pwd):
 # FIRESTORE CRUD
 # ══════════════════════════════════════════════════════
 def _f(v):
+    """Serializa valor para Firestore con validación de tipos."""
     if isinstance(v, bool):  return {"booleanValue": v}
-    if isinstance(v, int):   return {"integerValue": str(v)}
-    if isinstance(v, float): return {"doubleValue": v}
-    return {"stringValue": str(v)}
+    if isinstance(v, int):
+        v = max(-1e15, min(1e15, v))  # límite razonable
+        return {"integerValue": str(v)}
+    if isinstance(v, float):
+        if v != v or abs(v) == float('inf'): v = 0.0  # nan/inf → 0
+        v = max(-1e15, min(1e15, v))
+        return {"doubleValue": v}
+    # String: sanitizar
+    v = str(v)[:2000]  # máximo 2000 chars
+    v = ''.join(c for c in v if ord(c) >= 32)
+    return {"stringValue": v}
+    return {"stringValue": v}
 
 def _auth_header():
     token = st.session_state.get("auth_token", "")
@@ -524,12 +564,22 @@ def calcular_posicion(row, prices):
         gp=val-costo-com_c-com_v  # descontar ambas comisiones
         return costo,val,gp,(gp/costo*100 if costo else 0),pv,0
 
-    if cat in ["CDT","Cuenta Remunerada"] and pc>0 and costo>0:
+    if cat in ["CDT","Cuenta Remunerada"] and costo>0:
         try:
-            dias=max((pd.Timestamp.now()-pd.to_datetime(row.get("Fecha_Compra"))).days,0)
-            val=costo*((1+pc)**(dias/365)); gp=val-costo
-            return costo,val,gp,(gp/costo*100 if costo else 0),pc,0
-        except: return costo,costo,0,0,pc,0
+            # TEA puede estar actualizada en Notas como "TEA_ACTUAL:0.135"
+            tea = pc  # TEA guardada en Precio_Compra (decimal)
+            notas_str = str(row.get("Notas",""))
+            import re as _re
+            m_tea = _re.search(r"TEA_ACTUAL:([\d.]+)", notas_str)
+            if m_tea:
+                tea = float(m_tea.group(1))
+            if tea > 0:
+                dias = max((pd.Timestamp.now()-pd.to_datetime(row.get("Fecha_Compra"))).days,0)
+                val  = costo*((1+tea)**(dias/365))
+                gp   = val-costo
+                return costo,val,gp,(gp/costo*100 if costo else 0),tea,0
+        except: pass
+        return costo,costo,0,0,pc,0
 
     if ticker and ticker in prices and prices[ticker].get("price",0)>0:
         px=prices[ticker]["price"]; chg=prices[ticker].get("chg24",0)
@@ -598,9 +648,25 @@ if not st.session_state.logged_in:
         pwd   = st.text_input("Contraseña", type="password")
         if st.button("ENTRAR →", use_container_width=True):
             if email and pwd:
+                # Rate limiting: máximo 5 intentos por sesión
+                if "login_attempts" not in st.session_state:
+                    st.session_state.login_attempts = 0
+                    st.session_state.login_blocked_until = 0
+
+                import time as _time
+                now = _time.time()
+                if st.session_state.login_attempts >= 5:
+                    wait = int(st.session_state.login_blocked_until - now)
+                    if wait > 0:
+                        st.error(f"🔒 Demasiados intentos. Espera {wait} segundos.")
+                        st.stop()
+                    else:
+                        st.session_state.login_attempts = 0
+
                 with st.spinner("Verificando…"):
                     ok, result = firebase_login(email, pwd)
                 if ok:
+                    st.session_state.login_attempts = 0
                     em    = email.strip().lower()
                     rol   = "admin" if em == ADMIN_EMAIL.lower() else "usuario"
                     token = result.get("idToken", "")
@@ -619,7 +685,14 @@ if not st.session_state.logged_in:
                     })
                     st.rerun()
                 else:
-                    st.error(f"❌ {result}")
+                    st.session_state.login_attempts += 1
+                    remaining = 5 - st.session_state.login_attempts
+                    if st.session_state.login_attempts >= 5:
+                        import time as _time
+                        st.session_state.login_blocked_until = _time.time() + 120  # 2 min bloqueo
+                        st.error("🔒 Cuenta bloqueada por 2 minutos por múltiples intentos fallidos.")
+                    else:
+                        st.error(f"❌ {result} ({remaining} intentos restantes)")
             else:
                 st.warning("Completa los dos campos")
 
@@ -961,10 +1034,8 @@ with k1: st.markdown(card("Portafolio actual",   money(act_per,factor)+sfx), uns
 with k2: st.markdown(card("Total invertido",     money(inv_per,factor)+sfx, color="#8BA5C8"), unsafe_allow_html=True)
 with k3:
     gp_str = f"{'+'if gp_per>=0 else ''}{money(gp_per,factor)}"
-    # Si el valor es muy largo, usar formato abreviado
-    if len(gp_str) > 12: gp_str = f"{'+'if gp_per>=0 else ''}{money(gp_per,factor)}"
-    st.markdown(card("Ganancia / Pérdida", gp_str+sfx,
-        f"{'▲' if rend_per>=0 else '▼'} {abs(rend_per):.2f}%", color=gc), unsafe_allow_html=True)
+    pnl_detalle = f"{'▲' if rend_per>=0 else '▼'} {abs(rend_per):.2f}% · realizadas: {'+'if pnl_cer>=0 else ''}{money(pnl_cer,factor)}{sfx}"
+    st.markdown(card("Ganancia / Pérdida", gp_str+sfx, pnl_detalle, color=gc), unsafe_allow_html=True)
 with k4: st.markdown(card("Posiciones abiertas", str(len(pos_ab_per)),
     label_periodo_cer, color="#F0C040"), unsafe_allow_html=True)
 with k5:
@@ -1593,16 +1664,39 @@ if puede_registrar:
                         nuevo_cap     = ec3.number_input("Capital (USD)",
                                                           value=cap_actual, min_value=0.0,
                                                           step=0.01, format="%.2f", key="ec_cap")
-                        st.markdown(f'<div style="font:400 10px IBM Plex Mono,mono;color:#5A7A9A;margin:4px 0">TEA: {nueva_tea:.2f}% → el sistema calcula el crecimiento diario automáticamente</div>', unsafe_allow_html=True)
+                        # TEA actual (puede haber sido ajustada en notas)
+                        import re as _re2
+                        notas_cdt_str = str(p_edit.get("Notas",""))
+                        m_tea_act = _re2.search(r"TEA_ACTUAL:([\d.]+)", notas_cdt_str)
+                        tea_vigente = float(m_tea_act.group(1))*100 if m_tea_act else tea_actual
+
+                        st.markdown(f'''<div style="background:#EFF4FF;border-left:3px solid #C8A84B;
+                            border-radius:0 6px 6px 0;padding:8px 12px;margin:6px 0;
+                            font:400 10px IBM Plex Mono,mono;color:#4A6A8A">
+                          TEA vigente: <strong>{tea_vigente:.2f}%</strong> anual · el sistema calcula el crecimiento diario automáticamente.<br>
+                          Si el banco ajustó la tasa este mes, actualízala abajo.
+                        </div>''', unsafe_allow_html=True)
+
+                        nueva_tea_mes = st.number_input(
+                            "Nueva TEA este mes % (solo si cambió)",
+                            value=tea_vigente, min_value=0.0, max_value=100.0,
+                            step=0.01, format="%.2f", key="et_tea_mes",
+                            help="NuBank, Nequi, etc. ajustan su tasa mensualmente. Ingresa la nueva tasa aquí."
+                        )
+
                         if st.button("✏️ ACTUALIZAR CDT/REMUNERADA", key="btn_edit_cdt"):
+                            # Guardar TEA en notas para historial
+                            notas_sin_tea = _re2.sub(r"TEA_ACTUAL:[\d.]+", "", notas_cdt_str).strip()
+                            notas_nueva   = f"{notas_sin_tea} TEA_ACTUAL:{nueva_tea_mes/100:.4f}".strip()
                             ok = fs_patch("inversiones", p_edit["_id"], {
                                 "Fecha_Compra":  str(nueva_fecha_c),
-                                "Precio_Compra": float(nueva_tea / 100),
+                                "Precio_Compra": float(nueva_tea / 100),  # TEA original
                                 "Cantidad":      float(nuevo_cap),
                                 "Ticker_API":    "",
+                                "Notas":         notas_nueva,
                             })
                             if ok:
-                                st.success(f"✓ CDT/Remunerada actualizado — TEA: {nueva_tea:.2f}%")
+                                st.success(f"✓ Actualizado — TEA vigente: {nueva_tea_mes:.2f}%")
                                 st.cache_data.clear(); st.rerun()
                             else:
                                 st.error("❌ Error actualizando")
