@@ -403,12 +403,13 @@ def get_prices(df):
 # ══════════════════════════════════════════════════════
 COLS = ["_id","Fondo","Usuario","Fecha_Compra","Activo","Categoria",
         "Cantidad","Precio_Compra","Broker","Ticker_API",
-        "Fecha_Venta","Precio_Venta","Estado","Notas"]
+        "Fecha_Venta","Precio_Venta","Estado","Notas",
+        "Comision_Compra","Comision_Venta"]
 
 @st.cache_data(ttl=60, show_spinner=False)
 def load_inv():
     def norm(df):
-        num=["Cantidad","Precio_Compra","Precio_Venta"]
+        num=["Cantidad","Precio_Compra","Precio_Venta","Comision_Compra","Comision_Venta"]
         for c in num:
             if c in df.columns: df[c]=pd.to_numeric(df[c],errors="coerce").fillna(0.0)
             else: df[c]=0.0
@@ -497,6 +498,8 @@ def calcular_posicion(row, prices):
     pc=float(row.get("Precio_Compra",0) or 0)
     pv=float(row.get("Precio_Venta",0) or 0)
     estado=str(row.get("Estado","Abierta"))
+    com_c=float(row.get("Comision_Compra",0) or 0)  # comisión de compra
+    com_v=float(row.get("Comision_Venta",0) or 0)   # comisión de venta
 
     # Calcular costo según categoría
     # Para CDT/Remunerada: cant = capital total, pc = TEA
@@ -517,7 +520,8 @@ def calcular_posicion(row, prices):
         costo = cant * pc if pc > 0 else 0.0
 
     if estado=="Cerrada" and pv>0:
-        val=cant*pv; gp=val-costo
+        val=cant*pv
+        gp=val-costo-com_c-com_v  # descontar ambas comisiones
         return costo,val,gp,(gp/costo*100 if costo else 0),pv,0
 
     if cat in ["CDT","Cuenta Remunerada"] and pc>0 and costo>0:
@@ -791,31 +795,31 @@ if not df_ap.empty and "Tipo" in df_ap.columns:
     cash_aportes = df_ap[df_ap["Tipo"]=="Aporte"]["Monto"].sum()
     cash_retiros = df_ap[df_ap["Tipo"]=="Retiro"]["Monto"].sum()
 
-# ── MODELO BROKER REAL (Opción B) ──────────────────────────
-# Capital en posiciones abiertas HOY
-cap_en_abiertas     = sum(p["Invertido"]  for p in posiciones if p["Estado"] == "Abierta")
-valor_en_abiertas   = sum(p["Val_Actual"] for p in posiciones if p["Estado"] == "Abierta")
-pnl_flotante        = valor_en_abiertas - cap_en_abiertas
+# ── MODELO BROKER REAL ──────────────────────────────────────
+cap_en_abiertas   = sum(p["Invertido"]  for p in posiciones if p["Estado"] == "Abierta")
+valor_en_abiertas = sum(p["Val_Actual"] for p in posiciones if p["Estado"] == "Abierta")
+pnl_flotante      = valor_en_abiertas - cap_en_abiertas
 
-# Ganancias/pérdidas realizadas de posiciones cerradas
-# Cuando cierras una posición, el capital recuperado vuelve a tu cuenta
-cap_recuperado_cerradas = sum(p["Val_Actual"] for p in posiciones if p["Estado"] == "Cerrada")
-pnl_realizado_total     = sum(p["GP_usd"]     for p in posiciones if p["Estado"] == "Cerrada")
-cap_original_cerradas   = sum(p["Invertido"]  for p in posiciones if p["Estado"] == "Cerrada")
+pnl_realizado_total   = sum(p["GP_usd"]    for p in posiciones if p["Estado"] == "Cerrada")
+cap_original_cerradas = sum(p["Invertido"] for p in posiciones if p["Estado"] == "Cerrada")
 
-# Cash disponible en el broker (como Schwab, IBKR, Binance):
-# = Depósitos - Retiros - Capital en abiertas + Capital recuperado de cerradas
-# El capital recuperado de cerradas ya está disponible para reinvertir
-cash_libre = cash_aportes - cash_retiros - cap_en_abiertas + cap_recuperado_cerradas
+# FÓRMULA CORRECTA (como broker):
+# El dinero original de posiciones cerradas YA estaba en los depósitos.
+# Solo la GANANCIA neta es "dinero extra" que vuelve disponible.
+# Cash libre = Depósitos - Retiros - Capital actualmente en abiertas + PnL realizado
+total_comisiones_pagadas = sum(float(p.get("Comision_Compra",0) or 0) +
+                             float(p.get("Comision_Venta",0) or 0)
+                             for p in posiciones)
+cash_libre = cash_aportes - cash_retiros - cap_en_abiertas + pnl_realizado_total - total_comisiones_pagadas
 
-# Patrimonio total = portafolio abierto + cash disponible
+# Patrimonio total = valor actual del portafolio + cash libre
 patrimonio_total = valor_en_abiertas + cash_libre
 
-# KPIs principales
-total_invertido  = cap_en_abiertas  # solo abiertas actuales
-total_actual     = valor_en_abiertas
-total_gp         = pnl_flotante + pnl_realizado_total  # flotante + realizado
-rend_pct         = total_gp / (cap_en_abiertas + cap_original_cerradas) * 100                    if (cap_en_abiertas + cap_original_cerradas) > 0 else 0
+# KPIs
+total_invertido = cap_en_abiertas
+total_actual    = valor_en_abiertas
+total_gp        = pnl_flotante + pnl_realizado_total
+rend_pct        = total_gp / (cap_en_abiertas + cap_original_cerradas) * 100                   if (cap_en_abiertas + cap_original_cerradas) > 0 else 0
 
 # Portafolio real = valor de posiciones abiertas + cash neto (retiros ya restan)
 # Si hay retiros, el valor total baja aunque las posiciones estén bien
@@ -1365,11 +1369,14 @@ if puede_registrar:
                 valor_pos = c5.number_input("Capital invertido (USD)", min_value=0.0,
                                              step=0.01, format="%.2f")
                 broker    = c6.text_input("Broker / Exchange", placeholder="Schwab, Binance…")
-                c7,c8     = st.columns(2)
+                c7,c8,c9  = st.columns(3)
                 ticker_api= c7.text_input("Ticker para precio en vivo",
                                            placeholder="AAPL · BTC · VTI · ETH",
                                            help="Símbolo exacto para obtener precio automático")
-                notas     = c8.text_input("Notas (opcional)")
+                notas        = c8.text_input("Notas (opcional)")
+                comision_c   = c9.number_input("Comisión compra (USD)", min_value=0.0,
+                                                step=0.01, format="%.2f", key="com_c_mercado",
+                                                help="Comisión pagada al broker al comprar")
                 qty       = round(valor_pos / precio_c, 8) if precio_c > 0 and valor_pos > 0 else 0.0
                 st.text_input("Cantidad calculada automáticamente",
                               value=f"{qty:,.8f}  =  ${valor_pos:,.2f} ÷ ${precio_c:,.4f}",
@@ -1391,8 +1398,11 @@ if puede_registrar:
                 valor_pos = c5.number_input("Capital invertido (USD)", min_value=0.0,
                                              step=0.01, format="%.2f")
                 broker    = c6.text_input("Entidad financiera", placeholder="Bancolombia, Nubank…")
-                notas     = st.text_input("Notas (opcional)")
-                ticker_api= ""
+                cc_cdt, notas_cdt = st.columns(2)
+                comision_c = cc_cdt.number_input("Comisión (USD)", min_value=0.0,
+                                                  step=0.01, format="%.2f", key="com_c_cdt")
+                notas      = notas_cdt.text_input("Notas (opcional)")
+                ticker_api = ""
                 precio_registro = tea_pct / 100  # guardamos TEA como precio
                 qty_registro    = valor_pos       # cantidad = capital total
 
@@ -1429,10 +1439,12 @@ if puede_registrar:
                         "Precio_Compra": float(precio_registro),
                         "Broker":        broker.strip(),
                         "Ticker_API":    ticker_api.strip().upper() if ticker_api else "",
-                        "Fecha_Venta":   "",
-                        "Precio_Venta":  0.0,
-                        "Estado":        "Abierta",
-                        "Notas":         notas_save,
+                        "Fecha_Venta":      "",
+                        "Precio_Venta":     0.0,
+                        "Estado":           "Abierta",
+                        "Notas":            notas_save,
+                        "Comision_Compra":  float(comision_c) if 'comision_c' in dir() else 0.0,
+                        "Comision_Venta":   0.0,
                     })
                     if ok:
                         st.success(f"✓ {activo} registrado correctamente")
@@ -1463,13 +1475,16 @@ if puede_registrar:
                                    format_func=lambda i: lbs[i])
                 pos_sel = abiertas_filtradas[sel]
 
-                cv1,cv2 = st.columns(2)
-                fecha_v  = cv1.date_input("📅 Fecha de venta", value=date.today())
-                precio_v = cv2.number_input("Precio de venta (USD)", min_value=0.0,
-                                             step=0.0001, format="%.4f")
+                cv1,cv2,cv3 = st.columns(3)
+                fecha_v    = cv1.date_input("📅 Fecha de venta", value=date.today())
+                precio_v   = cv2.number_input("Precio de venta (USD)", min_value=0.0,
+                                               step=0.0001, format="%.4f")
+                comision_v = cv3.number_input("Comisión venta (USD)", min_value=0.0,
+                                               step=0.01, format="%.2f",
+                                               help="Comisión pagada al broker al vender")
 
                 if precio_v > 0:
-                    gp_venta = (precio_v - pos_sel["Px_Compra"]) * pos_sel["Cantidad"]
+                    gp_venta = (precio_v - pos_sel["Px_Compra"]) * pos_sel["Cantidad"] - comision_v
                     gp_pct_v = gp_venta / pos_sel["Invertido"] * 100 if pos_sel["Invertido"] else 0
                     clr_v    = "#2ECC87" if gp_venta >= 0 else "#E85555"
                     st.markdown(f"""<div style="background:#FFFFFF;border:1px solid #1E3354;
@@ -1492,9 +1507,10 @@ if puede_registrar:
                     else:
                         _id = pos_sel["_id"]
                         datos_venta = {
-                            "Estado":       "Cerrada",
-                            "Fecha_Venta":  str(fecha_v),
-                            "Precio_Venta": float(precio_v),
+                            "Estado":         "Cerrada",
+                            "Fecha_Venta":    str(fecha_v),
+                            "Precio_Venta":   float(precio_v),
+                            "Comision_Venta": float(comision_v),
                         }
                         if _id.startswith("ops_"):
                             # Viene de colección 'operaciones' — guardar como nueva inversión cerrada
