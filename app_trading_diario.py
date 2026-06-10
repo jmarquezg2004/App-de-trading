@@ -18,145 +18,323 @@ header {visibility: hidden;}
 
 st.markdown("""
 <style>
-@import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@300;400;500;600&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600;700&family=Inter:wght@300;400;500;600&display=swap');
 
-/* Paleta Arkez Invest — arkezinvest.com */
 :root {
-    --bg:         #EDF0F5;
-    --sidebar-bg: #1B2B4B;
+    --bg:         #E8EEF6;
+    --sidebar-bg: #0F1E35;
     --surface:    #FFFFFF;
-    --surface2:   #E4E8F0;
-    --border:     #C8D4E8;
-    --nav:        #1B2B4B;
-    --text:       #1B2B4B;
-    --muted:      #5A7A9A;
-    --label:      #4A6A8A;
+    --surface2:   #F0F4FA;
+    --border:     #CBD8EC;
+    --text:       #0F1E35;
+    --muted:      #4A6A8A;
     --gold:       #C8A84B;
-    --green:      #2ECC87;
-    --red:        #E85555;
+    --gold2:      #E8C46A;
+    --green:      #00C97A;
+    --green2:     #00A862;
+    --red:        #E84545;
+    --red2:       #C03030;
+    --navy:       #1B2B4B;
+    --navy2:      #253A60;
 }
 
-html, body { font-family: 'IBM Plex Sans', sans-serif; }
-.stApp { background: #EDF0F5 !important; color: #1B2B4B; }
-.stApp > div { background: #EDF0F5 !important; }
-.main .block-container { background: #EDF0F5 !important; }
-h1 { font-family:'IBM Plex Mono',monospace!important; color:#C8A84B!important; letter-spacing:2px; }
-h2 { font-family:'IBM Plex Mono',monospace!important; font-size:11px!important; letter-spacing:1.5px; text-transform:uppercase; color:#5A7A9A!important; }
-h3 { font-family:'IBM Plex Mono',monospace!important; font-size:13px!important; color:#C8A84B!important; }
-hr { border-color:var(--border)!important; }
+/* ── ANIMACIONES GLOBALES ────────────────────────────── */
+@keyframes fadeInUp {
+    from { opacity:0; transform:translateY(16px); }
+    to   { opacity:1; transform:translateY(0); }
+}
+@keyframes fadeIn {
+    from { opacity:0; } to { opacity:1; }
+}
+@keyframes slideInLeft {
+    from { opacity:0; transform:translateX(-20px); }
+    to   { opacity:1; transform:translateX(0); }
+}
+@keyframes pulse-gold {
+    0%,100% { box-shadow: 0 0 0 0 rgba(200,168,75,0); }
+    50%      { box-shadow: 0 0 0 6px rgba(200,168,75,0.15); }
+}
+@keyframes shimmer {
+    0%   { background-position: -400px 0; }
+    100% { background-position: 400px 0; }
+}
+@keyframes countUp {
+    from { opacity:0; transform:scale(0.92); }
+    to   { opacity:1; transform:scale(1); }
+}
+@keyframes borderGlow {
+    0%,100% { border-color: #CBD8EC; }
+    50%      { border-color: #C8A84B66; }
+}
 
-section[data-testid="stSidebar"] { background:var(--sidebar-bg)!important; border-right:1px solid var(--border); }
-section[data-testid="stSidebar"] label { color:#5A7A9A!important; font-size:12px!important; }
+html, body { font-family:'Inter',sans-serif; }
 
-/* TODOS los inputs */
+/* ── FONDO ───────────────────────────────────────────── */
+.stApp {
+    background: linear-gradient(135deg, #E8EEF6 0%, #DDE5F0 50%, #E4EBF5 100%) !important;
+    color: var(--text);
+    min-height: 100vh;
+}
+.stApp > div { background: transparent !important; }
+.main .block-container {
+    background: transparent !important;
+    padding-top: 1rem !important;
+    animation: fadeIn 0.4s ease;
+}
+
+/* ── SIDEBAR PRO ─────────────────────────────────────── */
+section[data-testid="stSidebar"] {
+    background: linear-gradient(180deg, #0A1520 0%, #0F1E35 40%, #152540 100%) !important;
+    border-right: 1px solid rgba(200,168,75,0.2) !important;
+    box-shadow: 4px 0 24px rgba(0,0,0,0.3) !important;
+}
+section[data-testid="stSidebar"] > div { background: transparent !important; }
+section[data-testid="stSidebar"] label { color: #7A9CC0 !important; font-size:11px !important; letter-spacing:0.5px; }
+section[data-testid="stSidebar"] p,
+section[data-testid="stSidebar"] span { color: #C8D8F0 !important; }
+section[data-testid="stSidebar"] [data-testid="stRadio"] label span,
+section[data-testid="stSidebar"] [data-testid="stRadio"] p { color:#E8EDF5 !important; }
+
+/* ── TIPOGRAFÍA ──────────────────────────────────────── */
+h1 { font-family:'IBM Plex Mono',monospace !important; color: var(--gold) !important; letter-spacing:2px; }
+h2 { font-family:'IBM Plex Mono',monospace !important; font-size:10px !important;
+     letter-spacing:2px; text-transform:uppercase; color: var(--muted) !important;
+     margin-bottom:6px !important; }
+h3 { font-family:'IBM Plex Mono',monospace !important; color: var(--gold) !important; }
+hr { border-color: var(--border) !important; opacity:0.5; }
+
+/* ── INPUTS PRO ──────────────────────────────────────── */
 input, textarea {
-    background:var(--surface)!important; color:var(--text)!important;
-    -webkit-text-fill-color:var(--text)!important;
-    border:1px solid var(--border)!important; border-radius:6px!important;
-    font-family:'IBM Plex Mono',monospace!important; font-size:13px!important;
-    opacity:1!important;
+    background: rgba(255,255,255,0.9) !important;
+    color: var(--text) !important;
+    -webkit-text-fill-color: var(--text) !important;
+    border: 1px solid var(--border) !important;
+    border-radius: 8px !important;
+    font-family: 'IBM Plex Mono', monospace !important;
+    font-size: 13px !important;
+    opacity: 1 !important;
+    transition: border-color 0.2s, box-shadow 0.2s !important;
+    backdrop-filter: blur(4px);
 }
 input::placeholder, textarea::placeholder {
-    color:#5A7A9A!important; -webkit-text-fill-color:#5A7A9A!important; opacity:1!important;
+    color: #8AAAC8 !important;
+    -webkit-text-fill-color: #8AAAC8 !important;
+    opacity: 1 !important;
 }
-input:focus, textarea:focus { border-color:#C8A84B!important; }
+input:focus, textarea:focus {
+    border-color: var(--gold) !important;
+    box-shadow: 0 0 0 3px rgba(200,168,75,0.12) !important;
+    outline: none !important;
+}
 input:disabled {
-    color:#C8A84B!important; -webkit-text-fill-color:#C8A84B!important; opacity:1!important;
+    color: var(--gold) !important;
+    -webkit-text-fill-color: var(--gold) !important;
+    opacity: 1 !important;
+    background: rgba(200,168,75,0.06) !important;
 }
 
-/* Selectbox */
+/* ── SELECTBOX ───────────────────────────────────────── */
 [data-testid="stSelectbox"]>div>div {
-    background:#FFFFFF!important; border:1px solid #C8D4E8!important;
-    border-radius:6px!important; color:#1B2B4B!important;
+    background: rgba(255,255,255,0.9) !important;
+    border: 1px solid var(--border) !important;
+    border-radius: 8px !important;
+    color: var(--text) !important;
+    transition: border-color 0.2s !important;
+}
+[data-testid="stSelectbox"]>div>div:focus-within {
+    border-color: var(--gold) !important;
+    box-shadow: 0 0 0 3px rgba(200,168,75,0.12) !important;
 }
 [data-testid="stSelectbox"] span,
-[data-testid="stSelectbox"] p { color:#1B2B4B!important; font-size:13px!important; }
-
-/* Dropdown abierto */
+[data-testid="stSelectbox"] p { color: var(--text) !important; font-size:13px !important; }
 [data-baseweb="popover"], [data-baseweb="popover"] *,
 [data-baseweb="menu"], [data-baseweb="menu"] *,
 [role="listbox"], [role="listbox"] * {
-    background:var(--surface)!important; color:var(--text)!important;
-    font-family:'IBM Plex Mono',monospace!important; font-size:13px!important;
-    border-color:#1E3354!important;
+    background: #FFFFFF !important; color: var(--text) !important;
+    font-family: 'IBM Plex Mono', monospace !important;
+    font-size: 13px !important; border-color: var(--border) !important;
 }
-[role="option"]:hover { background:#243b55!important; color:#C8A84B!important; }
-[aria-selected="true"] { background:#E8F0FF!important; color:#C8A84B!important; }
-[data-baseweb="select"] svg { fill:#8BA5C8!important; }
+[role="option"]:hover { background: rgba(200,168,75,0.08) !important; color: var(--gold) !important; }
+[aria-selected="true"] { background: rgba(200,168,75,0.1) !important; color: var(--gold) !important; }
+[data-baseweb="select"] svg { fill: #8BA5C8 !important; }
 
-/* Labels */
-[data-testid="stTextInput"] label, [data-testid="stNumberInput"] label,
-[data-testid="stSelectbox"] label, [data-testid="stDateInput"] label,
-[data-testid="stTextArea"] label, [data-testid="stRadio"]>label {
-    color:#4A6A8A!important; font-size:13px!important; font-weight:500!important;
+/* ── LABELS ──────────────────────────────────────────── */
+[data-testid="stTextInput"] label,
+[data-testid="stNumberInput"] label,
+[data-testid="stSelectbox"] label,
+[data-testid="stDateInput"] label,
+[data-testid="stTextArea"] label,
+[data-testid="stRadio"]>label {
+    color: var(--muted) !important;
+    font-size: 11px !important;
+    font-weight: 600 !important;
+    letter-spacing: 0.8px !important;
+    text-transform: uppercase !important;
 }
 
-/* Number input buttons */
+/* ── NÚMERO INPUT BUTTONS ────────────────────────────── */
 [data-testid="stNumberInput"] button {
-    background:#E4EAF4!important; color:#1B2B4B!important; border-color:#C8D4E8!important;
+    background: rgba(200,168,75,0.08) !important;
+    color: var(--gold) !important;
+    border-color: rgba(200,168,75,0.2) !important;
+    transition: all 0.15s !important;
+}
+[data-testid="stNumberInput"] button:hover {
+    background: rgba(200,168,75,0.18) !important;
 }
 
-/* Botones */
-.stButton>button {
-    background:linear-gradient(135deg,#C8A84B,#A07830)!important;
-    color:#0A1520!important; border:none!important; border-radius:6px!important;
-    font-family:'IBM Plex Mono',monospace!important; font-weight:600!important;
-    letter-spacing:1px!important; text-transform:uppercase!important; font-size:12px!important;
+/* ── BOTONES DORADOS PRO ─────────────────────────────── */
+.stButton > button {
+    background: linear-gradient(135deg, #C8A84B 0%, #A87830 100%) !important;
+    color: #0A1520 !important;
+    border: none !important;
+    border-radius: 8px !important;
+    font-family: 'IBM Plex Mono', monospace !important;
+    font-weight: 700 !important;
+    letter-spacing: 1.5px !important;
+    text-transform: uppercase !important;
+    font-size: 11px !important;
+    padding: 10px 24px !important;
+    box-shadow: 0 4px 14px rgba(200,168,75,0.3) !important;
+    transition: all 0.2s ease !important;
+    position: relative !important;
+    overflow: hidden !important;
 }
-.stButton>button:hover { filter:brightness(1.1)!important; }
+.stButton > button::after {
+    content: '';
+    position: absolute; top:0; left:-100%; width:100%; height:100%;
+    background: linear-gradient(90deg, transparent, rgba(255,255,255,0.2), transparent);
+    transition: left 0.4s ease;
+}
+.stButton > button:hover::after { left: 100%; }
+.stButton > button:hover {
+    transform: translateY(-1px) !important;
+    box-shadow: 0 6px 20px rgba(200,168,75,0.4) !important;
+    filter: brightness(1.08) !important;
+}
+.stButton > button:active {
+    transform: translateY(0) !important;
+    box-shadow: 0 2px 8px rgba(200,168,75,0.3) !important;
+}
 
-/* Tabs */
+/* ── TABS PRO ────────────────────────────────────────── */
+[data-testid="stTabs"] {
+    background: rgba(255,255,255,0.6) !important;
+    border-radius: 10px 10px 0 0 !important;
+    padding: 0 4px !important;
+    backdrop-filter: blur(8px) !important;
+    border-bottom: 1px solid var(--border) !important;
+}
 [data-testid="stTabs"] button {
-    font-family:'IBM Plex Mono',monospace!important; font-size:11px!important;
-    letter-spacing:1px; text-transform:uppercase; color:#5A7A9A!important; background:transparent!important;
+    font-family: 'IBM Plex Mono', monospace !important;
+    font-size: 10px !important;
+    letter-spacing: 1.5px !important;
+    text-transform: uppercase !important;
+    color: var(--muted) !important;
+    background: transparent !important;
+    padding: 10px 16px !important;
+    transition: all 0.2s ease !important;
+    border-radius: 8px 8px 0 0 !important;
+}
+[data-testid="stTabs"] button:hover {
+    color: var(--navy) !important;
+    background: rgba(27,43,75,0.04) !important;
 }
 [data-testid="stTabs"] button[aria-selected="true"] {
-    color:#C8A84B!important; border-bottom:2px solid #C8A84B!important;
-    background: var(--surface) !important;
+    color: var(--gold) !important;
+    background: rgba(200,168,75,0.06) !important;
+    border-bottom: 2px solid var(--gold) !important;
+    font-weight: 600 !important;
 }
 
-/* Métricas */
+/* ── MÉTRICAS PRO ────────────────────────────────────── */
 [data-testid="metric-container"] {
-    background:#FFFFFF; border:1px solid #C8D4E8; border-radius:10px;
-    padding:16px!important; position:relative; overflow:hidden;
+    background: rgba(255,255,255,0.85) !important;
+    border: 1px solid var(--border) !important;
+    border-radius: 12px !important;
+    padding: 16px !important;
+    position: relative !important;
+    overflow: hidden !important;
+    backdrop-filter: blur(8px) !important;
+    box-shadow: 0 2px 12px rgba(27,43,75,0.06), 0 1px 3px rgba(27,43,75,0.04) !important;
+    transition: transform 0.2s ease, box-shadow 0.2s ease !important;
+    animation: fadeInUp 0.4s ease !important;
+}
+[data-testid="metric-container"]:hover {
+    transform: translateY(-2px) !important;
+    box-shadow: 0 6px 24px rgba(27,43,75,0.1) !important;
 }
 [data-testid="metric-container"]::before {
-    content:''; position:absolute; top:0;left:0;right:0; height:2px;
-    background:linear-gradient(90deg,#C8A84B,#A07830);
+    content: '';
+    position: absolute; top:0; left:0; right:0; height:2px;
+    background: linear-gradient(90deg, #C8A84B, #E8C46A, #C8A84B);
+    background-size: 200% 100%;
+    animation: shimmer 3s infinite linear;
 }
 [data-testid="stMetricValue"] {
-    font-family:'IBM Plex Mono',monospace!important; font-size:1.4rem!important;
-    color:#1B2B4B!important; font-weight:600!important;
+    font-family: 'IBM Plex Mono', monospace !important;
+    font-size: 1.5rem !important;
+    color: var(--text) !important;
+    font-weight: 700 !important;
+    animation: countUp 0.5s ease !important;
 }
 [data-testid="stMetricLabel"] {
-    font-family:'IBM Plex Mono',monospace!important; font-size:0.68rem!important;
-    letter-spacing:1.2px; text-transform:uppercase; color:#5A7A9A!important;
+    font-family: 'IBM Plex Mono', monospace !important;
+    font-size: 0.65rem !important;
+    letter-spacing: 1.5px !important;
+    text-transform: uppercase !important;
+    color: var(--muted) !important;
+}
+[data-testid="stMetricDelta"] { font-size: 0.8rem !important; font-weight:600 !important; }
+
+/* ── DATAFRAMES ──────────────────────────────────────── */
+[data-testid="stDataFrame"] {
+    border: 1px solid var(--border) !important;
+    border-radius: 10px !important;
+    overflow: hidden !important;
+    box-shadow: 0 2px 8px rgba(27,43,75,0.05) !important;
 }
 
-/* DataFrames */
-[data-testid="stDataFrame"] { border:1px solid #C8D4E8; border-radius:8px; overflow:hidden; }
-
-/* Alerts */
+/* ── ALERTS PRO ──────────────────────────────────────── */
 [data-testid="stAlert"] {
-    border-radius:8px!important; border-left-width:3px!important;
-    background:#FFFFFF!important; font-family:'IBM Plex Mono',monospace!important; color:#1B2B4B!important;
+    border-radius: 10px !important;
+    border-left-width: 3px !important;
+    background: rgba(255,255,255,0.85) !important;
+    backdrop-filter: blur(4px) !important;
+    font-family: 'IBM Plex Mono', monospace !important;
+    color: var(--text) !important;
+    animation: slideInLeft 0.3s ease !important;
 }
 
-/* Form */
+/* ── FORM ────────────────────────────────────────────── */
 [data-testid="stForm"] {
-    background:#FFFFFF!important; border:1px solid #C8D4E8!important;
-    border-radius:10px!important; padding:20px!important; box-shadow:0 1px 4px rgba(27,43,75,0.08)!important;
+    background: rgba(255,255,255,0.75) !important;
+    border: 1px solid rgba(200,168,75,0.2) !important;
+    border-radius: 12px !important;
+    padding: 20px !important;
+    backdrop-filter: blur(8px) !important;
+    box-shadow: 0 4px 20px rgba(27,43,75,0.07) !important;
 }
 
-/* Radio */
+/* ── RADIO ───────────────────────────────────────────── */
 [data-testid="stRadio"] label span,
 [data-testid="stRadio"] label p,
-[data-testid="stRadio"] p { color:#1B2B4B!important; font-weight:600!important; }
-/* Radio en sidebar → texto claro */
+[data-testid="stRadio"] p { color: var(--text) !important; font-weight:600 !important; }
 section[data-testid="stSidebar"] [data-testid="stRadio"] label span,
 section[data-testid="stSidebar"] [data-testid="stRadio"] label p,
-section[data-testid="stSidebar"] [data-testid="stRadio"] p { color:#E8EDF5!important; font-weight:500!important; }
-section[data-testid="stSidebar"] label { color:#B0C8E4!important; }
+section[data-testid="stSidebar"] [data-testid="stRadio"] p { color: #E8EDF5 !important; font-weight:500 !important; }
+
+/* ── SPINNER ─────────────────────────────────────────── */
+[data-testid="stSpinner"] { color: var(--gold) !important; }
+
+/* ── SCROLLBAR ───────────────────────────────────────── */
+::-webkit-scrollbar { width:6px; height:6px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: rgba(27,43,75,0.2); border-radius:3px; }
+::-webkit-scrollbar-thumb:hover { background: rgba(200,168,75,0.4); }
+
+/* ── CHECKBOX ────────────────────────────────────────── */
+[data-testid="stCheckbox"] label span { color: var(--text) !important; }
 </style>
 """, unsafe_allow_html=True)
 
@@ -612,13 +790,18 @@ def money(v,f=1):
     return f"${v2:,.2f}"
 
 def card(label,val,sub=None,color="#C8A84B"):
-    s=f'<div style="font:500 11px/1.4 IBM Plex Mono,mono;color:{color};margin-top:3px">{sub}</div>' if sub else ""
-    return f"""<div style="background:#FFFFFF;border:1px solid #C8D4E8;border-radius:10px;
-        padding:16px 18px;position:relative;overflow:hidden;height:100%;box-shadow:0 1px 4px rgba(0,0,0,0.06)">
-      <div style="position:absolute;top:0;left:0;right:0;height:2px;background:{color}"></div>
-      <div style="font:400 9px/1 IBM Plex Mono,mono;color:#5A7A9A;letter-spacing:1.5px;
-                  text-transform:uppercase;margin-bottom:8px">{label}</div>
-      <div style="font:600 22px/1 IBM Plex Mono,mono;color:#1B2B4B">{val}</div>{s}</div>"""
+    s=f'<div style="font:600 11px/1.4 IBM Plex Mono,mono;color:{color};margin-top:4px">{sub}</div>' if sub else ""
+    return f"""<div style="background:rgba(255,255,255,0.85);border:1px solid #CBD8EC;border-radius:12px;
+        padding:16px 18px;position:relative;overflow:hidden;height:100%;
+        backdrop-filter:blur(8px);
+        box-shadow:0 2px 12px rgba(27,43,75,0.06),0 1px 3px rgba(27,43,75,0.04);
+        transition:transform 0.2s ease,box-shadow 0.2s ease;
+        animation:fadeInUp 0.4s ease">
+      <div style="position:absolute;top:0;left:0;right:0;height:2px;
+                  background:linear-gradient(90deg,{color},{color}88,{color})"></div>
+      <div style="font:600 9px/1 IBM Plex Mono,mono;color:#4A6A8A;letter-spacing:2px;
+                  text-transform:uppercase;margin-bottom:10px">{label}</div>
+      <div style="font:700 22px/1 IBM Plex Mono,mono;color:#0F1E35">{val}</div>{s}</div>"""
 
 def sec(t):
     st.markdown(f'<h2 style="margin:18px 0 10px">{t}</h2>', unsafe_allow_html=True)
@@ -766,16 +949,17 @@ with st.sidebar:
             fondo = fa
         else:
             fondo = f"personal_{usuario.split('@')[0]}"
-        st.markdown(f"""<div style="background:#162A48;border:1px solid #243D5E;border-radius:6px;
-            padding:8px 12px;margin-bottom:8px">
-          <div style="font:400 9px IBM Plex Mono,mono;color:#7A9CC0">FONDO / PORTAFOLIO</div>
+        st.markdown(f"""<div style="background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.08);
+            border-radius:10px;padding:10px 14px;margin-bottom:8px">
+          <div style="font:600 9px IBM Plex Mono,mono;color:#7A9CC0;letter-spacing:1.5px">FONDO / PORTAFOLIO</div>
           <div style="font:600 12px IBM Plex Mono,mono;color:#C8A84B">{fondo}</div>
         </div>""", unsafe_allow_html=True)
 
     trm = get_trm()
-    st.markdown(f"""<div style="background:#162A48;border:1px solid #243D5E;border-radius:8px;
-        padding:9px 12px;margin:8px 0">
-      <div style="font:400 9px IBM Plex Mono,mono;color:#7A9CC0;letter-spacing:1px">TRM USD/COP</div>
+    st.markdown(f"""<div style="background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.08);
+        border-radius:10px;padding:10px 14px;margin:8px 0;
+        box-shadow:inset 0 1px 0 rgba(255,255,255,0.05)">
+      <div style="font:600 9px IBM Plex Mono,mono;color:#7A9CC0;letter-spacing:1.5px">TRM USD/COP</div>
       <div style="font:600 16px/1.5 IBM Plex Mono,mono;color:#F0C040">${trm:,.2f}</div>
     </div>""", unsafe_allow_html=True)
 
@@ -1841,9 +2025,11 @@ if rol == "admin" or puede_registrar:
         # Resumen de cash actual
         # ── Panel estilo broker ─────────────────────────────────
         # Fila 1: Flujos de dinero
-        st.markdown(f"""<div style="background:#1B2B4B;border-radius:12px;padding:16px 20px;
-            margin-bottom:10px">
-          <div style="font:600 9px IBM Plex Mono,mono;color:#C8A84B;letter-spacing:2px;margin-bottom:12px">
+        st.markdown(f"""<div style="background:linear-gradient(135deg,#0F1E35,#1B2B4B);
+            border:1px solid rgba(200,168,75,0.2);
+            border-radius:14px;padding:16px 20px;margin-bottom:10px;
+            box-shadow:0 4px 24px rgba(0,0,0,0.15),inset 0 1px 0 rgba(255,255,255,0.04)">
+          <div style="font:700 9px IBM Plex Mono,mono;color:#C8A84B;letter-spacing:2px;margin-bottom:12px">
             FLUJOS DE CAPITAL</div>
           <div style="display:flex;gap:0;flex-wrap:wrap">
             <div style="flex:1;min-width:140px;padding:0 16px;border-right:1px solid #2E4D6E">
@@ -1870,9 +2056,11 @@ if rol == "admin" or puede_registrar:
         </div>""", unsafe_allow_html=True)
 
         # Fila 2: Estado actual
-        st.markdown(f"""<div style="background:#1B2B4B;border-radius:12px;padding:16px 20px;
-            margin-bottom:16px">
-          <div style="font:600 9px IBM Plex Mono,mono;color:#C8A84B;letter-spacing:2px;margin-bottom:12px">
+        st.markdown(f"""<div style="background:linear-gradient(135deg,#0F1E35,#1B2B4B);
+            border:1px solid rgba(200,168,75,0.2);
+            border-radius:14px;padding:16px 20px;margin-bottom:16px;
+            box-shadow:0 4px 24px rgba(0,0,0,0.15),inset 0 1px 0 rgba(255,255,255,0.04)">
+          <div style="font:700 9px IBM Plex Mono,mono;color:#C8A84B;letter-spacing:2px;margin-bottom:12px">
             ESTADO ACTUAL DEL PORTAFOLIO</div>
           <div style="display:flex;gap:0;flex-wrap:wrap">
             <div style="flex:1;min-width:140px;padding:0 16px;border-right:1px solid #2E4D6E">
@@ -2140,8 +2328,11 @@ with t_rend:
         # Meses con ganancia: contar solo los que tienen PnL positivo real
         meses_ganadores = sum(1 for m in meses_data if m["pnl_tot"] > 0)
         clr_año = "#1A8A5A" if total_año_pnl >= 0 else "#C83030"
-        st.markdown(f"""<div style="background:#1B2B4B;border-radius:10px;padding:16px 20px;
-            margin-top:8px;display:flex;gap:32px;flex-wrap:wrap;align-items:center">
+        st.markdown(f"""<div style="background:linear-gradient(135deg,#0F1E35,#1B2B4B);
+            border:1px solid rgba(200,168,75,0.2);
+            border-radius:14px;padding:16px 24px;margin-top:8px;
+            display:flex;gap:32px;flex-wrap:wrap;align-items:center;
+            box-shadow:0 4px 24px rgba(0,0,0,0.15)">
           <div>
             <div style="font:400 9px IBM Plex Mono,mono;color:#7A9CC0;letter-spacing:1px">RESUMEN {año_sel}</div>
             <div style="font:700 20px IBM Plex Mono,mono;color:{clr_año}">{'+' if total_año_pnl>=0 else ''}{money(total_año_pnl*factor)}{sfx}</div>
