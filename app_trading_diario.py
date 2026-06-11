@@ -16,6 +16,111 @@ header {visibility: hidden;}
 [data-testid="stToolbar"] {display: none;}
 </style>""", unsafe_allow_html=True)
 
+# JS injection para efectos pro que CSS solo no puede hacer en Streamlit
+st.markdown("""
+<script>
+(function applyArkez() {
+  function inject() {
+    // Fondo con gradiente
+    var app = document.querySelector('.stApp');
+    if (app) {
+      app.style.background = 'linear-gradient(135deg, #E8EEF6 0%, #DDE5F0 50%, #E4EBF5 100%)';
+    }
+
+    // Sidebar gradiente oscuro profundo
+    var sidebar = document.querySelector('[data-testid="stSidebar"]');
+    if (sidebar) {
+      sidebar.style.background = 'linear-gradient(180deg, #0A1520 0%, #0F1E35 40%, #152540 100%)';
+      sidebar.style.borderRight = '1px solid rgba(200,168,75,0.2)';
+      sidebar.style.boxShadow = '4px 0 24px rgba(0,0,0,0.3)';
+    }
+
+    // Block container transparente
+    var block = document.querySelector('.main .block-container');
+    if (block) {
+      block.style.background = 'transparent';
+      block.style.animation = 'fadeIn 0.4s ease';
+    }
+
+    // Cards con glassmorphism
+    var metrics = document.querySelectorAll('[data-testid="metric-container"]');
+    metrics.forEach(function(m) {
+      m.style.background = 'rgba(255,255,255,0.85)';
+      m.style.backdropFilter = 'blur(8px)';
+      m.style.webkitBackdropFilter = 'blur(8px)';
+      m.style.borderRadius = '12px';
+      m.style.border = '1px solid #CBD8EC';
+      m.style.boxShadow = '0 2px 12px rgba(27,43,75,0.06), 0 1px 3px rgba(27,43,75,0.04)';
+      m.style.transition = 'transform 0.2s ease, box-shadow 0.2s ease';
+      m.style.animation = 'fadeInUp 0.4s ease';
+      m.addEventListener('mouseenter', function() {
+        this.style.transform = 'translateY(-2px)';
+        this.style.boxShadow = '0 6px 24px rgba(27,43,75,0.1)';
+      });
+      m.addEventListener('mouseleave', function() {
+        this.style.transform = 'translateY(0)';
+        this.style.boxShadow = '0 2px 12px rgba(27,43,75,0.06)';
+      });
+    });
+
+    // Botones dorados con shimmer
+    var btns = document.querySelectorAll('.stButton > button');
+    btns.forEach(function(btn) {
+      btn.style.background = 'linear-gradient(135deg, #C8A84B 0%, #A87830 100%)';
+      btn.style.color = '#0A1520';
+      btn.style.border = 'none';
+      btn.style.borderRadius = '8px';
+      btn.style.fontWeight = '700';
+      btn.style.letterSpacing = '1.5px';
+      btn.style.boxShadow = '0 4px 14px rgba(200,168,75,0.3)';
+      btn.style.transition = 'all 0.2s ease';
+      btn.addEventListener('mouseenter', function() {
+        this.style.transform = 'translateY(-1px)';
+        this.style.boxShadow = '0 6px 20px rgba(200,168,75,0.4)';
+        this.style.filter = 'brightness(1.08)';
+      });
+      btn.addEventListener('mouseleave', function() {
+        this.style.transform = 'translateY(0)';
+        this.style.boxShadow = '0 4px 14px rgba(200,168,75,0.3)';
+        this.style.filter = 'none';
+      });
+    });
+
+    // Tabs con glassmorphism
+    var tabBar = document.querySelector('[data-testid="stTabs"]');
+    if (tabBar) {
+      tabBar.style.background = 'rgba(255,255,255,0.6)';
+      tabBar.style.backdropFilter = 'blur(8px)';
+      tabBar.style.webkitBackdropFilter = 'blur(8px)';
+      tabBar.style.borderRadius = '10px 10px 0 0';
+      tabBar.style.borderBottom = '1px solid #CBD8EC';
+    }
+
+    // Forms con glassmorphism
+    var forms = document.querySelectorAll('[data-testid="stForm"]');
+    forms.forEach(function(f) {
+      f.style.background = 'rgba(255,255,255,0.75)';
+      f.style.backdropFilter = 'blur(8px)';
+      f.style.webkitBackdropFilter = 'blur(8px)';
+      f.style.border = '1px solid rgba(200,168,75,0.2)';
+      f.style.borderRadius = '12px';
+      f.style.boxShadow = '0 4px 20px rgba(27,43,75,0.07)';
+    });
+  }
+
+  // Ejecutar al cargar y cada vez que Streamlit re-renderiza
+  inject();
+  var observer = new MutationObserver(function() { inject(); });
+  observer.observe(document.body, { childList: true, subtree: true });
+
+  // También ejecutar después de delays para asegurar que cargó
+  setTimeout(inject, 500);
+  setTimeout(inject, 1500);
+  setTimeout(inject, 3000);
+})();
+</script>
+""", unsafe_allow_html=True)
+
 st.markdown("""
 <style>
 @import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600;700&family=Inter:wght@300;400;500;600&display=swap');
