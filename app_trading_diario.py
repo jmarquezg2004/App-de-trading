@@ -14,6 +14,34 @@ st.markdown("""<style>
 footer {visibility: hidden;}
 header {visibility: hidden;}
 [data-testid="stToolbar"] {display: none;}
+
+/* ── OCULTAR SIDEBAR COMPLETAMENTE ── */
+section[data-testid="stSidebar"] {display: none !important;}
+[data-testid="collapsedControl"] {display: none !important;}
+
+/* ── ÁREA PRINCIPAL OCUPA TODO EL ANCHO ── */
+.main .block-container {
+    max-width: 100% !important;
+    padding: 0.5rem 2rem !important;
+}
+
+/* ── TABS MÁS VISIBLES ── */
+[data-testid="stTabs"] button {
+    font-size: 11px !important;
+    letter-spacing: 1.5px !important;
+    text-transform: uppercase !important;
+    padding: 10px 20px !important;
+    font-weight: 500 !important;
+}
+[data-testid="stTabs"] button[aria-selected="true"] {
+    font-weight: 700 !important;
+    border-bottom-width: 3px !important;
+}
+
+/* ── CARDS COMPACTAS ── */
+[data-testid="metric-container"] {
+    padding: 12px 14px !important;
+}
 </style>""", unsafe_allow_html=True)
 
 # JS injection para efectos pro que CSS solo no puede hacer en Streamlit
